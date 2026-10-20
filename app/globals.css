@@ -1,0 +1,264 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #0e0d0b;
+  --color-ivory: #f4f1ea;
+  --color-marble: #e9e4da;
+  --color-gold: #b79342;
+  --color-gold-deep: #776b27;
+  --color-blush: #d28daf;
+  --color-olive: #bbae77;
+  --color-teal: #1f5c63;
+  --color-ruby: #9b1b30;
+  --color-ruby-night: #3d0912;
+
+  --font-serif: var(--font-bodoni), 'Playfair Display', Georgia, serif;
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
+
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-curtain: cubic-bezier(0.76, 0, 0.24, 1);
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --text-display: clamp(3rem, 8vw, 9rem);
+  --text-title: clamp(2.25rem, 5vw, 5.25rem);
+  --text-lead: clamp(1.15rem, 1.6vw, 1.5rem);
+
+  --radius-card: 28px;
+}
+
+:root {
+  --page-bg: var(--color-ivory);
+  --page-fg: var(--color-ink);
+  --header-h: 88px;
+  color-scheme: light;
+}
+
+html {
+  background: var(--page-bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Lenis */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+body {
+  background: var(--page-bg);
+  color: var(--page-fg);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+img,
+video {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Tipografia editorial */
+.font-display {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.82;
+}
+.serif-italic {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* Linhas mascaradas do SplitText */
+.split-line-mask {
+  overflow: clip;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+/* Sublinhado que desenha da esquerda para a direita */
+.link-draw {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 100% 100%;
+  background-repeat: no-repeat;
+  transition: background-size 0.5s var(--ease-soft);
+  padding-bottom: 2px;
+}
+.link-draw:hover,
+.link-draw:focus-visible,
+.link-draw[aria-current='page'] {
+  background-size: 100% 1px;
+  background-position: 0% 100%;
+}
+
+/* Roll de letras dos botões */
+.roll {
+  display: inline-flex;
+  overflow: hidden;
+  line-height: 1.25;
+}
+.roll > span {
+  display: inline-block;
+  position: relative;
+  transition: transform 0.55s var(--ease-expo);
+  transition-delay: calc(var(--i) * 18ms);
+}
+.roll > span::after {
+  content: attr(data-char);
+  position: absolute;
+  left: 0;
+  top: 100%;
+}
+.roll-host:hover .roll > span,
+.roll-host:focus-visible .roll > span {
+  transform: translateY(-100%);
+}
+
+/* Shimmer dourado dos skeletons */
+.shimmer {
+  background: linear-gradient(100deg, var(--color-marble) 30%, color-mix(in srgb, var(--color-gold) 25%, var(--color-marble)) 50%, var(--color-marble) 70%);
+  background-size: 300% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* Pulso dourado dos hotspots */
+@keyframes pulse-gold {
+  0% {
+    box-shadow: 0 0 0 0 rgb(183 147 66 / 0.7);
+  }
+  100% {
+    box-shadow: 0 0 0 18px rgb(183 147 66 / 0);
+  }
+}
+.hotspot-pulse {
+  animation: pulse-gold 1.8s var(--ease-soft) infinite;
+}
+
+/* Indicador de scroll */
+@keyframes scroll-cue {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  50% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+  51% {
+    transform-origin: bottom;
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}
+.scroll-cue {
+  animation: scroll-cue 2.2s var(--ease-curtain) infinite;
+}
+
+/* Textura de veludo da seção de atacado */
+.velvet {
+  background-color: var(--color-teal);
+  background-image:
+    radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / 0.09), transparent 60%),
+    radial-gradient(90% 70% at 90% 100%, rgb(0 0 0 / 0.35), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");
+}
+
+/* Faixa escura de seda */
+.silk {
+  background:
+    radial-gradient(80% 120% at 10% 10%, rgb(255 255 255 / 0.07), transparent 55%),
+    radial-gradient(60% 90% at 85% 80%, rgb(183 147 66 / 0.12), transparent 60%),
+    linear-gradient(160deg, #191713, #0e0d0b 60%);
+}
+
+/* Utilidades */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Cursor customizado só aparece em ponteiros finos */
+@media (hover: none), (pointer: coarse) {
+  .custom-cursor {
+    display: none !important;
+  }
+}
+
+/* View Transitions (card → produto) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
+}
+::view-transition-group(*) {
+  animation-duration: 0.8s;
+  animation-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  .roll > span {
+    transition: none;
+  }
+}
+
+/* Conteúdo que será revelado por JS fica oculto só quando o JS está ativo */
+.js [data-reveal] {
+  visibility: hidden;
+}
+html[data-preloaded] .preloader {
+  display: none;
+}
+.js [data-hero-hide] {
+  visibility: hidden;
+}
