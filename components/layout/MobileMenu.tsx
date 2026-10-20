@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { site } from '@/data/site';
 import { MediaKey } from '@/data/media.generated';
-import { getLenis } from '@/lib/lenis';
+import { setScrollLock } from '@/lib/lenis';
 import { Media } from '@/components/ui/Media';
 import { TransitionLink } from '@/components/ui/TransitionLink';
 
@@ -24,12 +24,14 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
   const [active, setActive] = useState(0);
 
   useEffect(() => {
-    const lenis = getLenis();
-    if (open) lenis?.stop();
-    else lenis?.start();
+    if (!open) return;
+    setScrollLock('menu', true);
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    if (open) window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      setScrollLock('menu', false);
+    };
   }, [open, onClose]);
 
   return (

@@ -7,12 +7,13 @@ import { getProduct, Product } from '@/data/products';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { mq } from '@/lib/animations';
 import { cn, formatPrice } from '@/lib/format';
-import { getLenis } from '@/lib/lenis';
+import { setScrollLock } from '@/lib/lenis';
 import { useShop } from '@/lib/store';
 import { Media } from '@/components/ui/Media';
 import { IconBag, IconClose } from '@/components/ui/Icons';
 import { RevealText } from '@/components/ui/Reveal';
 import { TransitionLink } from '@/components/ui/TransitionLink';
+import { Portal } from '@/components/ui/Portal';
 
 const tones: Record<Look['tone'], string> = {
   blush: 'bg-[#e7c3d3] text-ink',
@@ -63,7 +64,7 @@ export function Lookbook() {
       <ol className="mx-auto mt-14 max-w-[1600px]">
         {looks.map((look, i) => (
           <li key={look.id} className="lb-card sticky top-[9svh] mb-[6svh] h-[86svh] min-h-[560px]">
-            <article className={cn('lb-inner grid h-full grid-rows-[1fr_auto] md:grid-rows-1 origin-top overflow-hidden rounded-[var(--radius-card)] will-change-transform md:grid-cols-[1.25fr_1fr]', tones[look.tone])}>
+            <article className={cn('lb-inner grid h-full grid-rows-[auto_1fr] md:grid-rows-1 origin-top overflow-hidden rounded-[var(--radius-card)] will-change-transform md:grid-cols-[1.25fr_1fr]', tones[look.tone])}>
               <div className="relative min-h-0 overflow-hidden">
                 <Media k={look.image} alt={look.alt} fill sizes="(min-width:768px) 55vw, 100vw" className="object-cover" />
                 {look.spots.map((s) => {
@@ -88,7 +89,7 @@ export function Lookbook() {
                   );
                 })}
               </div>
-              <div className="flex flex-col justify-between gap-4 p-5 md:p-10 lg:p-14">
+              <div className="order-first flex flex-col justify-between gap-4 p-5 md:order-none md:p-10 lg:p-14">
                 <div className="flex items-center justify-between">
                   <span className="eyebrow">Look {look.id}</span>
                   <span className="eyebrow tabular-nums opacity-60">
@@ -123,18 +124,18 @@ function ShopTheLook({ state, onClose }: { state: { look: Look; focus?: string }
   const products = (state?.look.spots.map((s) => getProduct(s.slug)).filter(Boolean) ?? []) as Product[];
 
   useEffect(() => {
-    const lenis = getLenis();
     if (!state) return;
-    lenis?.stop();
+    setScrollLock('look', true);
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
-      lenis?.start();
+      setScrollLock('look', false);
     };
   }, [state, onClose]);
 
   return (
+    <Portal>
     <AnimatePresence>
       {state && (
         <div className="fixed inset-0 z-[80]">
@@ -207,5 +208,6 @@ function ShopTheLook({ state, onClose }: { state: { look: Look; focus?: string }
         </div>
       )}
     </AnimatePresence>
+    </Portal>
   );
 }

@@ -7,12 +7,13 @@ import { Product, Variant, variantLabels } from '@/data/products';
 import { site, whatsappLink } from '@/data/site';
 import { flyToCart } from '@/lib/flyToCart';
 import { cn, formatPrice } from '@/lib/format';
-import { getLenis } from '@/lib/lenis';
+import { setScrollLock } from '@/lib/lenis';
 import { useShop } from '@/lib/store';
 import { Media } from '@/components/ui/Media';
 import { IconArrow, IconClose, IconMinus, IconPlus, IconWhatsapp } from '@/components/ui/Icons';
 import { RevealText } from '@/components/ui/Reveal';
 import { TransitionLink } from '@/components/ui/TransitionLink';
+import { Portal } from '@/components/ui/Portal';
 import { FavoriteButton } from '@/components/shop/FavoriteButton';
 import { ProductCard, productVtName } from '@/components/shop/ProductCard';
 
@@ -270,8 +271,7 @@ function Lightbox({ product, index, onClose, onIndex }: { product: Product; inde
   const n = product.images.length;
   useEffect(() => {
     if (index === null) return;
-    const lenis = getLenis();
-    lenis?.stop();
+    setScrollLock('lightbox', true);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowRight') onIndex((index + 1) % n);
@@ -280,11 +280,12 @@ function Lightbox({ product, index, onClose, onIndex }: { product: Product; inde
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
-      lenis?.start();
+      setScrollLock('lightbox', false);
     };
   }, [index, n, onClose, onIndex]);
 
   return (
+    <Portal>
     <AnimatePresence>
       {index !== null && (
         <motion.div role="dialog" aria-modal="true" aria-label={`Fotos de ${product.name}`} className="fixed inset-0 z-[90] bg-ink/95" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -312,5 +313,6 @@ function Lightbox({ product, index, onClose, onIndex }: { product: Product; inde
         </motion.div>
       )}
     </AnimatePresence>
+    </Portal>
   );
 }

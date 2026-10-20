@@ -45,7 +45,7 @@ export default async function ProductPage({ params }: Props) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ProductView product={product} pairs={getPairs(product)} />
+      <ProductView key={product.slug} product={product} pairs={getPairs(product)} />
     </>
   );
 }

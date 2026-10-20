@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef } from 'react';
 import { phrases } from '@/data/site';
-import { getLenis } from '@/lib/lenis';
+import { setScrollLock } from '@/lib/lenis';
 import { useShop } from '@/lib/store';
 import { IconClose } from '@/components/ui/Icons';
 
@@ -24,16 +24,15 @@ export function RingSizeGuide() {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    const lenis = getLenis();
-    if (!open) {
-      lenis?.start();
-      return;
-    }
-    lenis?.stop();
+    if (!open) return;
+    setScrollLock('ring', true);
     requestAnimationFrame(() => closeRef.current?.focus());
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      setScrollLock('ring', false);
+    };
   }, [open, setOpen]);
 
   return (

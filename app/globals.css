@@ -49,7 +49,8 @@ html.lenis body {
 .lenis.lenis-smooth [data-lenis-prevent] {
   overscroll-behavior: contain;
 }
-.lenis.lenis-stopped {
+.lenis.lenis-stopped,
+html.scroll-locked {
   overflow: hidden;
 }
 
@@ -263,4 +264,45 @@ html[data-preloaded] .preloader {
 }
 .js [data-hero-hide] {
   visibility: hidden;
+}
+
+/* ——— Hero: selo giratório, reflexo na joia ——— */
+@keyframes badge-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.badge-spin {
+  animation: badge-spin 16s linear infinite;
+  transform-origin: 50% 50%;
+}
+/* Faixa de luz que atravessa a joia, recortada pelo próprio contorno do brinco */
+.jewel-shine {
+  -webkit-mask: url('/media/joia-rubi-recorte.webp') center / contain no-repeat;
+  mask: url('/media/joia-rubi-recorte.webp') center / contain no-repeat;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+.jewel-shine::before {
+  content: '';
+  position: absolute;
+  inset: -20% -60%;
+  background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 0.75) 48%, rgb(255 244 214 / 0.35) 52%, transparent 62%);
+  transform: translateX(-70%);
+  animation: jewel-shine 4.8s cubic-bezier(0.65, 0, 0.35, 1) 2.6s infinite;
+}
+@keyframes jewel-shine {
+  0% {
+    transform: translateX(-70%);
+  }
+  45%,
+  100% {
+    transform: translateX(70%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge-spin,
+  .jewel-shine::before {
+    animation: none;
+  }
 }

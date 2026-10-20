@@ -7,6 +7,24 @@ import { gsap, ScrollTrigger, prefersReducedMotion } from '@/lib/gsap';
 let instance: Lenis | null = null;
 export const getLenis = () => instance;
 
+/**
+ * Trava de rolagem centralizada. Cada camada (menu, sacola, busca, modais,
+ * cortina) registra a própria trava; a página só volta a rolar quando todas
+ * saírem. Antes cada uma chamava lenis.start/stop e uma desfazia a outra.
+ */
+const locks = new Set<string>();
+function applyLock() {
+  const locked = locks.size > 0;
+  if (locked) instance?.stop();
+  else instance?.start();
+  if (typeof document !== 'undefined') document.documentElement.classList.toggle('scroll-locked', locked);
+}
+export function setScrollLock(id: string, locked: boolean) {
+  if (locked) locks.add(id);
+  else locks.delete(id);
+  applyLock();
+}
+
 /** Scroll para o topo, com ou sem Lenis. */
 export function scrollToTop(immediate = true) {
   if (instance) instance.scrollTo(0, { immediate, force: true });
@@ -38,6 +56,7 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
       lenis.on('scroll', ScrollTrigger.update);
       gsap.ticker.add(tick);
       gsap.ticker.lagSmoothing(0);
+      applyLock();
     };
     const stop = () => {
       gsap.ticker.remove(tick);
@@ -48,8 +67,13 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
 
     if (!media.matches) start();
     media.addEventListener('change', onChange);
+    // fontes e imagens mudam a altura das seções: recalcula os gatilhos quando carregam
+    document.fonts?.ready.then(() => ScrollTrigger.refresh());
+    const onLoad = () => ScrollTrigger.refresh();
+    window.addEventListener('load', onLoad);
     return () => {
       media.removeEventListener('change', onChange);
+      window.removeEventListener('load', onLoad);
       stop();
     };
   }, []);

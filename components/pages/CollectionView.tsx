@@ -7,11 +7,13 @@ import { categories, CategorySlug } from '@/data/categories';
 import { products, StoneColor, stoneLabels, Tag, tagLabels } from '@/data/products';
 import { Flip, gsap, ScrollTrigger } from '@/lib/gsap';
 import { mq } from '@/lib/animations';
+import { setScrollLock } from '@/lib/lenis';
 import { cn } from '@/lib/format';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { IconClose } from '@/components/ui/Icons';
 import { ProductCard, ProductCardSkeleton } from '@/components/shop/ProductCard';
 import { FilterPills } from '@/components/shop/FilterPills';
+import { Portal } from '@/components/ui/Portal';
 
 type Sort = 'relevancia' | 'menor' | 'maior' | 'novidades';
 const sorts: { value: Sort; label: string }[] = [
@@ -106,6 +108,12 @@ export function CollectionView() {
     });
   }, [filtered]);
 
+  useEffect(() => {
+    if (!panel) return;
+    setScrollLock('filters', true);
+    return () => setScrollLock('filters', false);
+  }, [panel]);
+
   // Infinite scroll: carrega mais quando o sentinela aparece (com skeletons enquanto "busca")
   useEffect(() => {
     const el = sentinel.current;
@@ -151,6 +159,7 @@ export function CollectionView() {
       <PageHeader
         eyebrow="Loja VALUT"
         title={title}
+        titleKey={`${collection}-${category}`}
         aside={
           <p className="text-sm text-ink/60" aria-live="polite">
             {filtered.length} {filtered.length === 1 ? 'peça' : 'peças'}
@@ -234,6 +243,7 @@ export function CollectionView() {
         )}
       </section>
 
+      <Portal>
       <AnimatePresence>
         {panel && (
           <div className="fixed inset-0 z-[80]">
@@ -308,6 +318,7 @@ export function CollectionView() {
           </div>
         )}
       </AnimatePresence>
+      </Portal>
     </>
   );
 }

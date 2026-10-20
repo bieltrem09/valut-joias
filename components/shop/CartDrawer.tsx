@@ -6,7 +6,7 @@ import { site } from '@/data/site';
 import { variantLabels } from '@/data/products';
 import { cartLines, cartSubtotal, startCheckout } from '@/lib/checkout';
 import { cn, formatPrice } from '@/lib/format';
-import { getLenis } from '@/lib/lenis';
+import { setScrollLock } from '@/lib/lenis';
 import { cartCount, useShop } from '@/lib/store';
 import { IconClose, IconMinus, IconPlus } from '@/components/ui/Icons';
 import { Media } from '@/components/ui/Media';
@@ -31,17 +31,17 @@ export function CartDrawer() {
   const progress = Math.min(1, subtotal / site.freeShippingThreshold);
 
   useEffect(() => {
-    const lenis = getLenis();
-    if (open) {
-      lastFocus.current = document.activeElement as HTMLElement;
-      lenis?.stop();
-      requestAnimationFrame(() => closeRef.current?.focus());
-      const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-      window.addEventListener('keydown', onKey);
-      return () => window.removeEventListener('keydown', onKey);
-    }
-    lenis?.start();
-    lastFocus.current?.focus?.();
+    if (!open) return;
+    lastFocus.current = document.activeElement as HTMLElement;
+    setScrollLock('cart', true);
+    requestAnimationFrame(() => closeRef.current?.focus());
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      setScrollLock('cart', false);
+      lastFocus.current?.focus?.({ preventScroll: true });
+    };
   }, [open, setOpen]);
 
   return (

@@ -8,8 +8,19 @@ import { Media } from '@/components/ui/Media';
 import { PillLink } from '@/components/ui/Buttons';
 import { IconArrow } from '@/components/ui/Icons';
 import { TransitionLink } from '@/components/ui/TransitionLink';
+import { RotatingWords } from '@/components/ui/RotatingWords';
+import { RotatingBadge } from '@/components/ui/RotatingBadge';
 
 const WORD = ['V', 'Λ', 'L', 'U', 'T'];
+// brilhos em % da caixa da joia
+const GLINTS = [
+  { x: 18, y: 30, s: 1 },
+  { x: 74, y: 12, s: 0.8 },
+  { x: 88, y: 46, s: 0.6 },
+  { x: 30, y: 78, s: 0.7 },
+  { x: 58, y: 40, s: 0.5 },
+  { x: 8, y: 62, s: 0.45 },
+];
 
 /**
  * Hero editorial (ref. Velora): "VΛLUT" gigante atrás da joia recortada,
@@ -32,6 +43,8 @@ export function Hero() {
         const reduced = ctx.conditions?.reduced;
         gsap.set(q('[data-hero-hide]'), { autoAlpha: 0 });
         let split: SplitText | undefined;
+        let serif: SplitText | undefined;
+        const loops: gsap.core.Animation[] = [];
 
         const play = () => {
           if (reduced) {
@@ -40,9 +53,10 @@ export function Hero() {
           }
           gsap.set(q('[data-hero-hide]'), { autoAlpha: 1 });
           split = SplitText.create(q('.hero-lede'), { type: 'lines', mask: 'lines' });
+          serif = SplitText.create(q('.hero-serif'), { type: 'chars' });
           const tl = gsap.timeline({ defaults: { ease: ease.out } });
           tl.from(q('.hero-letter'), { yPercent: 105, duration: 1.3, stagger: 0.07 }, 0)
-            .from(q('.hero-serif'), { yPercent: 110, duration: 1.2 }, 0.35)
+            .from(serif.chars, { yPercent: 115, rotationX: -90, rotation: 12, transformOrigin: '50% 100%', duration: 1.1, stagger: 0.045 }, 0.4)
             .from(q('.hero-jewel'), { y: () => -window.innerHeight * 0.65, rotation: -14, scale: 1.08, duration: 1.5, ease: ease.land }, 0.15)
             .from(q('.hero-shadow'), { scaleX: 0.2, autoAlpha: 0, duration: 1.2 }, 0.75)
             .fromTo(q('.hero-photo'), { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.2, ease: 'curtain', stagger: 0.12 }, 0.45)
@@ -50,12 +64,29 @@ export function Hero() {
             .fromTo(q('.hero-line'), { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1.1, ease: 'power2.inOut' }, 0.9)
             .from(q('.hero-note'), { autoAlpha: 0, y: 10, duration: 0.8, stagger: 0.08 }, 1.0)
             .from(split.lines, { yPercent: 110, duration: 1, stagger: 0.06 }, 0.7)
-            .from(q('.hero-fade'), { autoAlpha: 0, y: 16, duration: 0.9, stagger: 0.07 }, 0.85);
+            .from(q('.hero-fade'), { autoAlpha: 0, y: 16, duration: 0.9, stagger: 0.07 }, 0.85)
+            .from(q('.hero-badge'), { scale: 0, rotation: -120, duration: 1.2, ease: 'back.out(1.6)' }, 1.0)
+            // a joia passa a "levitar" depois de pousar
+            .add(() => {
+              loops.push(gsap.to(q('[data-float]'), { y: -14, rotation: 1.6, duration: 2.8, ease: 'sine.inOut', yoyo: true, repeat: -1 }));
+              loops.push(gsap.to(q('.hero-shadow'), { scaleX: 0.86, opacity: 0.7, duration: 2.8, ease: 'sine.inOut', yoyo: true, repeat: -1 }));
+              q('.hero-glint').forEach((g, i) => {
+                loops.push(
+                  gsap.fromTo(
+                    g,
+                    { scale: 0, rotation: 0, autoAlpha: 0 },
+                    { scale: 1, rotation: 90, autoAlpha: 1, duration: 0.55, ease: 'power2.out', yoyo: true, repeat: -1, repeatDelay: 1.4 + (i % 3) * 0.7, delay: i * 0.45 },
+                  ),
+                );
+              });
+            }, 1.7);
         };
         const off = onReveal(play);
         return () => {
           off();
+          loops.forEach((l) => l.kill());
           split?.revert();
+          serif?.revert();
         };
       });
 
@@ -81,7 +112,34 @@ export function Hero() {
           rotX(-ny * 12);
         };
         el.addEventListener('pointermove', move);
-        return () => el.removeEventListener('pointermove', move);
+
+        // as letras do VΛLUT "levantam" em onda perto do cursor
+        const letters = q('.hero-letter');
+        const lift = letters.map((l) => gsap.quickTo(l, 'y', { duration: 0.8, ease: 'power3.out' }));
+        const wave = (e: PointerEvent) => {
+          letters.forEach((l, i) => {
+            const r = l.getBoundingClientRect();
+            const d = Math.abs(e.clientX - (r.left + r.width / 2));
+            lift[i](-Math.max(0, 1 - d / (window.innerWidth * 0.22)) * window.innerWidth * 0.018);
+          });
+        };
+        const calm = () => lift.forEach((f) => f(0));
+        el.addEventListener('pointermove', wave);
+        el.addEventListener('pointerleave', calm);
+        return () => {
+          el.removeEventListener('pointermove', move);
+          el.removeEventListener('pointermove', wave);
+          el.removeEventListener('pointerleave', calm);
+        };
+      });
+
+      // ——— Mobile: sem pin, mas o scroll ainda mexe na cena ———
+      mm.add(`${mq.mobile} and ${mq.motion}`, () => {
+        const tl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: 'bottom top', scrub: 0.6 } });
+        tl.to(q('[data-scroll="word"]'), { yPercent: -35, autoAlpha: 0.2 }, 0)
+          .to(q('[data-scroll="jewel"]'), { rotation: 35, scale: 0.8, yPercent: -18 }, 0)
+          .to(q('.hero-badge-wrap'), { rotation: 160, yPercent: -40 }, 0)
+          .to(q('[data-scroll="ui"]'), { yPercent: 12, autoAlpha: 0 }, 0);
       });
 
       // ——— Scroll: pin de ~100vh; a próxima seção sobe por cima ———
@@ -94,6 +152,7 @@ export function Hero() {
           .to(q('[data-scroll="jewel"]'), { rotation: 180, scale: 0.45, yPercent: -12 }, 0)
           .to(q('[data-scroll="photos"]'), { yPercent: -30, autoAlpha: 0 }, 0)
           .to(q('[data-scroll="ui"]'), { autoAlpha: 0, y: -40 }, 0)
+          .to(q('.hero-badge-wrap'), { rotation: 200, yPercent: -60, autoAlpha: 0 }, 0)
           .to(q('.hero-dim'), { autoAlpha: 0.55 }, 0);
       });
 
@@ -133,6 +192,7 @@ export function Hero() {
       {/* Joia recortada + sombra no chão */}
       <div data-scroll="jewel" className="absolute top-[57.5svh] left-1/2 z-20 w-[min(54vw,330px)] -translate-x-1/2 -translate-y-1/2 lg:top-[54svh] lg:w-[min(31vw,600px)]">
         <div data-mouse="jewel">
+          <div data-float>
           <div data-hero-hide className="hero-jewel relative">
             <Media
               k="joia-rubi-recorte"
@@ -141,8 +201,30 @@ export function Hero() {
               sizes="(min-width: 1024px) 31vw, 60vw"
               className="relative z-10 h-auto w-full drop-shadow-[0_30px_35px_rgba(14,13,11,0.28)]"
             />
+            <div aria-hidden className="jewel-shine absolute inset-0 z-20 overflow-hidden" />
+            {GLINTS.map((g, i) => (
+              <svg
+                key={i}
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="hero-glint pointer-events-none invisible absolute z-30 text-white drop-shadow-[0_0_6px_rgba(255,236,190,0.9)]"
+                style={{ left: `${g.x}%`, top: `${g.y}%`, width: `${g.s * 9}%`, translate: '-50% -50%' }}
+              >
+                <path fill="currentColor" d="M12 0c.7 7.5 2.4 10.6 12 12-9.6 1.4-11.3 4.5-12 12-.7-7.5-2.4-10.6-12-12 9.6-1.4 11.3-4.5 12-12Z" />
+              </svg>
+            ))}
+          </div>
           </div>
           <div aria-hidden data-hero-hide className="hero-shadow absolute -bottom-[6%] left-[12%] h-[9%] w-[76%] rounded-[50%] bg-ink/30 blur-2xl" />
+        </div>
+      </div>
+
+      {/* Selo giratório */}
+      <div className="hero-badge-wrap absolute top-[59svh] right-[4vw] z-30 w-[88px] lg:top-[27svh] lg:right-auto lg:left-[30vw] lg:w-[128px]">
+        <div data-mouse="photos">
+          <div data-hero-hide className="hero-badge">
+            <RotatingBadge text="Coleção Rubi Mood ✦ Semijoia que encanta ✦" className="w-full" />
+          </div>
         </div>
       </div>
 
@@ -180,10 +262,13 @@ export function Hero() {
           </p>
 
           {/* Texto + CTAs */}
-          <div className="absolute inset-x-5 bottom-[4svh] lg:inset-x-auto lg:bottom-auto lg:top-[60svh] lg:left-[17vw] lg:w-[19vw]">
+          <div className="absolute inset-x-5 bottom-[4svh] lg:inset-x-auto lg:bottom-auto lg:top-[56svh] lg:left-[15vw] lg:w-[17.5vw]">
+            <p data-hero-hide className="hero-fade mb-3 font-serif text-[22px] leading-tight lg:text-[26px]">
+              <RotatingWords prefix="Para" words={['os dias comuns.', 'os grandes dias.', 'você brilhar.', 'quem revende.']} className="text-ink" />
+            </p>
             <p data-hero-hide className="hero-lede max-w-[21rem] text-[14px] leading-[1.55] text-ink/75 lg:text-[14px] lg:leading-relaxed">
-              Peças pensadas para os dias comuns e para os grandes dias. <strong className="font-medium text-ink">Atacado & Varejo</strong>, com a{' '}
-              <span className="serif-italic text-[1.1em] text-ink">elegância</span> que exala em cada detalhe.
+              <strong className="font-medium text-ink">Atacado & Varejo</strong>, com a <span className="serif-italic text-[1.1em] text-ink">elegância</span> que exala em cada detalhe<span className="lg:hidden">.</span>
+              <span className="hidden lg:inline"> — peças pensadas para acompanhar a sua história.</span>
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-5 lg:mt-6">
               <div data-hero-hide className="hero-fade">
@@ -212,11 +297,6 @@ export function Hero() {
           </div>
           <span data-hero-hide className="hero-fade absolute top-[12svh] left-5 text-[12px] tabular-nums text-ink/60 lg:hidden">valut / 01</span>
           <span data-hero-hide className="hero-fade eyebrow absolute top-[12svh] right-5 text-[10px] text-ink/60 lg:hidden">Semijoia que encanta</span>
-          <p data-hero-hide className="hero-fade absolute inset-x-0 top-[73.5svh] flex items-center justify-center gap-3 text-[11px] tracking-[0.16em] text-ink/60 uppercase lg:hidden">
-            <span className="h-px w-8 bg-ink/30" aria-hidden />
-            Coleção Rubi Mood
-            <span className="h-px w-8 bg-ink/30" aria-hidden />
-          </p>
         </div>
       </div>
 

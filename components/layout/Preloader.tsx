@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { gsap, prefersReducedMotion } from '@/lib/gsap';
-import { getLenis } from '@/lib/lenis';
+import { setScrollLock } from '@/lib/lenis';
 import { isCovered, markPreloaded, setCovered } from '@/lib/reveal';
 import { symbolPaths, wordmarkPaths } from '@/components/ui/logo-paths';
 
@@ -23,12 +23,11 @@ export function Preloader() {
       return;
     }
     const el = root.current!;
-    const lenis = getLenis();
-    lenis?.stop();
+    setScrollLock('preloader', true);
     window.scrollTo(0, 0);
     const finish = () => {
       markPreloaded();
-      lenis?.start();
+      setScrollLock('preloader', false);
       setDone(true);
     };
 

@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { gsap, ScrollTrigger, prefersReducedMotion } from '@/lib/gsap';
-import { getLenis, scrollToTop } from '@/lib/lenis';
+import { scrollToTop, setScrollLock } from '@/lib/lenis';
 import { setCovered } from '@/lib/reveal';
 
 type NavigateOptions = { label?: string; viewTransition?: boolean };
@@ -66,7 +66,6 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
       }
       if (busy) return;
       setBusy(true);
-      const lenis = getLenis();
 
       try {
         if (prefersReducedMotion()) {
@@ -93,7 +92,7 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
 
         setLabel(opts.label ?? labelFor(url.pathname));
         setCovered(true);
-        lenis?.stop();
+        setScrollLock('transition', true);
         const layers = [gold.current, ivory.current];
         await gsap
           .timeline()
@@ -108,7 +107,7 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
         await nextFrame();
         scrollToTop();
         ScrollTrigger.refresh();
-        lenis?.start();
+        setScrollLock('transition', false);
 
         const out = gsap.timeline();
         out
@@ -118,7 +117,7 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
           .set(layers, { visibility: 'hidden' });
         await out.then();
       } finally {
-        lenis?.start();
+        setScrollLock('transition', false);
         setCovered(false);
         setBusy(false);
       }

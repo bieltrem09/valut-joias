@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { categories, categoryName } from '@/data/categories';
 import { products } from '@/data/products';
 import { formatPrice } from '@/lib/format';
-import { getLenis } from '@/lib/lenis';
+import { setScrollLock } from '@/lib/lenis';
 import { useShop } from '@/lib/store';
 import { IconClose, IconSearch } from '@/components/ui/Icons';
 import { Media } from '@/components/ui/Media';
@@ -20,16 +20,16 @@ export function SearchOverlay() {
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const lenis = getLenis();
-    if (!open) {
-      lenis?.start();
-      return;
-    }
-    lenis?.stop();
-    setTimeout(() => input.current?.focus(), 250);
+    if (!open) return;
+    setScrollLock('search', true);
+    const t = setTimeout(() => input.current?.focus({ preventScroll: true }), 250);
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('keydown', onKey);
+      setScrollLock('search', false);
+    };
   }, [open, setOpen]);
 
   const results = useMemo(() => {

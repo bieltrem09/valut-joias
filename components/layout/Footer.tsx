@@ -34,7 +34,8 @@ export function Footer() {
             scrollTrigger: { trigger: wrap.current, start: 'top bottom', end: 'bottom bottom', scrub: true },
           },
         );
-        gsap.fromTo('.footer-inner', { yPercent: -18 }, { yPercent: 0, ease: 'none', scrollTrigger: { trigger: wrap.current, start: 'top bottom', end: 'bottom bottom', scrub: true } });
+        if (window.matchMedia(mq.desktop).matches)
+          gsap.fromTo('.footer-inner', { yPercent: -18 }, { yPercent: 0, ease: 'none', scrollTrigger: { trigger: wrap.current, start: 'top bottom', end: 'bottom bottom', scrub: true } });
       });
       return () => mm.revert();
     },
