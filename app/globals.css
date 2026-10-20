@@ -306,3 +306,19 @@ html[data-preloaded] .preloader {
     animation: none;
   }
 }
+
+/* Galeria curva: largura dos cards por breakpoint */
+.arc-scroller {
+  --arc-w: 60vw;
+  scroll-padding-inline: 0;
+}
+@media (min-width: 640px) {
+  .arc-scroller {
+    --arc-w: 40vw;
+  }
+}
+@media (min-width: 1024px) {
+  .arc-scroller {
+    --arc-w: min(17vw, 50svh);
+  }
+}

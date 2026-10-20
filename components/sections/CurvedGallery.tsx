@@ -1,12 +1,14 @@
 'use client';
 
-import { MouseEvent, useRef } from 'react';
+import { MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { mq } from '@/lib/animations';
 import { MediaKey } from '@/data/media.generated';
+import { cn } from '@/lib/format';
 import { Media } from '@/components/ui/Media';
 import { LazyVideo } from '@/components/ui/LazyVideo';
 import { PillLink } from '@/components/ui/Buttons';
+import { IconArrow, IconArrowLeft } from '@/components/ui/Icons';
 import { RevealText } from '@/components/ui/Reveal';
 import { TransitionLink } from '@/components/ui/TransitionLink';
 import { productVtName } from '@/components/shop/ProductCard';
@@ -25,162 +27,162 @@ const items: { key: MediaKey; alt: string; slug: string; label: string }[] = [
 ];
 
 /**
- * Galeria curva (ref. Exotica): fotos dispostas num arco côncavo 3D (CSS
- * perspective + rotateY/translateZ). Seção pinada: o scroll gira o arco; também
- * aceita arrastar. Bordas mais escuras e menores. Ao entrar, o arco "desenrola"
- * do centro para fora. Clique → produto com elemento compartilhado.
+ * Galeria curva (ref. Exotica).
+ *
+ * A rolagem é NATIVA (overflow-x + scroll-snap): o navegador decide sozinho se
+ * o gesto é horizontal ou vertical, faz a inércia e o encaixe — nada de "brigar"
+ * com o dedo. O arco 3D é só visual: a cada frame de scroll, cada foto recebe
+ * rotação/escala/brilho conforme a distância até o centro (no elemento interno,
+ * então o layout e o snap não mudam).
+ *
+ * Desktop: a seção é pinada e o scroll vertical da página percorre a galeria.
  */
 export function CurvedGallery() {
   const root = useRef<HTMLElement>(null);
-  const ring = useRef<HTMLDivElement>(null);
-  const dragged = useRef(false);
+  const scroller = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+  const activeRef = useRef(0);
+
+  // Aplica o arco conforme a posição de cada card em relação ao centro.
+  const paint = useCallback(() => {
+    const sc = scroller.current;
+    if (!sc) return;
+    const box = sc.getBoundingClientRect();
+    const center = box.left + box.width / 2;
+    let best = 0;
+    let bestDist = Infinity;
+    sc.querySelectorAll<HTMLElement>('[data-arc-item]').forEach((item, i) => {
+      const r = item.getBoundingClientRect();
+      const d = (r.left + r.width / 2 - center) / (box.width / 2); // -1 … 1 na borda
+      const t = Math.min(1, Math.abs(d));
+      if (Math.abs(d) < bestDist) {
+        bestDist = Math.abs(d);
+        best = i;
+      }
+      const inner = item.firstElementChild as HTMLElement;
+      // puxa os vizinhos um pouco para o centro, para que "espiem" nas bordas
+      const pull = -Math.sign(d) * Math.min(Math.abs(d), 1.6) * r.width * 0.2;
+      inner.style.transform = `perspective(1000px) translateX(${pull}px) translateY(${t * t * 40}px) rotateY(${-Math.max(-1.4, Math.min(1.4, d)) * 30}deg) scale(${1 - t * 0.16})`;
+      inner.style.filter = `brightness(${1 - t * 0.55})`;
+    });
+    if (best !== activeRef.current) {
+      activeRef.current = best;
+      setActive(best);
+    }
+  }, []);
+
+  useEffect(() => {
+    const sc = scroller.current!;
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(paint);
+    };
+    // começa centralizado na 1ª foto
+    paint();
+    sc.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      sc.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [paint]);
+
+  // Mouse (desktop sem pin, ex.: tablet com mouse): arrastar para os lados
+  useEffect(() => {
+    const sc = scroller.current!;
+    let down = false;
+    let startX = 0;
+    let startLeft = 0;
+    let moved = false;
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse' || window.matchMedia(mq.desktop).matches) return;
+      down = true;
+      moved = false;
+      startX = e.clientX;
+      startLeft = sc.scrollLeft;
+      sc.style.scrollSnapType = 'none';
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!down) return;
+      const dx = e.clientX - startX;
+      if (Math.abs(dx) > 5) moved = true;
+      sc.scrollLeft = startLeft - dx;
+    };
+    const onUp = () => {
+      if (!down) return;
+      down = false;
+      sc.style.scrollSnapType = '';
+    };
+    const onClick = (e: globalThis.MouseEvent) => {
+      if (moved) {
+        e.preventDefault();
+        e.stopPropagation();
+        moved = false;
+      }
+    };
+    sc.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    sc.addEventListener('click', onClick, true);
+    return () => {
+      sc.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      sc.removeEventListener('click', onClick, true);
+    };
+  }, []);
 
   useGSAP(
     () => {
-      const el = root.current!;
-      const cards = gsap.utils.toArray<HTMLElement>('.arc-card', ring.current);
-      const n = cards.length;
-      const state = { rot: 0, drag: 0, spread: 0, scroll: 0 };
+      const sc = scroller.current!;
       const mm = gsap.matchMedia();
-
-      const layout = () => {
-        const w = ring.current!.offsetWidth;
-        const cardW = cards[0].offsetWidth;
-        const R = Math.max(w * 0.62, 520);
-        const step = ((cardW * 1.12) / R) * (180 / Math.PI) * state.spread;
-        const span = step * n;
-        const maxA = (step * n) / 2 || 1;
-        cards.forEach((c, i) => {
-          let a = (i - (n - 1) / 2) * step + state.rot + state.drag + state.scroll;
-          if (span > 0) a = gsap.utils.wrap(-span / 2, span / 2, a);
-          const t = Math.min(1, Math.abs(a) / maxA);
-          gsap.set(c, {
-            transform: `translate(-50%, -50%) translateZ(${R}px) rotateY(${a}deg) translateZ(${-R}px) scale(${1 - 0.22 * t})`,
-            filter: `brightness(${1 - 0.6 * t})`,
-            zIndex: Math.round(100 - t * 100),
-          });
+      // Entrada: as fotos sobem do centro para fora
+      mm.add(mq.motion, () => {
+        gsap.from('[data-arc-item]', {
+          autoAlpha: 0,
+          yPercent: 30,
+          duration: 1.2,
+          ease: 'expo.out',
+          stagger: { each: 0.06, from: 'start' },
+          scrollTrigger: { trigger: sc, start: 'top 80%', once: true },
         });
-      };
-
-      // Arrastar (mouse e toque) com inércia e encaixe no card mais próximo.
-      // No toque o ganho é maior: um gesto curto já gira várias fotos.
-      const stepDeg = () => {
-        const w = ring.current!.offsetWidth;
-        const R = Math.max(w * 0.62, 520);
-        return ((cards[0].offsetWidth * 1.12) / R) * (180 / Math.PI);
-      };
-      let startX = 0;
-      let base = 0;
-      let down = false;
-      let gain = 0.1;
-      let lastX = 0;
-      let lastT = 0;
-      let velocity = 0; // graus por ms
-      const onDown = (e: PointerEvent) => {
-        down = true;
-        dragged.current = false;
-        startX = lastX = e.clientX;
-        lastT = performance.now();
-        velocity = 0;
-        base = state.drag;
-        const step = stepDeg();
-        // toque: ~1 card a cada 80% do card arrastado; mouse: 1 card por largura de card
-        gain = (e.pointerType === 'mouse' ? 1 : 1.25) * (step / cards[0].offsetWidth);
-        gsap.killTweensOf(state, 'drag');
-      };
-      const onMove = (e: PointerEvent) => {
-        if (!down) return;
-        const dx = e.clientX - startX;
-        if (Math.abs(dx) > 6) dragged.current = true;
-        const now = performance.now();
-        const dt = Math.max(1, now - lastT);
-        velocity = gsap.utils.interpolate(velocity, ((e.clientX - lastX) * gain) / dt, 0.4);
-        lastX = e.clientX;
-        lastT = now;
-        state.drag = base + dx * gain;
-        layout();
-      };
-      const onUp = () => {
-        if (!down) return;
-        down = false;
-        const step = stepDeg();
-        const projected = state.drag + gsap.utils.clamp(-1.5, 1.5, velocity * 260 / (stepDeg() || 1)) * stepDeg(); // inércia: no máx. ~1,5 card por gesto
-        const offset = state.rot + state.scroll;
-        // com número par de fotos o centro cai entre dois cards: desloca meio passo
-        const half = (((n - 1) / 2) % 1) * step;
-        const snapTo = (v: number) => Math.round((v + offset - half) / step) * step - offset + half;
-        let snapped = snapTo(projected);
-        // um gesto intencional (> 40px) sempre avança pelo menos uma foto
-        const moved = lastX - startX;
-        if (Math.abs(moved) > 40 && Math.abs(snapped - snapTo(base)) < step / 2) snapped = snapTo(base) + Math.sign(moved) * step;
-        gsap.to(state, { drag: snapped, duration: 1.1, ease: 'expo.out', onUpdate: () => {
-          layout();
-          updateCounter();
-        } });
-      };
-      const counter = el.querySelector<HTMLElement>('[data-arc-counter]');
-      const updateCounter = () => {
-        if (!counter) return;
-        const step = stepDeg() || 1;
-        const idx = gsap.utils.wrap(0, n, Math.round((n - 1) / 2 - (state.rot + state.drag + state.scroll) / step + 0.001));
-        counter.textContent = `${String(idx + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`;
-      };
-      const stage = ring.current!;
-      stage.addEventListener('pointerdown', onDown);
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-      window.addEventListener('pointercancel', onUp);
-
-      mm.add({ motion: mq.motion, reduced: mq.reduced, desktop: mq.desktop }, (ctx) => {
-        const { reduced, desktop } = ctx.conditions!;
-        state.rot = (((n - 1) / 2) % 1) * stepDeg(); // começa com uma foto centralizada
-        if (reduced) {
-          state.spread = 1;
-          layout();
-          return;
-        }
-        // Desenrola do centro para fora
-        gsap.fromTo(
-          state,
-          { spread: 0 },
-          { spread: 1, duration: 1.8, ease: 'expo.out', onUpdate: layout, scrollTrigger: { trigger: el, start: 'top 65%', once: true } },
-        );
-        gsap.from(cards, { autoAlpha: 0, duration: 1, stagger: { each: 0.05, from: 'center' }, scrollTrigger: { trigger: el, start: 'top 65%', once: true } });
-        if (desktop) {
-          gsap.to(state, {
-            scroll: -110,
-            ease: 'none',
-            onUpdate: () => (layout(), updateCounter()),
-            scrollTrigger: { trigger: el, start: 'top top', end: '+=160%', pin: true, scrub: 1, invalidateOnRefresh: true },
-          });
-        }
-        // no mobile o giro é só pelo arrasto (o scroll vertical não mexe no arco)
-        layout();
-        updateCounter();
       });
-
-      window.addEventListener('resize', layout);
-      return () => {
-        mm.revert();
-        stage.removeEventListener('pointerdown', onDown);
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-        window.removeEventListener('pointercancel', onUp);
-        window.removeEventListener('resize', layout);
-      };
+      // Desktop: seção pinada; o scroll vertical percorre a galeria
+      mm.add(`${mq.desktop} and ${mq.motion}`, () => {
+        const max = () => sc.scrollWidth - sc.clientWidth;
+        const st = gsap.to(sc, {
+          scrollLeft: () => max(),
+          ease: 'none',
+          scrollTrigger: {
+            trigger: root.current,
+            start: 'top top',
+            end: () => `+=${Math.max(600, max())}`,
+            pin: true,
+            scrub: 0.8,
+            invalidateOnRefresh: true,
+          },
+        });
+        return () => {
+          st.scrollTrigger?.kill();
+          sc.scrollLeft = 0;
+        };
+      });
+      return () => mm.revert();
     },
     { scope: root },
   );
 
+  const go = (dir: 1 | -1) => {
+    const sc = scroller.current!;
+    const item = sc.querySelectorAll<HTMLElement>('[data-arc-item]')[Math.max(0, Math.min(items.length - 1, activeRef.current + dir))];
+    item?.scrollIntoView({ behavior: window.matchMedia(mq.reduced).matches ? 'auto' : 'smooth', inline: 'center', block: 'nearest' });
+  };
+
   const onCardClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (dragged.current) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
     const img = e.currentTarget.querySelector<HTMLElement>('[data-vt]');
-    const slug = e.currentTarget.dataset.slug!;
-    if (img) img.style.viewTransitionName = productVtName(slug);
+    if (img) img.style.viewTransitionName = productVtName(e.currentTarget.dataset.slug!);
   };
 
   return (
@@ -189,49 +191,85 @@ export function CurvedGallery() {
         <LazyVideo name="video-flores-cravejadas" label="" className="rounded-[200px]" />
       </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-[1600px] px-5 pt-24 text-center md:px-8 lg:pt-[12svh]">
+      <div className="relative z-10 mx-auto w-full max-w-[1600px] px-5 pt-24 text-center md:px-8 lg:pt-[9svh]">
         <p className="eyebrow text-gold">Galeria VALUT</p>
-        <RevealText as="h2" id="gallery-title" className="mx-auto mt-4 max-w-4xl font-serif text-[clamp(2.2rem,5.4vw,5.5rem)] leading-[0.98] uppercase">
+        <RevealText as="h2" id="gallery-title" className="mx-auto mt-4 max-w-4xl font-serif text-[clamp(2.2rem,4.6vw,4.75rem)] leading-[0.98] uppercase">
           Adorne sua história com <span className="serif-italic normal-case text-gold">elegância</span>
         </RevealText>
       </div>
 
       <div
-        ref={ring}
-        data-cursor="Arraste"
-        className="relative z-10 mx-auto my-auto h-[58svh] w-full cursor-grab touch-pan-y select-none active:cursor-grabbing lg:h-[50svh]"
-        style={{ perspective: '1400px', perspectiveOrigin: '50% 50%' }}
-        role="group"
+        ref={scroller}
+        role="region"
         aria-roledescription="carrossel"
-        aria-label="Galeria de peças — arraste ou role para girar"
+        aria-label="Galeria de peças"
+        tabIndex={0}
+        data-cursor="Arraste"
+        className="arc-scroller no-scrollbar relative z-10 my-auto flex snap-x snap-mandatory items-center overflow-x-auto overscroll-x-contain py-14 select-none lg:snap-none lg:overflow-hidden lg:py-[3svh]"
       >
-        <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d' }}>
-          {items.map((it) => (
-            <TransitionLink
-              key={it.key + it.slug}
-              href={`/produto/${it.slug}`}
-              viewTransition
-              data-slug={it.slug}
-              onClick={onCardClick}
-              draggable={false}
-              className="arc-card group absolute top-1/2 left-1/2 block aspect-[3/4] w-[56vw] max-w-[300px] origin-center sm:w-[34vw] lg:w-[16vw]"
-              aria-label={`Ver ${it.label}`}
-            >
-              <div data-vt className="relative h-full w-full overflow-hidden rounded-[18px] bg-white/5 shadow-[0_40px_80px_-30px_rgba(0,0,0,.8)]">
-                <Media k={it.key} alt={it.alt} fill sizes="(min-width:1024px) 16vw, 56vw" draggable={false} className="object-cover transition-transform duration-700 ease-[var(--ease-expo)] group-hover:scale-105" />
+        {/* espaçadores para a 1ª e a última foto poderem ficar no centro */}
+        <div aria-hidden className="shrink-0" style={{ width: 'calc(50% - var(--arc-w) / 2)' }} />
+        {items.map((it, i) => (
+          <TransitionLink
+            key={it.slug}
+            href={`/produto/${it.slug}`}
+            viewTransition
+            data-slug={it.slug}
+            data-arc-item
+            onClick={onCardClick}
+            draggable={false}
+            aria-label={`${it.label} — foto ${i + 1} de ${items.length}`}
+            className="group block shrink-0 snap-center px-[2.5vw] lg:px-[1.2vw]"
+            style={{ width: 'var(--arc-w)' }}
+          >
+            <div className="will-change-transform" style={{ transformOrigin: '50% 50%' }}>
+              <div data-vt className="relative aspect-[3/4] overflow-hidden rounded-[18px] bg-white/5 shadow-[0_40px_80px_-30px_rgba(0,0,0,.8)]">
+                <Media
+                  k={it.key}
+                  alt={it.alt}
+                  fill
+                  sizes="(min-width:1024px) 18vw, 64vw"
+                  draggable={false}
+                  className="object-cover transition-transform duration-700 ease-[var(--ease-expo)] group-hover:scale-105"
+                />
               </div>
-              <span className="eyebrow absolute -bottom-7 left-0 text-ivory/60 opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-focus-visible:opacity-100">{it.label}</span>
-            </TransitionLink>
-          ))}
-        </div>
+              <p className={cn('eyebrow mt-4 text-center transition-opacity duration-500', active === i ? 'text-gold opacity-100' : 'opacity-0')}>{it.label}</p>
+            </div>
+          </TransitionLink>
+        ))}
+        <div aria-hidden className="shrink-0" style={{ width: 'calc(50% - var(--arc-w) / 2)' }} />
       </div>
 
-      <div className="relative z-10 flex items-center justify-center gap-4 pb-6 text-[11px] tracking-[0.18em] text-ivory/60 uppercase lg:hidden" aria-hidden>
-        <span>← Arraste</span>
-        <span className="h-px w-10 bg-ivory/25" />
-        <span data-arc-counter className="tabular-nums text-gold">01 / 10</span>
+      {/* Navegação: setas (mobile/tablet), contador e barra de progresso */}
+      <div className="relative z-10 mx-auto flex w-full max-w-md items-center justify-between gap-4 px-6 pb-6 lg:pb-4">
+        <button
+          type="button"
+          onClick={() => go(-1)}
+          disabled={active === 0}
+          className="grid h-11 w-11 place-items-center rounded-full border border-ivory/30 transition-[opacity,background-color] hover:bg-ivory hover:text-ink disabled:opacity-25 lg:invisible"
+          aria-label="Foto anterior"
+        >
+          <IconArrowLeft width={18} />
+        </button>
+        <div className="flex flex-1 flex-col items-center gap-2" aria-live="polite">
+          <span className="text-[12px] tracking-[0.2em] tabular-nums text-gold">
+            {String(active + 1).padStart(2, '0')} / {String(items.length).padStart(2, '0')}
+          </span>
+          <span aria-hidden className="relative block h-px w-full max-w-[160px] bg-ivory/20">
+            <span className="absolute inset-y-0 left-0 bg-gold transition-[width] duration-500 ease-[var(--ease-expo)]" style={{ width: `${((active + 1) / items.length) * 100}%` }} />
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => go(1)}
+          disabled={active === items.length - 1}
+          className="grid h-11 w-11 place-items-center rounded-full border border-ivory/30 transition-[opacity,background-color] hover:bg-ivory hover:text-ink disabled:opacity-25 lg:invisible"
+          aria-label="Próxima foto"
+        >
+          <IconArrow width={18} />
+        </button>
       </div>
-      <div className="relative z-10 flex justify-center pb-16 lg:pb-[8svh]">
+      <div className="relative z-10 flex justify-center pb-16 lg:pb-[5svh]">
         <PillLink href="/colecao" label="Ver coleção completa" variant="light" />
       </div>
     </section>
