@@ -53,9 +53,9 @@ export function Wholesale({ standalone = false }: { standalone?: boolean }) {
           <div className="lg:text-right">
             <p className="font-display text-[clamp(5rem,12vw,11rem)] text-gold">
               <span ref={num}>54</span>
-              <span className="text-[0.5em]"> mil+</span>
+              <span className="ml-[0.08em] text-[0.42em] tracking-[-0.01em]">mil+</span>
             </p>
-            <p className="eyebrow mt-2 text-ivory/70">seguidores no Instagram {site.instagram.handle}</p>
+            <p className="eyebrow mt-5 text-ivory/70">seguidores no Instagram {site.instagram.handle}</p>
           </div>
         </div>
 

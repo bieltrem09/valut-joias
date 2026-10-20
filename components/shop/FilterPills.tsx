@@ -20,7 +20,7 @@ export function FilterPills<T extends string>({
 }) {
   const id = useId();
   return (
-    <div role="radiogroup" aria-label={label} className="no-scrollbar flex gap-2 overflow-x-auto">
+    <div role="radiogroup" aria-label={label} className="no-scrollbar flex gap-2 overflow-x-auto pr-8 md:pr-0">
       {options.map((o) => {
         const active = o.value === value;
         return (

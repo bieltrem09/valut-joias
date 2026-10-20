@@ -86,7 +86,7 @@ export function Categories() {
                 <p className="eyebrow text-ivory/75">
                   Categoria <span className="tabular-nums">0{i + 1}</span>
                 </p>
-                <h3 className="mt-1 font-serif text-[clamp(2rem,3.2vw,3rem)] leading-none">{c.name}</h3>
+                <h3 className="mt-2.5 font-serif text-[clamp(2rem,3.2vw,3rem)] leading-[1.05]">{c.name}</h3>
                 <p className="mt-3 flex items-center gap-2 overflow-hidden text-sm">
                   <span className="translate-y-full transition-transform duration-500 ease-[var(--ease-expo)] group-hover:translate-y-0 group-focus-visible:translate-y-0 max-lg:translate-y-0">Ver peças</span>
                   <IconArrow width={16} className="-translate-x-4 opacity-0 transition-all duration-500 ease-[var(--ease-expo)] group-hover:translate-x-0 group-hover:opacity-100 max-lg:translate-x-0 max-lg:opacity-100" />

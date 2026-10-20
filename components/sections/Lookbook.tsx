@@ -88,7 +88,7 @@ export function Lookbook() {
                   );
                 })}
               </div>
-              <div className="flex flex-col justify-between p-6 md:p-10 lg:p-14">
+              <div className="flex flex-col justify-between gap-4 p-5 md:p-10 lg:p-14">
                 <div className="flex items-center justify-between">
                   <span className="eyebrow">Look {look.id}</span>
                   <span className="eyebrow tabular-nums opacity-60">
@@ -97,11 +97,11 @@ export function Lookbook() {
                 </div>
                 <div>
                   <h3 className="font-serif text-[clamp(2rem,4vw,4rem)] leading-[0.95]">{look.title}</h3>
-                  <p className="mt-4 max-w-sm text-[15px] opacity-75">{look.spots.length} {look.spots.length === 1 ? 'peça' : 'peças'} neste look. Toque nos pontos dourados para conhecer cada uma.</p>
+                  <p className="mt-4 hidden max-w-sm text-[15px] opacity-75 md:block">{look.spots.length} {look.spots.length === 1 ? 'peça' : 'peças'} neste look. Toque nos pontos dourados para conhecer cada uma.</p>
                   <button
                     type="button"
                     onClick={() => setOpen({ look })}
-                    className="roll-host mt-8 inline-flex h-12 items-center gap-3 rounded-full bg-ink px-6 text-sm font-medium text-ivory transition-colors hover:bg-gold hover:text-ink"
+                    className="roll-host mt-5 inline-flex h-12 md:mt-8 items-center gap-3 rounded-full bg-ink px-6 text-sm font-medium text-ivory transition-colors hover:bg-gold hover:text-ink"
                   >
                     <IconBag width={18} /> Comprar o look
                   </button>

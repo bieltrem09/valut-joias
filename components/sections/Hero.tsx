@@ -122,7 +122,7 @@ export function Hero() {
       </div>
 
       {/* "semijoias" em serif itálico, parcialmente atrás da joia */}
-      <div data-scroll="word" className="absolute top-[30svh] right-[5vw] z-10 lg:top-[53svh] lg:right-[4vw]">
+      <div data-scroll="word" className="absolute top-[33svh] right-[5vw] z-10 lg:top-[53svh] lg:right-[4vw]">
         <div data-mouse="text" className="overflow-hidden">
           <p aria-hidden data-hero-hide className="hero-serif serif-italic text-[13.5vw] lg:text-[8.4vw] leading-[1.08] pr-[0.1em] select-none">
             semijoias
@@ -131,7 +131,7 @@ export function Hero() {
       </div>
 
       {/* Joia recortada + sombra no chão */}
-      <div data-scroll="jewel" className="absolute top-[56.5svh] left-1/2 z-20 w-[min(56vw,340px)] -translate-x-1/2 -translate-y-1/2 lg:top-[54svh] lg:w-[min(31vw,600px)]">
+      <div data-scroll="jewel" className="absolute top-[57.5svh] left-1/2 z-20 w-[min(54vw,330px)] -translate-x-1/2 -translate-y-1/2 lg:top-[54svh] lg:w-[min(31vw,600px)]">
         <div data-mouse="jewel">
           <div data-hero-hide className="hero-jewel relative">
             <Media
@@ -180,7 +180,7 @@ export function Hero() {
           </p>
 
           {/* Texto + CTAs */}
-          <div className="absolute inset-x-5 bottom-[5svh] lg:inset-x-auto lg:bottom-auto lg:top-[60svh] lg:left-[17vw] lg:w-[19vw]">
+          <div className="absolute inset-x-5 bottom-[4svh] lg:inset-x-auto lg:bottom-auto lg:top-[60svh] lg:left-[17vw] lg:w-[19vw]">
             <p data-hero-hide className="hero-lede max-w-[21rem] text-[14px] leading-[1.55] text-ink/75 lg:text-[14px] lg:leading-relaxed">
               Peças pensadas para os dias comuns e para os grandes dias. <strong className="font-medium text-ink">Atacado & Varejo</strong>, com a{' '}
               <span className="serif-italic text-[1.1em] text-ink">elegância</span> que exala em cada detalhe.
@@ -212,7 +212,7 @@ export function Hero() {
           </div>
           <span data-hero-hide className="hero-fade absolute top-[12svh] left-5 text-[12px] tabular-nums text-ink/60 lg:hidden">valut / 01</span>
           <span data-hero-hide className="hero-fade eyebrow absolute top-[12svh] right-5 text-[10px] text-ink/60 lg:hidden">Semijoia que encanta</span>
-          <p data-hero-hide className="hero-fade absolute inset-x-0 top-[71svh] flex items-center justify-center gap-3 text-[11px] tracking-[0.16em] text-ink/60 uppercase lg:hidden">
+          <p data-hero-hide className="hero-fade absolute inset-x-0 top-[73.5svh] flex items-center justify-center gap-3 text-[11px] tracking-[0.16em] text-ink/60 uppercase lg:hidden">
             <span className="h-px w-8 bg-ink/30" aria-hidden />
             Coleção Rubi Mood
             <span className="h-px w-8 bg-ink/30" aria-hidden />

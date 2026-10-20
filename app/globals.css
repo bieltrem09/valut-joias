@@ -101,10 +101,12 @@ video {
 }
 
 /* Linhas mascaradas do SplitText */
+/* Folga generosa para acentos (Ó, Ã), cedilha e descendentes (j, g, p, ç)
+   e para a inclinação do itálico — sem isso o clip corta as letras. */
 .split-line-mask {
   overflow: clip;
-  padding-bottom: 0.08em;
-  margin-bottom: -0.08em;
+  padding: 0.2em 0.08em 0.26em;
+  margin: -0.2em -0.08em -0.26em;
 }
 
 /* Sublinhado que desenha da esquerda para a direita */

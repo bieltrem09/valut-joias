@@ -57,7 +57,7 @@ export function AboutView() {
           {facts.map((f) => (
             <li key={f.l} className="border-t border-ivory/20 pt-6">
               <p className="font-serif text-[clamp(3rem,6vw,5.5rem)] leading-none text-gold">{f.n}</p>
-              <p className="eyebrow mt-3 text-ivory/70">{f.l}</p>
+              <p className="eyebrow mt-5 text-ivory/70">{f.l}</p>
             </li>
           ))}
         </ul>

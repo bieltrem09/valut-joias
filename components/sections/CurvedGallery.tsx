@@ -84,8 +84,8 @@ export function CurvedGallery() {
         velocity = 0;
         base = state.drag;
         const step = stepDeg();
-        // toque: ~1 card a cada 35% do card arrastado; mouse: 1 card por largura de card
-        gain = (e.pointerType === 'mouse' ? 1 : 2.8) * (step / cards[0].offsetWidth);
+        // toque: ~1 card a cada 80% do card arrastado; mouse: 1 card por largura de card
+        gain = (e.pointerType === 'mouse' ? 1 : 1.25) * (step / cards[0].offsetWidth);
         gsap.killTweensOf(state, 'drag');
       };
       const onMove = (e: PointerEvent) => {
@@ -104,9 +104,15 @@ export function CurvedGallery() {
         if (!down) return;
         down = false;
         const step = stepDeg();
-        const projected = state.drag + velocity * 420; // inércia
+        const projected = state.drag + gsap.utils.clamp(-1.5, 1.5, velocity * 260 / (stepDeg() || 1)) * stepDeg(); // inércia: no máx. ~1,5 card por gesto
         const offset = state.rot + state.scroll;
-        const snapped = Math.round((projected + offset) / step) * step - offset;
+        // com número par de fotos o centro cai entre dois cards: desloca meio passo
+        const half = (((n - 1) / 2) % 1) * step;
+        const snapTo = (v: number) => Math.round((v + offset - half) / step) * step - offset + half;
+        let snapped = snapTo(projected);
+        // um gesto intencional (> 40px) sempre avança pelo menos uma foto
+        const moved = lastX - startX;
+        if (Math.abs(moved) > 40 && Math.abs(snapped - snapTo(base)) < step / 2) snapped = snapTo(base) + Math.sign(moved) * step;
         gsap.to(state, { drag: snapped, duration: 1.1, ease: 'expo.out', onUpdate: () => {
           layout();
           updateCounter();
@@ -116,7 +122,7 @@ export function CurvedGallery() {
       const updateCounter = () => {
         if (!counter) return;
         const step = stepDeg() || 1;
-        const idx = gsap.utils.wrap(0, n, Math.round((n - 1) / 2 - (state.rot + state.drag + state.scroll) / step));
+        const idx = gsap.utils.wrap(0, n, Math.round((n - 1) / 2 - (state.rot + state.drag + state.scroll) / step + 0.001));
         counter.textContent = `${String(idx + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`;
       };
       const stage = ring.current!;
@@ -127,6 +133,7 @@ export function CurvedGallery() {
 
       mm.add({ motion: mq.motion, reduced: mq.reduced, desktop: mq.desktop }, (ctx) => {
         const { reduced, desktop } = ctx.conditions!;
+        state.rot = (((n - 1) / 2) % 1) * stepDeg(); // começa com uma foto centralizada
         if (reduced) {
           state.spread = 1;
           layout();
@@ -146,9 +153,8 @@ export function CurvedGallery() {
             onUpdate: () => (layout(), updateCounter()),
             scrollTrigger: { trigger: el, start: 'top top', end: '+=160%', pin: true, scrub: 1, invalidateOnRefresh: true },
           });
-        } else {
-          gsap.to(state, { scroll: -40, ease: 'none', onUpdate: () => (layout(), updateCounter()), scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 1 } });
         }
+        // no mobile o giro é só pelo arrasto (o scroll vertical não mexe no arco)
         layout();
         updateCounter();
       });

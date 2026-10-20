@@ -160,7 +160,7 @@ export function CollectionView() {
 
       <div className="sticky top-0 z-30 border-y border-ink/10 bg-ivory/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1600px] items-center gap-4 px-5 py-3 md:px-8">
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 [mask-image:linear-gradient(to_right,#000_85%,transparent)] md:[mask-image:none]">
             <FilterPills
               label="Categoria"
               value={category}
