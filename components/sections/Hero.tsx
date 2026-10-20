@@ -122,23 +122,23 @@ export function Hero() {
       </div>
 
       {/* "semijoias" em serif itálico, parcialmente atrás da joia */}
-      <div data-scroll="word" className="absolute right-[4vw] top-[53svh] z-10 hidden lg:block">
+      <div data-scroll="word" className="absolute top-[30svh] right-[5vw] z-10 lg:top-[53svh] lg:right-[4vw]">
         <div data-mouse="text" className="overflow-hidden">
-          <p aria-hidden data-hero-hide className="hero-serif serif-italic text-[8.4vw] leading-[1.08] pr-[0.1em] select-none">
+          <p aria-hidden data-hero-hide className="hero-serif serif-italic text-[13.5vw] lg:text-[8.4vw] leading-[1.08] pr-[0.1em] select-none">
             semijoias
           </p>
         </div>
       </div>
 
       {/* Joia recortada + sombra no chão */}
-      <div data-scroll="jewel" className="absolute top-[56svh] left-1/2 z-20 w-[min(76vw,440px)] -translate-x-1/2 -translate-y-1/2 lg:top-[54svh] lg:w-[min(31vw,600px)]">
+      <div data-scroll="jewel" className="absolute top-[56.5svh] left-1/2 z-20 w-[min(56vw,340px)] -translate-x-1/2 -translate-y-1/2 lg:top-[54svh] lg:w-[min(31vw,600px)]">
         <div data-mouse="jewel">
           <div data-hero-hide className="hero-jewel relative">
             <Media
               k="joia-rubi-recorte"
               alt="Par de brincos coração com pedra rubi e halo cravejado, coleção Rubi Mood"
               priority
-              sizes="(min-width: 1024px) 31vw, 76vw"
+              sizes="(min-width: 1024px) 31vw, 60vw"
               className="relative z-10 h-auto w-full drop-shadow-[0_30px_35px_rgba(14,13,11,0.28)]"
             />
           </div>
@@ -149,7 +149,7 @@ export function Hero() {
       {/* Fotos pequenas nos cantos */}
       <div data-scroll="photos" className="absolute inset-0 z-10" aria-hidden={false}>
         <div data-mouse="photos" className="absolute inset-0">
-          <div data-hero-hide className="hero-photo absolute top-[34svh] right-[5vw] aspect-[4/3] w-[24vw] overflow-hidden rounded-sm lg:top-[70svh] lg:w-[11vw]">
+          <div data-hero-hide className="hero-photo absolute hidden aspect-[4/3] overflow-hidden rounded-sm lg:top-[70svh] lg:right-[4vw] lg:block lg:w-[11vw]">
             <Media k="editorial-flores-cravejadas" alt="Modelo com brinco de flores cravejadas" fill sizes="(min-width:1024px) 12vw, 30vw" className="object-cover object-[50%_35%]" />
           </div>
           <div data-hero-hide className="hero-photo absolute bottom-[12svh] left-[4vw] hidden aspect-[3/4] w-[9.5vw] overflow-hidden rounded-sm lg:block">
@@ -180,12 +180,12 @@ export function Hero() {
           </p>
 
           {/* Texto + CTAs */}
-          <div className="absolute inset-x-5 bottom-[7svh] lg:inset-x-auto lg:bottom-auto lg:top-[60svh] lg:left-[17vw] lg:w-[19vw]">
-            <p data-hero-hide className="hero-lede max-w-[22rem] text-[15px] leading-relaxed text-ink/75 lg:text-[14px]">
+          <div className="absolute inset-x-5 bottom-[5svh] lg:inset-x-auto lg:bottom-auto lg:top-[60svh] lg:left-[17vw] lg:w-[19vw]">
+            <p data-hero-hide className="hero-lede max-w-[21rem] text-[14px] leading-[1.55] text-ink/75 lg:text-[14px] lg:leading-relaxed">
               Peças pensadas para os dias comuns e para os grandes dias. <strong className="font-medium text-ink">Atacado & Varejo</strong>, com a{' '}
               <span className="serif-italic text-[1.1em] text-ink">elegância</span> que exala em cada detalhe.
             </p>
-            <div className="mt-6 flex flex-wrap items-center gap-5">
+            <div className="mt-5 flex flex-wrap items-center gap-5 lg:mt-6">
               <div data-hero-hide className="hero-fade">
                 <PillLink href="/colecao" label="Explorar coleção" icon={<IconArrow width={16} />} />
               </div>
@@ -211,6 +211,12 @@ export function Hero() {
             </span>
           </div>
           <span data-hero-hide className="hero-fade absolute top-[12svh] left-5 text-[12px] tabular-nums text-ink/60 lg:hidden">valut / 01</span>
+          <span data-hero-hide className="hero-fade eyebrow absolute top-[12svh] right-5 text-[10px] text-ink/60 lg:hidden">Semijoia que encanta</span>
+          <p data-hero-hide className="hero-fade absolute inset-x-0 top-[71svh] flex items-center justify-center gap-3 text-[11px] tracking-[0.16em] text-ink/60 uppercase lg:hidden">
+            <span className="h-px w-8 bg-ink/30" aria-hidden />
+            Coleção Rubi Mood
+            <span className="h-px w-8 bg-ink/30" aria-hidden />
+          </p>
         </div>
       </div>
 

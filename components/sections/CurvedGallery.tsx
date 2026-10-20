@@ -62,27 +62,68 @@ export function CurvedGallery() {
         });
       };
 
-      // Arrastar (mouse e toque)
+      // Arrastar (mouse e toque) com inércia e encaixe no card mais próximo.
+      // No toque o ganho é maior: um gesto curto já gira várias fotos.
+      const stepDeg = () => {
+        const w = ring.current!.offsetWidth;
+        const R = Math.max(w * 0.62, 520);
+        return ((cards[0].offsetWidth * 1.12) / R) * (180 / Math.PI);
+      };
       let startX = 0;
       let base = 0;
       let down = false;
+      let gain = 0.1;
+      let lastX = 0;
+      let lastT = 0;
+      let velocity = 0; // graus por ms
       const onDown = (e: PointerEvent) => {
         down = true;
         dragged.current = false;
-        startX = e.clientX;
+        startX = lastX = e.clientX;
+        lastT = performance.now();
+        velocity = 0;
         base = state.drag;
+        const step = stepDeg();
+        // toque: ~1 card a cada 35% do card arrastado; mouse: 1 card por largura de card
+        gain = (e.pointerType === 'mouse' ? 1 : 2.8) * (step / cards[0].offsetWidth);
+        gsap.killTweensOf(state, 'drag');
       };
       const onMove = (e: PointerEvent) => {
         if (!down) return;
         const dx = e.clientX - startX;
         if (Math.abs(dx) > 6) dragged.current = true;
-        gsap.to(state, { drag: base + dx * 0.08, duration: 0.6, ease: 'power3.out', onUpdate: layout, overwrite: true });
+        const now = performance.now();
+        const dt = Math.max(1, now - lastT);
+        velocity = gsap.utils.interpolate(velocity, ((e.clientX - lastX) * gain) / dt, 0.4);
+        lastX = e.clientX;
+        lastT = now;
+        state.drag = base + dx * gain;
+        layout();
       };
-      const onUp = () => (down = false);
+      const onUp = () => {
+        if (!down) return;
+        down = false;
+        const step = stepDeg();
+        const projected = state.drag + velocity * 420; // inércia
+        const offset = state.rot + state.scroll;
+        const snapped = Math.round((projected + offset) / step) * step - offset;
+        gsap.to(state, { drag: snapped, duration: 1.1, ease: 'expo.out', onUpdate: () => {
+          layout();
+          updateCounter();
+        } });
+      };
+      const counter = el.querySelector<HTMLElement>('[data-arc-counter]');
+      const updateCounter = () => {
+        if (!counter) return;
+        const step = stepDeg() || 1;
+        const idx = gsap.utils.wrap(0, n, Math.round((n - 1) / 2 - (state.rot + state.drag + state.scroll) / step));
+        counter.textContent = `${String(idx + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`;
+      };
       const stage = ring.current!;
       stage.addEventListener('pointerdown', onDown);
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
 
       mm.add({ motion: mq.motion, reduced: mq.reduced, desktop: mq.desktop }, (ctx) => {
         const { reduced, desktop } = ctx.conditions!;
@@ -102,13 +143,14 @@ export function CurvedGallery() {
           gsap.to(state, {
             scroll: -110,
             ease: 'none',
-            onUpdate: layout,
+            onUpdate: () => (layout(), updateCounter()),
             scrollTrigger: { trigger: el, start: 'top top', end: '+=160%', pin: true, scrub: 1, invalidateOnRefresh: true },
           });
         } else {
-          gsap.to(state, { scroll: -40, ease: 'none', onUpdate: layout, scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 1 } });
+          gsap.to(state, { scroll: -40, ease: 'none', onUpdate: () => (layout(), updateCounter()), scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 1 } });
         }
         layout();
+        updateCounter();
       });
 
       window.addEventListener('resize', layout);
@@ -117,6 +159,7 @@ export function CurvedGallery() {
         stage.removeEventListener('pointerdown', onDown);
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
         window.removeEventListener('resize', layout);
       };
     },
@@ -150,7 +193,7 @@ export function CurvedGallery() {
       <div
         ref={ring}
         data-cursor="Arraste"
-        className="relative z-10 mx-auto my-auto h-[52svh] w-full cursor-grab touch-pan-y select-none active:cursor-grabbing lg:h-[50svh]"
+        className="relative z-10 mx-auto my-auto h-[58svh] w-full cursor-grab touch-pan-y select-none active:cursor-grabbing lg:h-[50svh]"
         style={{ perspective: '1400px', perspectiveOrigin: '50% 50%' }}
         role="group"
         aria-roledescription="carrossel"
@@ -165,11 +208,11 @@ export function CurvedGallery() {
               data-slug={it.slug}
               onClick={onCardClick}
               draggable={false}
-              className="arc-card group absolute top-1/2 left-1/2 block aspect-[3/4] w-[44vw] max-w-[300px] origin-center sm:w-[30vw] lg:w-[16vw]"
+              className="arc-card group absolute top-1/2 left-1/2 block aspect-[3/4] w-[56vw] max-w-[300px] origin-center sm:w-[34vw] lg:w-[16vw]"
               aria-label={`Ver ${it.label}`}
             >
               <div data-vt className="relative h-full w-full overflow-hidden rounded-[18px] bg-white/5 shadow-[0_40px_80px_-30px_rgba(0,0,0,.8)]">
-                <Media k={it.key} alt={it.alt} fill sizes="(min-width:1024px) 16vw, 44vw" draggable={false} className="object-cover transition-transform duration-700 ease-[var(--ease-expo)] group-hover:scale-105" />
+                <Media k={it.key} alt={it.alt} fill sizes="(min-width:1024px) 16vw, 56vw" draggable={false} className="object-cover transition-transform duration-700 ease-[var(--ease-expo)] group-hover:scale-105" />
               </div>
               <span className="eyebrow absolute -bottom-7 left-0 text-ivory/60 opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-focus-visible:opacity-100">{it.label}</span>
             </TransitionLink>
@@ -177,6 +220,11 @@ export function CurvedGallery() {
         </div>
       </div>
 
+      <div className="relative z-10 flex items-center justify-center gap-4 pb-6 text-[11px] tracking-[0.18em] text-ivory/60 uppercase lg:hidden" aria-hidden>
+        <span>← Arraste</span>
+        <span className="h-px w-10 bg-ivory/25" />
+        <span data-arc-counter className="tabular-nums text-gold">01 / 10</span>
+      </div>
       <div className="relative z-10 flex justify-center pb-16 lg:pb-[8svh]">
         <PillLink href="/colecao" label="Ver coleção completa" variant="light" />
       </div>

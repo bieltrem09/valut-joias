@@ -35,10 +35,17 @@ export function RubiMood() {
           gsap.set(el, { backgroundColor: RUBY_NIGHT, color: IVORY });
           return;
         }
+        // no mobile a troca acontece antes, para o título já chegar legível
+        const mobile = window.matchMedia(mq.mobile).matches;
         gsap.fromTo(
           html,
           { '--page-bg': IVORY, '--page-fg': INK },
-          { '--page-bg': RUBY_NIGHT, '--page-fg': IVORY, ease: 'none', scrollTrigger: { trigger: el, start: 'top 75%', end: 'top 25%', scrub: true } },
+          {
+            '--page-bg': RUBY_NIGHT,
+            '--page-fg': IVORY,
+            ease: 'none',
+            scrollTrigger: { trigger: el, start: mobile ? 'top 80%' : 'top 75%', end: mobile ? 'top 35%' : 'top 25%', scrub: true },
+          },
         );
         gsap.fromTo(
           html,
@@ -71,20 +78,20 @@ export function RubiMood() {
         </div>
 
         <div className="rb-media relative grid grid-cols-12 items-start gap-4 lg:min-h-[120svh]">
-          <div className="rb-video col-span-7 col-start-1 lg:col-span-6 lg:col-start-2">
+          <div className="rb-video col-span-9 col-start-1 lg:col-span-6 lg:col-start-2">
             <RevealImage className="aspect-[9/16] rounded-[var(--radius-card)] bg-black/30">
               <div data-reveal-media className="h-full w-full">
                 <LazyVideo name="video-rubi-mood" label="Vídeo: brincos coração rubi e bracelete cravejado, Rubi Mood" />
               </div>
             </RevealImage>
           </div>
-          <div className="rb-photo col-span-6 col-start-7 mt-[30%] lg:col-span-5 lg:col-start-8 lg:mt-[45%]">
-            <RevealImage className="relative aspect-[9/14] rounded-[var(--radius-card)]" delay={0.2}>
+          <div className="rb-photo relative z-10 col-span-6 col-start-7 -mt-[55%] lg:col-span-5 lg:col-start-8 lg:mt-[45%]">
+            <RevealImage className="relative aspect-[9/14] rounded-[var(--radius-card)] ring-4 ring-ruby-night lg:ring-0" delay={0.2}>
               <div data-reveal-media className="absolute inset-0">
                 <Media k="conjunto-rubi-expositor" alt="Conjunto de colar e brincos rubi retangulares em expositor verde" fill sizes="(min-width:1024px) 22vw, 50vw" className="object-cover" />
               </div>
             </RevealImage>
-            <p className="serif-italic mt-4 text-xl opacity-80">“{phrases.elegance}.”</p>
+            <p className="serif-italic mt-4 text-lg opacity-80 lg:text-xl">“{phrases.elegance}.”</p>
           </div>
         </div>
       </div>

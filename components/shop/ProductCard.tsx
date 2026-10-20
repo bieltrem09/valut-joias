@@ -10,6 +10,7 @@ import { useShop } from '@/lib/store';
 import { Media } from '@/components/ui/Media';
 import { TransitionLink } from '@/components/ui/TransitionLink';
 import { FavoriteButton } from './FavoriteButton';
+import { IconBag } from '@/components/ui/Icons';
 
 type Props = { product: Product; priority?: boolean; tone?: 'light' | 'dark'; className?: string; sizes?: string };
 
@@ -75,17 +76,33 @@ export function ProductCard({ product, priority, tone = 'light', className, size
         {onSale && (
           <span className="pointer-events-none absolute top-3 left-3 rounded-full bg-ruby px-3 py-1 text-[11px] font-medium tracking-wider text-ivory uppercase">Sale</span>
         )}
-        <FavoriteButton slug={product.slug} name={product.name} className="absolute top-3 right-3" />
+        <FavoriteButton slug={product.slug} name={product.name} className="absolute top-2.5 right-2.5 md:top-3 md:right-3" />
+        {/* Mobile: botão compacto de sacola sobre a foto */}
+        <button
+          type="button"
+          onClick={onAdd}
+          aria-label={`Adicionar ${product.name} à sacola`}
+          className={cn(
+            'absolute right-2.5 bottom-2.5 grid h-11 w-11 place-items-center rounded-full shadow-[0_8px_20px_-8px_rgba(14,13,11,.5)] transition-[transform,background-color] duration-300 active:scale-90 md:hidden',
+            added ? 'bg-gold text-ink' : 'bg-ink text-ivory',
+          )}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span key={added ? 'ok' : 'add'} initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.4, opacity: 0 }} transition={{ duration: 0.25 }}>
+              {added ? '✓' : <IconBag width={18} height={18} />}
+            </motion.span>
+          </AnimatePresence>
+        </button>
       </div>
 
-      <div className={cn('mt-4 flex flex-1 flex-col', dark ? 'text-ivory' : 'text-ink')}>
-        <p className={cn('eyebrow', dark ? 'text-gold' : 'text-gold-deep')}>{categoryName(product.category)}</p>
-        <h3 className="mt-1 font-serif text-xl leading-tight">
+      <div className={cn('mt-3 flex flex-1 flex-col md:mt-4', dark ? 'text-ivory' : 'text-ink')}>
+        <p className={cn('eyebrow text-[10px] md:text-[11px]', dark ? 'text-gold' : 'text-gold-deep')}>{categoryName(product.category)}</p>
+        <h3 className="mt-1 font-serif text-[17px] leading-tight md:text-xl">
           <TransitionLink href={`/produto/${product.slug}`} className="link-draw">
             {product.name}
           </TransitionLink>
         </h3>
-        <p className="mt-2 flex items-baseline gap-2 text-[15px]">
+        <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[14px] md:mt-2 md:text-[15px]">
           <span className="font-medium">{formatPrice(product.price)}</span>
           {product.compareAt && (
             <span className={cn('text-sm line-through', dark ? 'text-ivory/50' : 'text-ink/50')}>
@@ -98,7 +115,7 @@ export function ProductCard({ product, priority, tone = 'light', className, size
           type="button"
           onClick={onAdd}
           className={cn(
-            'roll-host relative mt-4 h-11 overflow-hidden rounded-full border text-sm font-medium transition-colors duration-300',
+            'roll-host relative mt-4 hidden h-11 overflow-hidden rounded-full border text-sm font-medium transition-colors duration-300 md:block',
             dark ? 'border-ivory/40 hover:bg-ivory hover:text-ink' : 'border-ink/25 hover:border-ink hover:bg-ink hover:text-ivory',
           )}
           aria-label={`Adicionar ${product.name} à sacola`}

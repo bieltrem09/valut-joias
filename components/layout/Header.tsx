@@ -88,7 +88,7 @@ export function Header() {
         </a>
         <div
           className={cn(
-            'relative mx-auto grid h-full max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center px-5 transition-transform duration-500 ease-[var(--ease-expo)] md:px-8',
+            'relative mx-auto flex h-full max-w-[1600px] items-center justify-between px-5 lg:grid lg:grid-cols-[1fr_auto_1fr] transition-transform duration-500 ease-[var(--ease-expo)] md:px-8',
             compact ? '-translate-y-3' : 'translate-y-0',
             menuOpen ? 'text-ivory' : 'text-ink',
           )}

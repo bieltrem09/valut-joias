@@ -43,9 +43,9 @@ export function Manifesto() {
   );
 
   return (
-    <section ref={root} aria-label="Manifesto" className="relative px-5 py-[18svh] md:px-8">
+    <section ref={root} aria-label="Manifesto" className="relative px-4 py-[14svh] md:px-8 md:py-[18svh]">
       <p className="eyebrow mb-10 text-center text-gold-deep">Manifesto</p>
-      <p className="mf-text mx-auto max-w-[1200px] text-center font-serif text-[clamp(2rem,5.2vw,5rem)] leading-[1.12] tracking-[-0.01em]">
+      <p className="mf-text mx-auto max-w-[1200px] text-center font-serif text-[2.7rem] leading-[1.06] sm:text-[3.2rem] md:text-[clamp(2rem,5.2vw,5rem)] md:leading-[1.12] tracking-[-0.01em]">
         {tokens.map((t, i) => (
           <Fragment key={i}>
             {'w' in t ? (

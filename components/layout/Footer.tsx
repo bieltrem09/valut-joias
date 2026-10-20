@@ -45,8 +45,8 @@ export function Footer() {
     <div ref={wrap} className="relative lg:h-[100svh] lg:min-h-[720px] lg:[clip-path:polygon(0_0,100%_0,100%_100%,0_100%)]">
       <footer className="bg-ink text-ivory lg:fixed lg:inset-x-0 lg:bottom-0 lg:h-[100svh] lg:min-h-[720px]">
         <div className="footer-inner mx-auto flex h-full max-w-[1600px] flex-col px-5 pt-16 md:px-8 lg:pt-24">
-          <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1.6fr]">
-            <div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1.6fr]">
+            <div className="col-span-2 lg:col-span-1">
               <LogoSymbol className="h-14 w-14 text-gold" aria-hidden />
               <p className="mt-6 max-w-[16rem] font-serif text-2xl leading-snug">
                 Semijoia que <span className="serif-italic text-gold">encanta.</span>
@@ -143,7 +143,7 @@ function Newsletter() {
   };
   const lifted = focused || email.length > 0;
   return (
-    <div>
+    <div className="col-span-2 lg:col-span-1">
       <h2 className="eyebrow text-gold">Newsletter</h2>
       <p className="mt-5 font-serif text-xl leading-snug">Novidades, lançamentos e coisas que nós achamos chique — direto no seu e-mail.</p>
       <AnimatePresence mode="wait">
