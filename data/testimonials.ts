@@ -1,9 +1,18 @@
-// [CONFIRMAR] Depoimentos são PLACEHOLDERS. Substitua pelos feedbacks reais
-// (destaque "Feedbacks" do Instagram), com autorização das clientes.
+/**
+ * Avaliações reais da ficha "Valut Semi Jóias" no Google Maps.
+ * Para adicionar novas, copie o texto e o nome exatamente como aparecem no Google.
+ */
 export const testimonials = [
-  { name: '[CONFIRMAR] Cliente 01', city: '[Cidade]', text: 'Placeholder — depoimento real da cliente sobre a peça e o atendimento.' },
-  { name: '[CONFIRMAR] Cliente 02', city: '[Cidade]', text: 'Placeholder — comentário sobre o brilho e o acabamento das semijoias.' },
-  { name: '[CONFIRMAR] Cliente 03', city: '[Cidade]', text: 'Placeholder — experiência de compra no atacado e rapidez do envio.' },
-  { name: '[CONFIRMAR] Cliente 04', city: '[Cidade]', text: 'Placeholder — elogio a uma peça específica (ex.: Rubi Mood).' },
-  { name: '[CONFIRMAR] Cliente 05', city: '[Cidade]', text: 'Placeholder — visita à loja física e atendimento.' },
+  {
+    name: 'Sandra Motta',
+    detail: 'Local Guide',
+    text: 'Semi jóias de qualidade e muito bom gosto. Atendimento excelente. Vale a pena dar uma passada por lá.',
+  },
+  {
+    name: 'G360OUT',
+    detail: 'Local Guide',
+    text: 'Loja linda, produtos maravilhosos. Atendimento personalizado!',
+  },
 ];
+
+export const reviewsSource = { label: 'Avaliações no Google', url: 'https://www.google.com/maps/search/?api=1&query=Valut+Semi+J%C3%B3ias+Limeira' };

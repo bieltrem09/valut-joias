@@ -178,9 +178,10 @@ export function ProductView({ product, pairs }: { product: Product; pairs: Produ
                 </ul>
               </Accordion>
               <Accordion title="Envio">
-                <p>
-                  {site.shipping}. Prazos e valores calculados na finalização. [CONFIRMAR] política de envio, prazo de postagem e transportadoras.
-                </p>
+                <p>Envio rápido para todo o Brasil. Prazos e valores calculados na finalização do pedido.</p>
+              </Accordion>
+              <Accordion title="Garantia">
+                <p>Qualidade comprovada: esta peça tem garantia de 1 ano. Qualquer dúvida, fale com a gente pelo WhatsApp {site.whatsapp.label}.</p>
               </Accordion>
             </div>
           </div>

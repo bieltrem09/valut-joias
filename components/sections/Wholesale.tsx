@@ -1,19 +1,14 @@
 'use client';
 
 import { useRef } from 'react';
-import { site, whatsappLink } from '@/data/site';
+import { about, site, whatsappLink } from '@/data/site';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { mq } from '@/lib/animations';
 import { PillLink } from '@/components/ui/Buttons';
 import { IconArrow } from '@/components/ui/Icons';
 import { RevealText } from '@/components/ui/Reveal';
 
-// [CONFIRMAR] benefícios reais do programa de revenda
-const benefits = [
-  { title: '[CONFIRMAR] Pedido mínimo', text: 'Condições de atacado a definir com a VALUT.' },
-  { title: '[CONFIRMAR] Catálogo exclusivo', text: 'Lançamentos e reposições para revendedoras.' },
-  { title: 'Enviamos para todo o Brasil', text: 'Receba a sua coleção onde estiver.' },
-];
+const benefits = about.pillars;
 
 /** Bloco de conversão de atacado: veludo azul-petróleo, count-up só com dados reais (seguidores do Instagram). */
 export function Wholesale({ standalone = false }: { standalone?: boolean }) {
@@ -48,7 +43,7 @@ export function Wholesale({ standalone = false }: { standalone?: boolean }) {
             <RevealText as={standalone ? 'h1' : 'h2'} id="ws-title" className="mt-4 font-serif text-[clamp(2.8rem,7vw,7rem)] leading-[0.9]">
               Atacado <span className="serif-italic text-gold">&</span> Varejo
             </RevealText>
-            <p className="mt-6 max-w-lg text-lg text-ivory/80">Leve a VALUT para as suas clientes. Semijoia que encanta, agora no seu negócio.</p>
+            <p className="mt-6 max-w-lg text-lg text-ivory/80">Desde 2018 impulsionando empreendedores no mercado das semijoias: coleções exclusivas e atemporais, com maior giro de estoque e excelente lucratividade.</p>
           </div>
           <div className="lg:text-right">
             <p className="font-display text-[clamp(5rem,12vw,11rem)] text-gold">
@@ -59,7 +54,7 @@ export function Wholesale({ standalone = false }: { standalone?: boolean }) {
           </div>
         </div>
 
-        <ul className="ws-benefits mt-16 grid gap-px overflow-hidden rounded-[var(--radius-card)] bg-ivory/15 md:grid-cols-3">
+        <ul className="ws-benefits mt-16 grid gap-px overflow-hidden rounded-[var(--radius-card)] bg-ivory/15 md:grid-cols-2 lg:grid-cols-4">
           {benefits.map((b, i) => (
             <li key={i} className="ws-benefit bg-teal/95 p-8">
               <span className="font-serif text-4xl text-gold italic">0{i + 1}</span>

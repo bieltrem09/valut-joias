@@ -5,9 +5,11 @@ import { whatsappLink } from '@/data/site';
 import { RevealText } from '@/components/ui/Reveal';
 
 const faq = [
-  { q: 'Qual o pedido mínimo?', a: '[CONFIRMAR] Valor ou quantidade mínima para compras no atacado.' },
-  { q: 'Como funciona o envio?', a: 'Enviamos para todo o Brasil. [CONFIRMAR] prazos e transportadoras.' },
-  { q: 'Quais as formas de pagamento?', a: '[CONFIRMAR] Formas de pagamento aceitas no atacado.' },
+  { q: 'Por que revender VALUT?', a: 'Coleções exclusivas, atemporais e altamente desejadas, pensadas para maior giro de estoque e excelente lucratividade.' },
+  { q: 'As peças têm garantia?', a: 'Sim. Qualidade comprovada, com garantia de 1 ano.' },
+  { q: 'Vocês dão suporte ao revendedor?', a: 'Sim — suporte completo para nossos revendedores, do primeiro pedido à reposição.' },
+  { q: 'Como funciona o envio?', a: 'Envio rápido para todo o Brasil.' },
+  { q: 'Qual o pedido mínimo?', a: '[CONFIRMAR] Valor ou quantidade mínima para compras no atacado. Fale com a gente no WhatsApp (19) 99366-1551.' },
 ];
 
 /** Formulário de revenda: monta a mensagem e abre o WhatsApp (ou o link de vendas, enquanto o número não é confirmado). */

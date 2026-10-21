@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { phrases, site } from '@/data/site';
+import { about, phrases, site } from '@/data/site';
 import { useParallax } from '@/lib/animations';
 import { Media } from '@/components/ui/Media';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -10,9 +10,10 @@ import { RevealImage, RevealText } from '@/components/ui/Reveal';
 import { LogoSymbol } from '@/components/ui/Logo';
 
 const facts = [
+  { n: `Desde ${site.since}`, l: 'empresa familiar' },
   { n: site.instagram.followers, l: `seguidores em ${site.instagram.handle}` },
-  { n: 'Atacado', l: '& Varejo' },
-  { n: 'Brasil', l: 'enviamos para todo o país' },
+  { n: '1 ano', l: 'de garantia em todas as peças' },
+  { n: 'Brasil', l: 'envio rápido para todo o país' },
 ];
 
 export function AboutView() {
@@ -45,15 +46,13 @@ export function AboutView() {
           <RevealText as="p" className="mt-8 font-serif text-[clamp(1.8rem,3vw,2.8rem)] leading-tight">
             {phrases.chic}. {phrases.elegance}. Para todos os dias — e para os grandes dias.
           </RevealText>
-          <p className="mt-6 max-w-lg text-[15px] leading-relaxed text-ink/70">
-            [CONFIRMAR] História da marca: quando e como a VALUT começou, quem está por trás, o que inspira as coleções. Este texto é um placeholder — substitua pelo
-            conteúdo do destaque &quot;Sobre nós&quot; do Instagram.
-          </p>
+          <p className="mt-6 max-w-lg text-[15px] leading-relaxed text-ink/75">{about.intro}</p>
+          <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-ink/75">{about.trends}</p>
         </div>
       </section>
 
       <section className="bg-ink px-5 py-24 text-ivory md:px-8">
-        <ul className="mx-auto grid max-w-[1600px] gap-10 md:grid-cols-3">
+        <ul className="mx-auto grid max-w-[1600px] gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {facts.map((f) => (
             <li key={f.l} className="border-t border-ivory/20 pt-6">
               <p className="font-serif text-[clamp(3rem,6vw,5.5rem)] leading-none text-gold">{f.n}</p>
@@ -70,7 +69,7 @@ export function AboutView() {
             Veludo, mármore e <span className="serif-italic">luz dourada</span>
           </RevealText>
           <p className="mt-6 max-w-md text-[15px] text-ink/70">
-            {site.store.street} — {site.store.district}, {site.store.city}/{site.store.state}.
+            {site.store.venue} — {site.store.street}, {site.store.district}, {site.store.city}/{site.store.state}.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <PillLink href="/contato" label="Como chegar" />

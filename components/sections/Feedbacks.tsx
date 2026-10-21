@@ -1,13 +1,13 @@
 'use client';
 
 import { useRef } from 'react';
-import { testimonials } from '@/data/testimonials';
+import { reviewsSource, testimonials } from '@/data/testimonials';
 import { site } from '@/data/site';
 import { MediaKey } from '@/data/media.generated';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { mq } from '@/lib/animations';
 import { Media } from '@/components/ui/Media';
-import { IconInstagram, IconSpark } from '@/components/ui/Icons';
+import { IconInstagram } from '@/components/ui/Icons';
 import { RevealText } from '@/components/ui/Reveal';
 
 const posts: { k: MediaKey; alt: string }[] = [
@@ -49,17 +49,23 @@ export function Feedbacks() {
     { scope: root },
   );
 
+  // poucas avaliações: repete a lista para o carrossel infinito preencher a largura
+  const loop = [...testimonials, ...testimonials, ...testimonials];
   const cards = (hidden: boolean) =>
-    testimonials.map((t, i) => (
-      <figure key={`${hidden}-${i}`} aria-hidden={hidden || undefined} className="w-[80vw] shrink-0 rounded-[var(--radius-card)] bg-marble p-8 sm:w-[420px]">
-        <div className="flex gap-1 text-gold" aria-label="5 estrelas">
-          {[...Array(5)].map((_, s) => (
-            <IconSpark key={s} />
-          ))}
-        </div>
-        <blockquote className="mt-5 font-serif text-xl leading-snug">“{t.text}”</blockquote>
-        <figcaption className="mt-6 text-sm text-ink/60">
-          {t.name} · {t.city}
+    loop.map((t, i) => (
+      <figure
+        key={`${hidden}-${i}`}
+        aria-hidden={hidden || i >= testimonials.length || undefined}
+        className="flex w-[82vw] shrink-0 flex-col justify-between rounded-[var(--radius-card)] bg-marble p-8 sm:w-[460px]"
+      >
+        <span aria-hidden className="font-serif text-6xl leading-none text-gold">“</span>
+        <blockquote className="mt-2 font-serif text-[clamp(1.25rem,2vw,1.6rem)] leading-snug">{t.text}</blockquote>
+        <figcaption className="mt-6 flex items-center gap-3 text-sm">
+          <span className="grid h-9 w-9 place-items-center rounded-full bg-ink font-serif text-ivory">{t.name[0]}</span>
+          <span>
+            <span className="block font-medium text-ink">{t.name}</span>
+            <span className="text-xs text-ink/55">{t.detail} · Google</span>
+          </span>
         </figcaption>
       </figure>
     ));
@@ -71,6 +77,9 @@ export function Feedbacks() {
         <RevealText as="h2" id="fb-title" className="mt-3 font-serif text-[length:var(--text-title)] leading-[0.95]">
           Quem usa, <span className="serif-italic">conta</span>
         </RevealText>
+        <a href={reviewsSource.url} target="_blank" rel="noopener noreferrer" className="link-draw mt-4 inline-block text-sm text-ink/70">
+          {reviewsSource.label} ↗
+        </a>
       </div>
 
       <div className="mt-12 overflow-hidden" role="region" aria-label="Depoimentos de clientes">

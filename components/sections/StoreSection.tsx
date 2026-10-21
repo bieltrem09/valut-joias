@@ -145,7 +145,7 @@ export function StoreSection() {
           <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/25 to-ink/10" aria-hidden />
         </div>
         <div className="st-copy absolute inset-x-5 bottom-[8svh] text-ivory md:inset-x-8 lg:left-[max(2rem,calc((100vw-1600px)/2+2rem))] lg:max-w-xl">
-          <p className="eyebrow text-gold">A Loja · Est. loja física</p>
+          <p className="eyebrow text-gold">A Loja · Desde 2018</p>
           <h2 id="store-title" className="mt-4 font-serif text-[clamp(2.6rem,6vw,6rem)] leading-[0.92]">
             Visite a nossa <span className="serif-italic">loja</span>
           </h2>

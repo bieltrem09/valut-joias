@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { site } from '@/data/site';
+import { site, whatsappLink } from '@/data/site';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { PillLink } from '@/components/ui/Buttons';
 import { Media } from '@/components/ui/Media';
@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 
 const policies = [
   { id: 'trocas', title: 'Trocas e devoluções', text: '[CONFIRMAR] Política de trocas: prazo, condições da peça, como solicitar e quem paga o frete de retorno.' },
-  { id: 'envio', title: 'Envio', text: `${site.shipping}. [CONFIRMAR] Prazo de postagem, transportadoras, rastreio e valor para frete grátis.` },
-  { id: 'garantia', title: 'Garantia', text: '[CONFIRMAR] Garantia do banho e o que ela cobre.' },
+  { id: 'envio', title: 'Envio', text: 'Envio rápido para todo o Brasil. Prazos e valores de frete calculados na finalização do pedido.' },
+  { id: 'garantia', title: 'Garantia', text: 'Qualidade comprovada: todas as peças têm garantia de 1 ano. Para acionar, fale com a gente pelo WhatsApp (19) 99366-1551.' },
 ];
 
 export default function ContactPage() {
@@ -34,9 +34,11 @@ export default function ContactPage() {
           <div>
             <h2 className="eyebrow text-gold-deep">Loja física</h2>
             <address className="mt-3 font-serif text-2xl leading-snug not-italic">
+              {site.store.venue}
+              <br />
               {site.store.street}
               <br />
-              {site.store.district} · {site.store.city}/{site.store.state}
+              {site.store.district} · {site.store.city}/{site.store.state} · {site.store.zip}
             </address>
             <ul className="mt-3 text-[15px] text-ink/70">
               {site.store.hours.map((h) => (
@@ -60,7 +62,12 @@ export default function ContactPage() {
                   linktr.ee/valutvendas
                 </a>
               </li>
-              <li>WhatsApp: {site.whatsapp.label}</li>
+              <li>
+                WhatsApp:{' '}
+                <a className="link-draw" href={whatsappLink('Olá, VALUT! Vim pelo site.')} target="_blank" rel="noopener noreferrer">
+                  {site.whatsapp.label}
+                </a>
+              </li>
             </ul>
           </div>
           <div>

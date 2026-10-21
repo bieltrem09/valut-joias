@@ -2,7 +2,7 @@
 
 import { FormEvent, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { site } from '@/data/site';
+import { site, whatsappLink } from '@/data/site';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { mq } from '@/lib/animations';
 import { useShop } from '@/lib/store';
@@ -78,6 +78,11 @@ export function Footer() {
                 </a>
               </li>
               <li>
+                <a href={whatsappLink('Olá, VALUT! Vim pelo site.')} target="_blank" rel="noopener noreferrer" className="link-draw">
+                  WhatsApp {site.whatsapp.label}
+                </a>
+              </li>
+              <li>
                 <a href={site.salesLink} target="_blank" rel="noopener noreferrer" className="link-draw">
                   linktr.ee/valutvendas
                 </a>
@@ -96,7 +101,7 @@ export function Footer() {
               ))}
             </ul>
             <p>
-              {site.store.street} · CNPJ {site.cnpj}
+              {site.store.venue} · {site.store.street} · {site.store.district}, {site.store.city}/{site.store.state} · {site.store.zip}
             </p>
           </div>
           {site.demoData && <p className="mt-2 text-[11px] text-ivory/40">Nomes de produtos e preços ilustrativos — [CONFIRMAR] com a VALUT.</p>}

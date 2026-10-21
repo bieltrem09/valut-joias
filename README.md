@@ -68,15 +68,12 @@ lib/                  gsap (registro dos plugins), lenis (smooth scroll), reveal
 
 Busque por `CONFIRMAR` no código. Lista completa:
 
-**Loja e contato** (`data/site.ts`)
-- [ ] Bairro, cidade e UF da loja (Shopping Villa Real — Av. Mal. Arthur da Costa e Silva, 1380)
-- [ ] Horários de funcionamento
-- [ ] Conferir se o ponto do mapa cai certo na loja (busca: "Shopping Villa Real, Av. Mal. Arthur da Costa e Silva, 1380")
-- [ ] (Opcional) chave `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` para o mapa totalmente personalizado
-- [ ] Número de WhatsApp (enquanto vazio, os botões levam para linktr.ee/valutvendas)
-- [ ] CNPJ
+**Loja e contato** (`data/site.ts`) — ✅ preenchidos: Shopping Villa Real, Av. Mal. Artur da Costa e Silva, 1380 · Lj 2, Jardim Glória, Limeira/SP, 13487-230; horários; WhatsApp (19) 99366-1551; empresa familiar desde 2018; garantia de 1 ano.
+- [ ] CNPJ (não aparece no site enquanto não for informado)
 - [ ] Domínio definitivo do site
 - [ ] Valor mínimo para frete grátis (hoje R$ 299)
+- [ ] Conferir se o ponto do mapa cai certo na loja
+- [ ] (Opcional) chave `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` para o mapa totalmente personalizado
 
 **Produtos** (`data/products.ts`)
 - [ ] Nomes reais das peças (hoje são descrições do que aparece nas fotos)
@@ -86,11 +83,9 @@ Busque por `CONFIRMAR` no código. Lista completa:
 - [ ] Quando os dados forem reais, mude `demoData` para `false` em `data/site.ts` (some o aviso "preços ilustrativos")
 
 **Conteúdo**
-- [ ] História da marca na página Sobre (`components/pages/AboutView.tsx`)
-- [ ] Depoimentos reais com autorização (`data/testimonials.ts`)
-- [ ] Benefícios do programa de revenda: pedido mínimo, catálogo (`components/sections/Wholesale.tsx`)
-- [ ] FAQ do atacado (`components/pages/WholesaleForm.tsx`)
-- [ ] Políticas de trocas, envio e garantia (`app/contato/page.tsx`, acordeão "Envio" do produto)
+- [ ] Mais avaliações do Google, se quiser (`data/testimonials.ts`)
+- [ ] Pedido mínimo do atacado (`components/pages/WholesaleForm.tsx`)
+- [ ] Política de trocas e devoluções (`app/contato/page.tsx`)
 - [ ] Tabela de tamanhos de anel (`components/shop/RingSizeGuide.tsx`)
 - [ ] Formas de pagamento no rodapé (`components/layout/Footer.tsx`)
 - [ ] Integração da newsletter (`components/layout/Footer.tsx`)

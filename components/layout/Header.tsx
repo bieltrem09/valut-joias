@@ -97,7 +97,7 @@ export function Header() {
             <TransitionLink href="/" aria-label="VALUT Semijoias — início" className="block">
               <LogoWordmark className="h-[18px] w-auto text-current md:h-5" aria-hidden />
             </TransitionLink>
-            <span className="eyebrow hidden opacity-70 xl:inline">Est. Loja Física</span>
+            <span className="eyebrow hidden opacity-70 xl:inline">Est. 2018</span>
           </div>
 
           <nav aria-label="Principal" className="hidden lg:block">
