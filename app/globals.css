@@ -322,3 +322,37 @@ html[data-preloaded] .preloader {
     --arc-w: min(17vw, 50svh);
   }
 }
+
+/* Indicador de scroll horizontal (hero desktop) */
+@keyframes scroll-cue-x {
+  0% {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  50% {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+  51% {
+    transform-origin: right;
+  }
+  100% {
+    transform: scaleX(0);
+    transform-origin: right;
+  }
+}
+.scroll-cue-x {
+  animation: scroll-cue-x 2.2s var(--ease-curtain) infinite;
+}
+
+/* CTAs do hero desktop: começam transparentes (mas clicáveis) até a entrada */
+@media (min-width: 1024px) {
+  .js .hd-cta {
+    opacity: 0;
+  }
+}
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+  .js .hd-cta {
+    opacity: 1;
+  }
+}

@@ -114,6 +114,18 @@ export const media = {
     "height": 872,
     "blurDataURL": ""
   },
+  "hero-joia-desktop": {
+    "src": "/media/hero-joia-desktop.webp",
+    "width": 842,
+    "height": 872,
+    "blurDataURL": ""
+  },
+  "hero-editorial-desktop": {
+    "src": "/media/hero-editorial-desktop.jpg",
+    "width": 1193,
+    "height": 1600,
+    "blurDataURL": "data:image/webp;base64,UklGRmgAAABXRUJQVlA4IFwAAADQAQCdASoMABAAA4BaJbACdADbPtYkgAD+0VnUTN/GVISTzrRwQqhz6Eq20ljsmfUw2k6pilFQKtXaLakywSFlHYpqcJyjApUClzpx9BKzqN64WzaV/FySrUYQAA=="
+  },
   "video-flores-cravejadas-poster": {
     "src": "/media/video-flores-cravejadas-poster.jpg",
     "width": 540,

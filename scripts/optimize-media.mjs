@@ -75,6 +75,27 @@ for (const [needle, name, kind] of photos) {
   console.log('✓ joia-rubi-recorte.webp');
 }
 
+// Variantes exclusivas do hero desktop (o mobile continua usando os arquivos acima).
+// Pós-produção idêntica nas duas para manter tom e nitidez consistentes:
+// saturação +8%, contraste leve e sharpening suave.
+{
+  const finish = (img) => img.modulate({ saturation: 1.08 }).linear(1.04, -4).sharpen({ sigma: 0.8, m1: 0.6, m2: 2 });
+  const jobs = [
+    { name: 'hero-joia-desktop.webp', from: path.join(root, 'scripts/joia-hero-recorte.png'), webp: true },
+    { name: 'hero-editorial-desktop.jpg', from: find('857895182'), webp: false },
+  ];
+  for (const j of jobs) {
+    let img = sharp(j.from).rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true });
+    img = finish(img);
+    const buf = j.webp ? await img.webp({ quality: 90, alphaQuality: 100 }).toBuffer() : await img.jpeg({ quality: 90, mozjpeg: true }).toBuffer();
+    await sharp(buf).toFile(path.join(out, j.name));
+    const meta = await sharp(buf).metadata();
+    const blur = j.webp ? '' : `data:image/webp;base64,${(await sharp(buf).resize(12).webp({ quality: 40 }).toBuffer()).toString('base64')}`;
+    manifest[j.name.replace(/\.(jpg|webp)$/, '')] = { src: `/media/${j.name}`, width: meta.width, height: meta.height, blurDataURL: blur };
+    console.log('✓', j.name, `${meta.width}×${meta.height}`);
+  }
+}
+
 // Vídeos
 const hasFfmpeg = (() => { try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' }); return true; } catch { return false; } })();
 const videos = [
