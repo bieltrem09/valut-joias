@@ -5,6 +5,7 @@ import { PointerEvent as RPointerEvent, ReactNode, useEffect, useRef, useState }
 import { categoryName } from '@/data/categories';
 import { Product, Variant, variantLabels } from '@/data/products';
 import { site, whatsappLink } from '@/data/site';
+import { orderMessage } from '@/lib/checkout';
 import { flyToCart } from '@/lib/flyToCart';
 import { cn, formatPrice } from '@/lib/format';
 import { setScrollLock } from '@/lib/lenis';
@@ -45,7 +46,7 @@ export function ProductView({ product, pairs }: { product: Product; pairs: Produ
     setTimeout(() => setCartOpen(true), 250);
   };
 
-  const waMessage = `Olá, VALUT! Quero comprar: ${product.name} (${variantLabels[variant]}) × ${qty} — ${formatPrice(product.price * qty)}`;
+  const waMessage = orderMessage([{ slug: product.slug, variant, qty }], 'Vi esta peça no site e gostaria de comprar.');
 
   return (
     <>
