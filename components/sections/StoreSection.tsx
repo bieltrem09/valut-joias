@@ -95,8 +95,34 @@ export function StoreSection() {
             .fromTo(item.querySelector('.st-ring'), { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 1.2 }, 0.6);
           if (cap) tl.from(cap.children, { yPercent: 100, opacity: 0, duration: 0.8, stagger: 0.08 }, 0.7);
 
+          // Celular/tablet (sem mouse): a inclinação 3D e o reflexo de luz acompanham a rolagem do dedo
+          if (!ctx.conditions?.fine) {
+            const glare = item.querySelector<HTMLElement>('.st-glare')!;
+            gsap.set(frame, { transformPerspective: 900 });
+            gsap.set(glare, {
+              opacity: 1,
+              backgroundImage: 'linear-gradient(115deg, transparent 35%, rgb(255 255 255 / .55) 50%, transparent 65%)',
+              backgroundSize: '250% 250%',
+            });
+            const st = { trigger: item, start: 'top bottom', end: 'bottom top', scrub: 0.6 };
+            const dir = anim === 'split' || anim === 'blinds' ? -1 : 1;
+            gsap.fromTo(frame, { rotationX: 9, rotationY: -5 * dir }, { rotationX: -9, rotationY: 5 * dir, ease: 'none', scrollTrigger: st });
+            gsap.fromTo(glare, { backgroundPosition: '120% 120%' }, { backgroundPosition: '-20% -20%', ease: 'none', scrollTrigger: { ...st, start: 'top 90%', end: 'bottom 30%' } });
+            // toque: leve "afundar" da foto
+            const press = () => gsap.to(frame, { scale: 0.97, duration: 0.25, ease: 'power3.out' });
+            const release = () => gsap.to(frame, { scale: 1, duration: 0.6, ease: 'elastic.out(1, 0.5)' });
+            frame.addEventListener('touchstart', press, { passive: true });
+            frame.addEventListener('touchend', release);
+            frame.addEventListener('touchcancel', release);
+            cleanups.push(() => {
+              frame.removeEventListener('touchstart', press);
+              frame.removeEventListener('touchend', release);
+              frame.removeEventListener('touchcancel', release);
+            });
+            return;
+          }
+
           // hover (desktop): inclinação 3D + reflexo de luz seguindo o cursor
-          if (!ctx.conditions?.fine) return;
           gsap.set(frame, { transformPerspective: 900 });
           const rx = gsap.quickTo(frame, 'rotationX', { duration: 0.7, ease: 'power3.out' });
           const ry = gsap.quickTo(frame, 'rotationY', { duration: 0.7, ease: 'power3.out' });
