@@ -44,8 +44,17 @@ const photos = [
 
 const manifest = {};
 
+// Fotos da loja ampliadas 2x por super-resolução (EDSR) — ver scripts/upscale.py.
+// Quando existe img/hd/<nome>.jpg ela é usada no lugar da original de 960px.
+const hdSource = (name) => {
+  const f = path.join(src, 'hd', name.replace(/\.(jpg|webp)$/, '.jpg'));
+  return existsSync(f) ? f : null;
+};
+
 for (const [needle, name, kind] of photos) {
-  let img = sharp(find(needle)).rotate().resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true });
+  const hd = hdSource(name);
+  let img = sharp(hd ?? find(needle)).rotate().resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true });
+  if (hd) img = img.sharpen({ sigma: 0.5, m1: 0.4, m2: 1.2 });
   img =
     kind === 'loja'
       ? img.modulate({ brightness: 1.02, saturation: 0.94 }).recomb([[1.04, 0, 0], [0, 1.0, 0], [0, 0, 0.93]]).linear(1.06, -6)
@@ -78,9 +87,10 @@ for (const [needle, name, kind] of photos) {
 // Fachada do Shopping Villa Real (captura do Google Street View — manter o crédito no site).
 // Recorte que tira parte do céu e foca no letreiro e na entrada.
 {
-  const name = 'loja-fachada.jpg';
-  const buf = await sharp(find('fachada-shopping-villa-real'))
-    .extract({ left: 0, top: 470, width: 1080, height: 1130 })
+  const name = 'loja-fachada.jpg'; // a versão HD já vem recortada (mesmo enquadramento)
+  const hd = hdSource(name);
+  const base = hd ? sharp(hd).resize({ width: 2000, height: 2000, fit: 'inside' }) : sharp(find('fachada-shopping-villa-real')).extract({ left: 0, top: 470, width: 1080, height: 1130 });
+  const buf = await base
     .modulate({ saturation: 1.04 })
     .linear(1.03, -3)
     .sharpen({ sigma: 0.6 })

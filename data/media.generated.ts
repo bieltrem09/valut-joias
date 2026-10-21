@@ -50,9 +50,9 @@ export const media = {
   },
   "loja-perolas-busto": {
     "src": "/media/loja-perolas-busto.webp",
-    "width": 960,
-    "height": 1280,
-    "blurDataURL": "data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAADQAgCdASoMABAAA4BaJbACdDiAByZovubyf3de0GIAAP7h8GpuA9ORQ7mKcDWdNpFsi6v9i68bMRUayv+KGKPT2MgJL7AWxmBBpfuD2Y37cOinxZTdw/b4w4pB3KKIjpNL4egagCcwy5xrrnWS+TPvf33f+9J2JJk5NiIAAAA="
+    "width": 1500,
+    "height": 2000,
+    "blurDataURL": "data:image/webp;base64,UklGRogAAABXRUJQVlA4IHwAAACwAgCdASoMABAAA4BaJbACdDiAByXYvubyf3iVd9AA/uHwam4DtvVsxWpv6H0Hxjhh2dwDFmUs5v+0is7ZjRg88IOgNfDR1vpaqAFwHBEa+mqpFqyR1zbr6mIpvr3S3UT7LMn/S0VplY074rs2DusEYIA8gsThqQdCLAAA"
   },
   "loja-conjunto-coral": {
     "src": "/media/loja-conjunto-coral.webp",
@@ -74,21 +74,21 @@ export const media = {
   },
   "aneis-coquetel": {
     "src": "/media/aneis-coquetel.webp",
-    "width": 960,
-    "height": 1280,
-    "blurDataURL": "data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAAAQAgCdASoMABAAA4BaJYgCdAYr7Zxw2FcAAPxeAnrThwN7TN3wfe6kzwNFqtT5Yorh0VC3wHXwfKKfjWtUFFgApzpKm5e6z0LzPR7GnpBft67CZanWFdKpueSauhz4QFXM+AAA"
+    "width": 1500,
+    "height": 2000,
+    "blurDataURL": "data:image/webp;base64,UklGRnIAAABXRUJQVlA4IGYAAAAQAgCdASoMABAAA4BaJZACdAYstZxw18UAAPxeAnuFxyZuTN31aGLedCFkgOp+j35v2cPiakhpZ9JGIauzd2iKQZ5IRNM21n/gmvjOkv8fXZdxz4wm3YFkaeyV/BifxZoZ9z+YgAA="
   },
   "loja-letreiro": {
     "src": "/media/loja-letreiro.webp",
-    "width": 960,
-    "height": 1280,
+    "width": 1500,
+    "height": 2000,
     "blurDataURL": "data:image/webp;base64,UklGRlwAAABXRUJQVlA4IFAAAABwAQCdASoMABAAA4BaJQBOgBsLgAD+BK6x2rt4HwUXaOYGyV6mm2opMRTD/0cxGlq5pYqWRCc6SJHqeZi3rFIqd74wDt7bQuHOCNz9XgAAAA=="
   },
   "loja-rivieras-letreiro": {
     "src": "/media/loja-rivieras-letreiro.webp",
-    "width": 960,
-    "height": 1280,
-    "blurDataURL": "data:image/webp;base64,UklGRmAAAABXRUJQVlA4IFQAAAAQAgCdASoMABAAA4BaJYgC7AEUrvKCeXiAAP7gqrAkXVgqNP8lBDD+Jor3CR3x0SQSvfLZzZPiHU6PMwgbjeLriuLWO+S5ATuQJ/WTBFcieKAAAAA="
+    "width": 1500,
+    "height": 2000,
+    "blurDataURL": "data:image/webp;base64,UklGRl4AAABXRUJQVlA4IFIAAADQAQCdASoMABAAA4BaJYgC7ACSAjCBuAD+34Wwg6eEmhIAms0fDpIV0YGAgomFMcKXYl62N1TZd1/eoxRMaJJyIELXt+M+5SDEuVe4RHoqsgAA"
   },
   "loja-argolas": {
     "src": "/media/loja-argolas.webp",
@@ -98,14 +98,14 @@ export const media = {
   },
   "loja-logo-marmore": {
     "src": "/media/loja-logo-marmore.webp",
-    "width": 960,
-    "height": 720,
-    "blurDataURL": "data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAADQAQCdASoMAAkAA4BaJZACdADz/8/wAAD+6uvasWntPt05v06F9ikfZDkFxyAK3l3oHqctfCh4gkI/hZiZicO9j4v30cjacJ1iZ8gAAAA="
+    "width": 1920,
+    "height": 1440,
+    "blurDataURL": "data:image/webp;base64,UklGRlgAAABXRUJQVlA4IEwAAADwAQCdASoMAAkAA4BaJZACdAD0l0ywOgAA/urr2rFp7bYGNkPWvZOrkFC0CXzmob4BuVAsyhlCOjACrN77eYp3XIxroJAB6oEz5AAA"
   },
   "loja-interior": {
     "src": "/media/loja-interior.webp",
-    "width": 960,
-    "height": 1280,
+    "width": 1500,
+    "height": 2000,
     "blurDataURL": "data:image/webp;base64,UklGRn4AAABXRUJQVlA4IHIAAABwAgCdASoMABAAA4BaJbACdAYtpzDb9PVIo2mAAMyjbIexzUnIlE4MeKNQvRRHNa9ERgrEuCk9qn6+qHBk/pfpLJ+IZ3WKBZsUCsZIm7/VY4WCyZTCfvaoVuanABr9jXWDly9R3+GSEid+3JJX3JAWIAA="
   },
   "joia-rubi-recorte": {
@@ -116,9 +116,9 @@ export const media = {
   },
   "loja-fachada": {
     "src": "/media/loja-fachada.jpg",
-    "width": 1080,
-    "height": 1130,
-    "blurDataURL": "data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAADwAQCdASoMAA0AA4BaJZACdAEOu7/Uc4AA/dvfjN9q5BlY+9T7j2RLUNXpLHCs6yAZjU7ILVYmkru3b7EzJ6A9DefhpQNIz8gOPKVooAA="
+    "width": 1912,
+    "height": 2000,
+    "blurDataURL": "data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAAAQAgCdASoMAA0AA4BaJZACdGuAAsz4pvkAAP3b34zfauQZWPvU+49kTZOlGyppzwKgpks5ghgq7ZUgRJCUKHiOZnb+upuMayFWsmeAAAA="
   },
   "hero-joia-desktop": {
     "src": "/media/hero-joia-desktop.webp",

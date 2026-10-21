@@ -361,3 +361,44 @@ html[data-preloaded] .preloader {
 .map-tint {
   filter: grayscale(1) sepia(0.28) saturate(1.15) contrast(0.94) brightness(1.03);
 }
+
+/* ——— Seção da loja: palavras-chave e brilho ——— */
+.st-kw {
+  --u: 0;
+  position: relative;
+  white-space: nowrap;
+}
+.st-kw::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.02em;
+  height: 0.06em;
+  background: linear-gradient(90deg, var(--color-gold), color-mix(in srgb, var(--color-gold) 40%, #fff));
+  transform: scaleX(var(--u));
+  transform-origin: left;
+}
+.st-shine {
+  color: var(--color-gold-deep);
+}
+.st-shine-txt {
+  background: linear-gradient(100deg, var(--color-gold-deep) 0%, var(--color-gold-deep) 35%, #e9cf8a 50%, var(--color-gold-deep) 65%, var(--color-gold-deep) 100%);
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.st-shine-txt.is-on {
+  animation: st-shine 3.6s ease-in-out infinite;
+}
+@keyframes st-shine {
+  0% {
+    background-position: 100% 0;
+  }
+  60%,
+  100% {
+    background-position: -50% 0;
+  }
+}

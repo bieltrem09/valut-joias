@@ -78,7 +78,7 @@ export function StoreLocation({ id = 'onde-estamos' }: { id?: string }) {
           },
         });
 
-        tl.fromTo(q('.loc-photo-img'), { scale: 1.14 }, { scale: 1, duration: 0.25 }, 0)
+        tl.fromTo(q('.loc-photo-img'), { scale: 1.08 }, { scale: 1, duration: 0.25 }, 0)
           .fromTo(q('.loc-intro > *'), { y: 0, autoAlpha: 1 }, { y: -40, autoAlpha: 0, stagger: 0.02, duration: 0.12 }, 0.18)
           // foto → miniatura
           .fromTo(
@@ -157,7 +157,7 @@ export function StoreLocation({ id = 'onde-estamos' }: { id?: string }) {
         {/* Foto da fachada (na frente) — encolhe até a miniatura do cartão */}
         <div className="loc-photo absolute inset-0 z-20 overflow-hidden will-change-transform motion-reduce:hidden">
           <div className="loc-photo-img absolute inset-0">
-            <Media k="loja-fachada" alt={`Fachada do ${site.store.venue}, ${site.store.street}`} fill sizes="100vw" className="object-cover object-[50%_45%]" />
+            <Media k="loja-fachada" alt={`Fachada do ${site.store.venue}, ${site.store.street}`} fill quality={90} sizes="100vw" className="object-cover object-[50%_45%]" />
           </div>
           <div className="loc-veil absolute inset-0 bg-gradient-to-b from-ink/25 via-ink/5 via-45% to-ink/90" aria-hidden />
         </div>
