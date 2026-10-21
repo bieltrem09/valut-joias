@@ -356,3 +356,8 @@ html[data-preloaded] .preloader {
     opacity: 1;
   }
 }
+
+/* Mapa incorporado: tons neutros e quentes, alinhados à paleta (ivory/dourado) */
+.map-tint {
+  filter: grayscale(1) sepia(0.28) saturate(1.15) contrast(0.94) brightness(1.03);
+}

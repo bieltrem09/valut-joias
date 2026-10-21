@@ -12,12 +12,17 @@ export const site = {
   salesLink: 'https://linktr.ee/valutvendas',
   url: 'https://valutsemijoias.com.br', // [CONFIRMAR] domínio definitivo
   store: {
+    venue: 'Shopping Villa Real', // visto na fachada (nº 1380)
     street: 'Av. Mal. Arthur da Costa e Silva, 1380',
     district: '[CONFIRMAR BAIRRO]',
     city: '[CONFIRMAR CIDADE]',
     state: '[CONFIRMAR UF]',
     hours: ['Seg a Sex · [CONFIRMAR HORÁRIO]', 'Sábado · [CONFIRMAR HORÁRIO]'],
-    mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Av.+Mal.+Arthur+da+Costa+e+Silva,+1380', // [CONFIRMAR] link exato
+    /** Texto usado para localizar a loja no Google Maps / Waze. */
+    mapsQuery: 'Shopping Villa Real, Av. Mal. Arthur da Costa e Silva, 1380',
+    mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Shopping+Villa+Real%2C+Av.+Mal.+Arthur+da+Costa+e+Silva%2C+1380',
+    directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=Shopping+Villa+Real%2C+Av.+Mal.+Arthur+da+Costa+e+Silva%2C+1380',
+    wazeUrl: 'https://waze.com/ul?q=Shopping%20Villa%20Real%2C%20Av.%20Mal.%20Arthur%20da%20Costa%20e%20Silva%2C%201380&navigate=yes',
   },
   whatsapp: {
     number: '', // [CONFIRMAR NÚMERO] formato internacional, ex.: 5599999999999

@@ -75,6 +75,24 @@ for (const [needle, name, kind] of photos) {
   console.log('✓ joia-rubi-recorte.webp');
 }
 
+// Fachada do Shopping Villa Real (captura do Google Street View — manter o crédito no site).
+// Recorte que tira parte do céu e foca no letreiro e na entrada.
+{
+  const name = 'loja-fachada.jpg';
+  const buf = await sharp(find('fachada-shopping-villa-real'))
+    .extract({ left: 0, top: 470, width: 1080, height: 1130 })
+    .modulate({ saturation: 1.04 })
+    .linear(1.03, -3)
+    .sharpen({ sigma: 0.6 })
+    .jpeg({ quality: 88, mozjpeg: true })
+    .toBuffer();
+  await sharp(buf).toFile(path.join(out, name));
+  const meta = await sharp(buf).metadata();
+  const blur = await sharp(buf).resize(12).webp({ quality: 40 }).toBuffer();
+  manifest['loja-fachada'] = { src: `/media/${name}`, width: meta.width, height: meta.height, blurDataURL: `data:image/webp;base64,${blur.toString('base64')}` };
+  console.log('✓', name, `${meta.width}×${meta.height}`);
+}
+
 // Variantes exclusivas do hero desktop (o mobile continua usando os arquivos acima).
 // Pós-produção idêntica nas duas para manter tom e nitidez consistentes:
 // saturação +8%, contraste leve e sharpening suave.

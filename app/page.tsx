@@ -7,6 +7,7 @@ import { RubiMood } from '@/components/sections/RubiMood';
 import { Lookbook } from '@/components/sections/Lookbook';
 import { Featured } from '@/components/sections/Featured';
 import { StoreSection } from '@/components/sections/StoreSection';
+import { StoreLocation } from '@/components/sections/StoreLocation';
 import { Wholesale } from '@/components/sections/Wholesale';
 import { Feedbacks } from '@/components/sections/Feedbacks';
 
@@ -24,6 +25,7 @@ export default function Home() {
         <Lookbook />
         <Featured />
         <StoreSection />
+        <StoreLocation />
         <Wholesale />
         <Feedbacks />
       </div>

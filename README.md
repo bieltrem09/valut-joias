@@ -38,6 +38,12 @@ A joia recortada do hero (`joia-rubi-recorte.webp`) foi gerada a partir de um fr
 ### Logo
 O logo foi **recriado em SVG** a partir das fotos do letreiro (`public/brand/valut-logo.svg`, `valut-simbolo.svg`, `valut-wordmark.svg`; gerador em `scripts/gen-logo.mjs`). Se a VALUT tiver o vetor oficial, substitua os arquivos e os paths em `components/ui/logo-paths.ts`.
 
+### Mapa da loja (Google Maps)
+A seção "Onde estamos" (home e /contato) mostra a fachada do Shopping Villa Real e, ao rolar, o mapa.
+- **Sem configuração:** usa a incorporação oficial do Google Maps com tratamento de cor no estilo do site.
+- **Mapa 100% personalizado (opcional):** crie uma chave da *Maps JavaScript API* no Google Cloud e adicione na Vercel a variável `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`. O site passa a usar o mapa com as cores da VALUT (`components/ui/StoreMap.tsx`). Restrinja a chave ao domínio do site.
+- A foto da fachada é uma captura do Google Street View e o crédito aparece no cartão. **[CONFIRMAR]** substituir por uma foto própria da fachada quando houver.
+
 ## Estrutura
 
 ```
@@ -63,9 +69,10 @@ lib/                  gsap (registro dos plugins), lenis (smooth scroll), reveal
 Busque por `CONFIRMAR` no código. Lista completa:
 
 **Loja e contato** (`data/site.ts`)
-- [ ] Bairro, cidade e UF da loja (Av. Mal. Arthur da Costa e Silva, 1380)
+- [ ] Bairro, cidade e UF da loja (Shopping Villa Real — Av. Mal. Arthur da Costa e Silva, 1380)
 - [ ] Horários de funcionamento
-- [ ] Link exato do Google Maps
+- [ ] Conferir se o ponto do mapa cai certo na loja (busca: "Shopping Villa Real, Av. Mal. Arthur da Costa e Silva, 1380")
+- [ ] (Opcional) chave `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` para o mapa totalmente personalizado
 - [ ] Número de WhatsApp (enquanto vazio, os botões levam para linktr.ee/valutvendas)
 - [ ] CNPJ
 - [ ] Domínio definitivo do site

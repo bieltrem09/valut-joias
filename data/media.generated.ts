@@ -114,6 +114,12 @@ export const media = {
     "height": 872,
     "blurDataURL": ""
   },
+  "loja-fachada": {
+    "src": "/media/loja-fachada.jpg",
+    "width": 1080,
+    "height": 1130,
+    "blurDataURL": "data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAADwAQCdASoMAA0AA4BaJZACdAEOu7/Uc4AA/dvfjN9q5BlY+9T7j2RLUNXpLHCs6yAZjU7ILVYmkru3b7EzJ6A9DefhpQNIz8gOPKVooAA="
+  },
   "hero-joia-desktop": {
     "src": "/media/hero-joia-desktop.webp",
     "width": 842,

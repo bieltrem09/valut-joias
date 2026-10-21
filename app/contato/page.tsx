@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { PillLink } from '@/components/ui/Buttons';
 import { Media } from '@/components/ui/Media';
 import { RingGuideButton } from '@/components/shop/RingGuideButton';
+import { StoreLocation } from '@/components/sections/StoreLocation';
 
 export const metadata: Metadata = {
   title: 'Contato',
@@ -71,6 +72,7 @@ export default function ContactPage() {
           <Media k="loja-logo-marmore" alt="Logo VALUT dourado em parede de mármore" fill priority sizes="(min-width:1024px) 58vw, 100vw" className="object-cover" />
         </div>
       </section>
+      <StoreLocation id="mapa" />
       <section className="border-t border-ink/10 bg-marble/40 px-5 py-20 md:px-8">
         <div className="mx-auto grid max-w-[1600px] gap-10 md:grid-cols-3">
           {policies.map((p) => (
