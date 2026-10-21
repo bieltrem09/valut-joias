@@ -5,18 +5,24 @@ import { gsap, useGSAP } from '@/lib/gsap';
 import { mq } from '@/lib/animations';
 import { MediaKey } from '@/data/media.generated';
 import { Media } from '@/components/ui/Media';
+import { site } from '@/data/site';
 
 type Token = { w: string; italic?: boolean } | { img: MediaKey; alt: string };
 
+const w = (text: string, italic = false): Token[] => text.split(' ').map((word) => ({ w: word, italic }));
+
 const tokens: Token[] = [
-  { w: 'Coisas' }, { w: 'que' }, { w: 'nós' }, { w: 'achamos' }, { w: 'chique.', italic: true },
+  ...w('Coisas que nós achamos'), ...w('chique.', true),
   { img: 'detalhe-brinco-gota', alt: 'Brinco gota cravejado' },
-  { w: 'Um' }, { w: 'tom' }, { w: 'que' }, { w: 'exala' },
+  ...w('Um brilho que não pede licença, um tom que exala'),
   { img: 'aneis-coquetel', alt: 'Anéis coquetel coloridos' },
-  { w: 'elegância.', italic: true },
-  { w: 'Para' }, { w: 'todos' }, { w: 'os' }, { w: 'dias' },
+  ...w('elegância.', true),
+  ...w('Peças que acompanham todos os dias'),
   { img: 'editorial-colar-gota', alt: 'Modelo com colar gota' },
-  { w: 'e' }, { w: 'para' }, { w: 'os' }, { w: 'grandes', italic: true }, { w: 'dias.', italic: true },
+  ...w('e brilham ainda mais nos'), ...w('grandes dias.', true),
+  ...w('Porque o verdadeiro luxo'),
+  { img: 'loja-perolas-busto', alt: 'Colares de pérolas em busto de veludo' },
+  ...w('mora nos'), ...w('detalhes', true), ...w('— e em quem os veste.'),
 ];
 
 /** Manifesto: revelação palavra por palavra ligada ao scroll (0.15 → 1), com fotos redondas que surgem entre as palavras. */
@@ -45,7 +51,7 @@ export function Manifesto() {
   return (
     <section ref={root} aria-label="Manifesto" className="relative px-4 py-[14svh] md:px-8 md:py-[18svh]">
       <p className="eyebrow mb-10 text-center text-gold-deep">Manifesto</p>
-      <p className="mf-text mx-auto max-w-[1200px] text-center font-serif text-[2.7rem] leading-[1.06] sm:text-[3.2rem] md:text-[clamp(2rem,5.2vw,5rem)] md:leading-[1.12] tracking-[-0.01em]">
+      <p className="mf-text mx-auto max-w-[1200px] text-center font-serif text-[2.4rem] leading-[1.08] sm:text-[3rem] md:text-[clamp(2rem,5.2vw,5rem)] md:leading-[1.12] tracking-[-0.01em]">
         {tokens.map((t, i) => (
           <Fragment key={i}>
             {'w' in t ? (
@@ -57,6 +63,9 @@ export function Manifesto() {
             )}{' '}
           </Fragment>
         ))}
+      </p>
+      <p className="eyebrow mt-12 flex items-center justify-center gap-3 text-ink/55">
+        <span className="h-px w-8 bg-gold" aria-hidden /> VALUT · desde {site.since} <span className="h-px w-8 bg-gold" aria-hidden />
       </p>
     </section>
   );
