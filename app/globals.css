@@ -402,3 +402,41 @@ html[data-preloaded] .preloader {
     background-position: -50% 0;
   }
 }
+
+/* ——— Sacola ——— */
+.cart-progress {
+  background: linear-gradient(90deg, var(--color-gold), #e9cf8a 25%, var(--color-gold) 50%, #e9cf8a 75%, var(--color-gold));
+  background-size: 200% 100%;
+  animation: cart-progress 2.8s linear infinite;
+}
+@keyframes cart-progress {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+.cart-cta-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgb(255 255 255 / 0.22) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: cart-cta-shine 3.6s var(--ease-curtain) 1.2s infinite;
+  pointer-events: none;
+}
+@keyframes cart-cta-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  40%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cart-progress,
+  .cart-cta-shine {
+    animation: none;
+  }
+}
