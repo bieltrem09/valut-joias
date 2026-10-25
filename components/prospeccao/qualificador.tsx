@@ -59,7 +59,7 @@ export function Qualificador({
   const rolar = (d: number) => trilho.current?.scrollBy({ left: d * 300, behavior: reduce ? "auto" : "smooth" });
 
   return (
-    <section aria-label="Qualificador de leads" className="hidden gap-5 lg:grid">
+    <section aria-label="Qualificador de leads" className="hidden grid-cols-[minmax(0,1fr)] gap-5 lg:grid">
       {/* Buscas salvas */}
       <div className="surface toque flex items-center gap-5 p-4">
         <div className="flex shrink-0 items-center gap-3 border-r border-border pr-5">
