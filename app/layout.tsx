@@ -6,6 +6,7 @@ import { Providers } from "@/components/shell/providers";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { BottomNav } from "@/components/shell/bottom-nav";
+import { Aurora } from "@/components/shell/aurora";
 import { persistente } from "@/lib/db";
 import Link from "next/link";
 import "./globals.css";
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8f7f4" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1020" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0814" },
   ],
 };
 
@@ -45,6 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="pt-BR" suppressHydrationWarning className={`${instrument.variable} ${jetbrains.variable}`}>
       <body>
         <Providers initialCollapsed={collapsed}>
+          <Aurora />
           <a
             href="#conteudo"
             className="sr-only z-50 rounded-control bg-card px-3 py-2 text-13 shadow-pop focus:not-sr-only focus:fixed focus:left-4 focus:top-4"

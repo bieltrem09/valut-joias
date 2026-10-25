@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { googleEnabled, searchText } from "@/lib/google/places";
+import { GoogleApiError, googleEnabled, searchText } from "@/lib/google/places";
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
@@ -20,6 +20,9 @@ export async function GET(req: NextRequest) {
     });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ enabled: true, results: [], error: "A busca no Google falhou. Tente de novo em instantes." }, { status: 502 });
+    return NextResponse.json(
+      { enabled: true, results: [], error: e instanceof GoogleApiError ? e.motivo : "A busca no Google falhou. Tente de novo em instantes." },
+      { status: 502 },
+    );
   }
 }

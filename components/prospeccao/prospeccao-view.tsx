@@ -9,6 +9,7 @@ import { ArrowUpRight, ChevronDown, Crosshair, Loader2, MapPin, Phone, Radar, Se
 import { Button } from "@/components/ui/button";
 import { Select, fieldClass } from "@/components/ui/input";
 import { GridGlow } from "@/components/ui/grid-glow";
+import { Orb } from "@/components/ui/orb";
 import { Stars } from "@/components/clientes/stars";
 import { enviarAoFunil } from "@/app/actions";
 import { ordenar, whatsappUrl, type Lead } from "@/lib/prospeccao";
@@ -165,15 +166,18 @@ export function ProspeccaoView({ googleEnabled, buscas }: { googleEnabled: boole
 
   if (!googleEnabled) {
     return (
-      <section className="surface relative overflow-hidden p-8">
+      <section className="surface relative flex flex-col items-center gap-6 overflow-hidden p-8 md:flex-row md:items-center">
         <GridGlow />
+        <Orb size={180} energia={0.15} className="relative" label="Radar de prospecção aguardando a chave do Google" />
         <div className="relative max-w-xl">
           <p className="eyebrow text-primary">Falta uma chave</p>
           <p className="mt-2 text-20 font-medium tracking-[-0.015em]">A prospecção busca empresas reais no Google, então precisa da Places API.</p>
           <ol className="mt-4 grid list-decimal gap-1.5 pl-5 text-13 text-subtle-foreground">
-            <li>No Google Cloud, crie um projeto e ative a “Places API (New)”.</li>
-            <li>Crie uma chave de API e restrinja à Places API.</li>
-            <li>Na Vercel, adicione GOOGLE_PLACES_API_KEY em Settings → Environment Variables e publique de novo.</li>
+            <li>Em console.cloud.google.com, crie um projeto e ative o faturamento (o Google dá crédito mensal grátis).</li>
+            <li>Em APIs e serviços → Biblioteca, ative a “Places API (New)”. Tem que ser a “(New)”.</li>
+            <li>Em Credenciais → Criar credenciais → Chave de API. Em “Restrições de aplicativo”, deixe “Nenhuma”.</li>
+            <li>Na Vercel, em Settings → Environment Variables, crie GOOGLE_PLACES_API_KEY com a chave, marque Production e Preview, e publique de novo.</li>
+            <li>Abra Configurações: o painel testa a chave e diz o que o Google recusou, se recusar.</li>
           </ol>
           <p className="mt-4 text-12 text-muted-foreground">Cada página de até 20 empresas é uma chamada à API. Uma busca completa usa até 3.</p>
         </div>
@@ -185,12 +189,19 @@ export function ProspeccaoView({ googleEnabled, buscas }: { googleEnabled: boole
     <div className="grid gap-5">
       {/* Busca */}
       <form
-        className="surface grid gap-4 p-4 md:p-5"
+        className="surface relative grid gap-4 overflow-hidden p-4 md:grid-cols-[auto_1fr] md:gap-x-6 md:p-5"
         onSubmit={(e) => {
           e.preventDefault();
           buscar();
         }}
       >
+        {/* Radar: a esfera fica calma esperando e se agita enquanto varre o Google. */}
+        <div className="flex items-center gap-3 md:row-span-3 md:flex-col md:justify-center md:gap-1">
+          <Orb size={112} energia={carregando ? 1 : 0.2} label={carregando ? "Varrendo o Google" : "Radar pronto"} />
+          <p className="text-12 text-muted-foreground md:text-center" aria-live="polite">
+            {carregando ? "Varrendo o Google…" : resultados ? `${resultados.length} encontrados` : "Radar pronto"}
+          </p>
+        </div>
         <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_auto]">
           <label className="relative flex items-center">
             <Search className="pointer-events-none absolute left-3 size-4 text-muted-foreground" strokeWidth={1.5} />

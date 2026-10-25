@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db, ready, schema as s } from "@/lib/db";
-import { buscarLugares, googleEnabled, localizarCidade, type Viewport } from "@/lib/google/places";
+import { buscarLugares, GoogleApiError, googleEnabled, localizarCidade, type Viewport } from "@/lib/google/places";
 import { distanciaKm, ordenar, qualificar, type Lead } from "@/lib/prospeccao";
 
 type Body = {
@@ -105,15 +105,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     console.error(e);
-    const msg = e instanceof Error ? e.message : "";
-    const recusada = /Places API (400|403)/.test(msg);
     return NextResponse.json(
-      {
-        ok: false,
-        error: recusada
-          ? "O Google recusou a chave. Confira se a “Places API (New)” está ativa no projeto e se a chave não está restrita a outro serviço."
-          : "O Google não respondeu. Tente de novo em instantes.",
-      },
+      { ok: false, error: e instanceof GoogleApiError ? e.motivo : "O Google não respondeu. Tente de novo em instantes." },
       { status: 502 },
     );
   }

@@ -37,8 +37,59 @@ async function call<T>(url: string, init: RequestInit & { fieldMask: string }): 
     },
     cache: "no-store",
   });
-  if (!res.ok) throw new Error(`Places API ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok) throw new GoogleApiError(res.status, await res.text());
   return res.json() as Promise<T>;
+}
+
+/** Erro do Google já traduzido: `motivo` diz em português o que mudar no Google Cloud. */
+export class GoogleApiError extends Error {
+  motivo: string;
+  constructor(
+    public status: number,
+    corpo: string,
+  ) {
+    super(`Places API ${status}: ${corpo.slice(0, 300)}`);
+    this.motivo = traduzirErro(status, corpo);
+  }
+}
+
+function traduzirErro(status: number, corpo: string): string {
+  let reason = "";
+  let mensagem = "";
+  try {
+    const j = JSON.parse(corpo) as { error?: { message?: string; details?: { reason?: string }[] } };
+    reason = j.error?.details?.find((d) => d.reason)?.reason ?? "";
+    mensagem = j.error?.message ?? "";
+  } catch {}
+  const tudo = `${reason} ${mensagem}`;
+  if (/API_KEY_INVALID|API key not valid/i.test(tudo))
+    return "A chave está errada. Copie de novo a chave inteira no Google Cloud (Credenciais) e cole na Vercel, sem espaços.";
+  if (/BILLING|billing/i.test(tudo))
+    return "Falta ativar o faturamento no projeto do Google Cloud. Vá em Faturamento, vincule um cartão (o Google dá crédito mensal grátis) e espere uns minutos.";
+  if (/SERVICE_DISABLED|has not been used|is disabled/i.test(tudo))
+    return "A “Places API (New)” não está ativada nesse projeto. Em APIs e serviços → Biblioteca, procure “Places API (New)” e clique em Ativar. Atenção: é a “(New)”, não a antiga.";
+  if (/REFERRER|referer/i.test(tudo))
+    return "A chave está restrita a sites (HTTP referrers). O painel chama o Google pelo servidor, então em “Restrições de aplicativo” escolha “Nenhuma”.";
+  if (/IP_ADDRESS|IP address/i.test(tudo)) return "A chave está restrita por IP. A Vercel muda de IP, então em “Restrições de aplicativo” escolha “Nenhuma”.";
+  if (/API_KEY_SERVICE_BLOCKED|blocked/i.test(tudo))
+    return "A chave não tem permissão para a Places API (New). Em “Restrições de API”, marque a “Places API (New)” na lista ou deixe sem restrição.";
+  if (status === 429) return "O Google limitou as chamadas (cota). Espere alguns minutos ou aumente a cota no Google Cloud.";
+  if (status === 401 || status === 403) return `O Google recusou a chave: ${mensagem || "permissão negada"}`;
+  return `O Google respondeu com erro ${status}${mensagem ? `: ${mensagem}` : ""}.`;
+}
+
+/** Testa a chave com a chamada mais barata possível (só IDs). */
+export async function testarChave(): Promise<{ ok: true } | { ok: false; motivo: string }> {
+  try {
+    await call(`${BASE}/places:searchText`, {
+      method: "POST",
+      fieldMask: "places.id",
+      body: JSON.stringify({ textQuery: "padaria Limeira SP", pageSize: 1 }),
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, motivo: e instanceof GoogleApiError ? e.motivo : "Não deu para falar com o Google agora. Tente de novo em instantes." };
+  }
 }
 
 type LocalizedText = { text: string; languageCode?: string };

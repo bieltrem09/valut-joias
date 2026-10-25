@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getEmpresa } from "@/lib/data/empresas";
-import { googleEnabled, syncEmpresa } from "@/lib/google/places";
+import { GoogleApiError, googleEnabled, syncEmpresa } from "@/lib/google/places";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
@@ -14,6 +14,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ ok: false, error: "O Google não respondeu. Tente de novo." }, { status: 502 });
+    return NextResponse.json({ ok: false, error: e instanceof GoogleApiError ? e.motivo : "O Google não respondeu. Tente de novo." }, { status: 502 });
   }
 }

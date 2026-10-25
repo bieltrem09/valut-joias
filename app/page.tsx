@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { parsePeriod } from "@/lib/period";
+import { parsePeriod, PERIOD_LABEL } from "@/lib/period";
 import { getDashboard, listEmpresasParaSelect } from "@/lib/data/vendas";
 import { NovaVendaButton } from "@/components/vendas/nova-venda";
 import { HeroLucro } from "@/components/vendas/hero-lucro";
@@ -31,6 +31,7 @@ export default async function VendasPage({ searchParams }: Props) {
             serie={d.serie}
             fraseAnterior={period.fraseAnterior}
             periodKey={period.key}
+            periodoLabel={period.key === "custom" ? period.frase.replace(/^de /, "") : PERIOD_LABEL[period.key]}
             vendasDoDia={period.dias === 1 ? d.vendas.filter((v) => v.status !== "cancelada") : []}
           />
         </div>

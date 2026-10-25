@@ -6,7 +6,7 @@ import { db, ready, schema as s, one, must, emSerie } from "@/lib/db";
 import { isISODate, todaySP } from "@/lib/dates";
 import { getEmpresaDetalhe, type EmpresaDetalhe } from "@/lib/data/empresas";
 import { proximoCodigo } from "@/lib/data/placas";
-import { googleEnabled, registrarMedicao, syncEmpresa } from "@/lib/google/places";
+import { GoogleApiError, googleEnabled, registrarMedicao, syncEmpresa } from "@/lib/google/places";
 import type { DespesaCategoria, PlacaTipo } from "@/lib/db/schema";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -251,7 +251,7 @@ export async function criarEmpresa(
     } catch (e) {
       console.error(e);
       await apagarEmpresa(row.id);
-      return { ok: false, error: "Não deu para puxar os dados do Google agora. Tente de novo." };
+      return { ok: false, error: e instanceof GoogleApiError ? e.motivo : "Não deu para puxar os dados do Google agora. Tente de novo." };
     }
     revalidatePath("/clientes");
     return { ok: true, data: { id: row.id } };

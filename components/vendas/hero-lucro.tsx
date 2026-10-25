@@ -5,19 +5,25 @@ import { useReducedMotion } from "motion/react";
 import { Area, AreaChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { RollingNumber } from "@/components/ui/rolling-number";
-import { GridGlow } from "@/components/ui/grid-glow";
 import { formatBRL, formatPct } from "@/lib/format";
 import { shortDate } from "@/lib/dates";
 import type { PontoDiario, Resumo } from "@/lib/finance";
 import { variacao } from "@/lib/finance";
 import { cn } from "@/lib/utils";
 
+/**
+ * Card principal (referência "400%"): fundo violeta escuro com brilho na base,
+ * grade sutil, curva luminosa com ponto pulsando no pico e o número grande
+ * centralizado embaixo. Movimento: brilhos derivando, base "respirando",
+ * linha que se desenha e um reflexo que atravessa o card.
+ */
 export function HeroLucro({
   resumo,
   anterior,
   serie,
   fraseAnterior,
   periodKey,
+  periodoLabel,
   vendasDoDia = [],
 }: {
   vendasDoDia?: { id: number; empresa: string; valor: number; status: string }[];
@@ -26,6 +32,7 @@ export function HeroLucro({
   serie: PontoDiario[];
   fraseAnterior: string;
   periodKey: string;
+  periodoLabel: string;
 }) {
   const v = variacao(resumo.lucroLiquido, anterior.lucroLiquido);
   const semVendas = resumo.vendasPagas === 0 && resumo.receitaBruta === 0;
@@ -34,44 +41,70 @@ export function HeroLucro({
   return (
     <section
       aria-labelledby="hero-title"
-      className="relative isolate flex h-full min-h-[360px] flex-col overflow-hidden rounded-card bg-hero p-6 text-hero-foreground shadow-hairline ring-1 ring-border md:min-h-[420px] md:p-8 dark:ring-[color-mix(in_oklch,var(--primary)_22%,transparent)]"
+      className="hero-card relative isolate flex h-full min-h-[420px] flex-col overflow-hidden rounded-[28px] p-6 text-hero-foreground md:min-h-[480px] md:p-8"
     >
-      {/* Grade só no escuro: dá profundidade sem virar decoração no claro. */}
-      <GridGlow color="var(--hero-line)" className="-z-1 hidden dark:block" intensity={0.1} />
+      <HeroFundo />
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 id="hero-title" className="eyebrow text-hero-muted">
-            Lucro líquido no período
-          </h2>
-          <p className="mt-3 font-mono text-[44px] font-medium leading-none tracking-[-0.03em] tabular sm:text-56">
-            <RollingNumber value={resumo.lucroLiquido} format={formatBRL} />
-          </p>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-hero-chip px-2.5 py-1 text-12 font-medium">
-              <span className="font-mono tabular">{formatPct(resumo.margemLiquida)}</span> de margem
-            </span>
-            {v !== null && v !== 0 && !semVendas && (
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-13 text-hero-muted">
+          <span className="hero-live mr-2 inline-block size-1.5 rounded-full align-middle" aria-hidden />
+          Dados atualizados agora
+        </p>
+        <span className="rounded-full bg-[oklch(1_0_0/0.08)] px-3 py-1 text-13 text-hero-foreground ring-1 ring-[oklch(1_0_0/0.12)] backdrop-blur-sm">
+          {periodoLabel}
+        </span>
+      </div>
+
+      <div className="relative mt-4 min-h-[180px] flex-1">
+        {semVendas ? <CurvaFantasma /> : umDia ? <OneDay resumo={resumo} periodKey={periodKey} vendas={vendasDoDia} /> : <LucroChart serie={serie} />}
+      </div>
+
+      <div className="relative mt-4 text-center">
+        <h2 id="hero-title" className="text-14 text-hero-muted">
+          Lucro líquido no período
+        </h2>
+        <p className="hero-number mt-2 font-sans text-[48px] font-semibold leading-none tracking-[-0.04em] tabular sm:text-[64px]">
+          <RollingNumber value={resumo.lucroLiquido} format={formatBRL} />
+        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-12">
+          {v !== null && v !== 0 && !semVendas ? (
+            <span className="inline-flex items-center gap-1 text-hero-muted" title={`Comparado com ${fraseAnterior}: ${formatBRL(anterior.lucroLiquido)}`}>
               <span
-                className="inline-flex items-center gap-1 rounded-full bg-hero-chip px-2.5 py-1 text-12 font-medium"
-                title={`Comparado com ${fraseAnterior}: ${formatBRL(anterior.lucroLiquido)}`}
+                className={cn(
+                  "inline-flex items-center gap-0.5 font-mono font-medium tabular",
+                  v > 0 ? "text-[oklch(0.82_0.17_150)]" : "text-[oklch(0.78_0.15_25)]",
+                )}
               >
                 {v > 0 ? <ArrowUpRight className="size-3.5" strokeWidth={2} /> : <ArrowDownRight className="size-3.5" strokeWidth={2} />}
-                <span className="font-mono tabular">
-                  {v > 0 ? "+" : "−"}
-                  {formatPct(Math.abs(v))}
-                </span>
-                <span className="text-hero-muted">vs. {fraseAnterior}</span>
+                {v > 0 ? "+" : "−"}
+                {formatPct(Math.abs(v))}
               </span>
-            )}
-          </div>
+              vs. {fraseAnterior}
+            </span>
+          ) : (
+            <span className="text-hero-muted">{semVendas ? "Registre a primeira venda para começar" : "Sem base de comparação"}</span>
+          )}
+          {!semVendas && (
+            <span className="text-hero-muted">
+              · margem <span className="font-mono tabular text-hero-foreground">{formatPct(resumo.margemLiquida)}</span>
+            </span>
+          )}
         </div>
       </div>
-
-      <div className="relative mt-6 min-h-[200px] flex-1">
-        {semVendas ? <EmptyHero /> : umDia ? <OneDay resumo={resumo} periodKey={periodKey} vendas={vendasDoDia} /> : <LucroChart serie={serie} />}
-      </div>
     </section>
+  );
+}
+
+/** Camadas de luz do card. Só transform/opacity animados (CSS). */
+function HeroFundo() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-1">
+      <div className="hero-blob hero-blob-a" />
+      <div className="hero-blob hero-blob-b" />
+      <div className="hero-grid" />
+      <div className="hero-base" />
+      <div className="hero-sheen" />
+    </div>
   );
 }
 
@@ -80,7 +113,8 @@ function LucroChart({ serie }: { serie: PontoDiario[] }) {
   const values = serie.map((p) => p.acumulado);
   const min = Math.min(0, ...values);
   const max = Math.max(0, ...values);
-  const ticks = [serie[0].data, serie[Math.floor(serie.length / 2)].data, serie[serie.length - 1].data];
+  const pico = values.indexOf(Math.max(...values));
+  const ticks = [serie[0].data, serie[serie.length - 1].data];
 
   return (
     <div
@@ -89,14 +123,26 @@ function LucroChart({ serie }: { serie: PontoDiario[] }) {
       aria-label={`Lucro acumulado: começa em ${formatBRL(values[0])} e termina em ${formatBRL(values.at(-1)!)}.`}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={serie} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+        <AreaChart data={serie} margin={{ top: 18, right: 10, bottom: 0, left: 10 }}>
           <defs>
             <linearGradient id="hero-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" style={{ stopColor: "var(--hero-line)", stopOpacity: 0.22 }} />
+              <stop offset="0%" style={{ stopColor: "var(--hero-line)", stopOpacity: 0.28 }} />
               <stop offset="100%" style={{ stopColor: "var(--hero-line)", stopOpacity: 0 }} />
             </linearGradient>
+            <linearGradient id="hero-stroke" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" style={{ stopColor: "var(--hero-line)", stopOpacity: 0.35 }} />
+              <stop offset="50%" style={{ stopColor: "oklch(0.85 0.12 300)", stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: "var(--hero-line)", stopOpacity: 0.55 }} />
+            </linearGradient>
+            <filter id="hero-glow" x="-20%" y="-50%" width="140%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
-          <YAxis hide domain={[min * 1.1, max * 1.12 || 1]} />
+          <YAxis hide domain={[min * 1.1, max * 1.15 || 1]} />
           <XAxis
             dataKey="data"
             ticks={ticks}
@@ -108,7 +154,7 @@ function LucroChart({ serie }: { serie: PontoDiario[] }) {
                 x={t.x}
                 y={t.y}
                 dy={4}
-                textAnchor={t.index === 0 ? "start" : t.index === ticks.length - 1 ? "end" : "middle"}
+                textAnchor={t.index === 0 ? "start" : "end"}
                 fill="var(--hero-fg-muted)"
                 fontSize={11}
                 fontFamily="var(--font-jetbrains)"
@@ -116,28 +162,43 @@ function LucroChart({ serie }: { serie: PontoDiario[] }) {
                 {shortDate(t.payload.value)}
               </text>
             )}
-            tickMargin={10}
+            tickMargin={8}
           />
           {min < 0 && <ReferenceLine y={0} stroke="var(--hero-fg-muted)" strokeOpacity={0.35} strokeDasharray="2 4" />}
           <Tooltip
             content={(p) => <HeroTooltip active={p.active} payload={p.payload} />}
-            cursor={{ stroke: "var(--hero-fg-muted)", strokeOpacity: 0.4, strokeWidth: 1 }}
+            cursor={{ stroke: "var(--hero-fg-muted)", strokeOpacity: 0.35, strokeWidth: 1 }}
             isAnimationActive={false}
           />
           <Area
             type="monotone"
             dataKey="acumulado"
-            stroke="var(--hero-line)"
-            strokeWidth={1.5}
+            stroke="url(#hero-stroke)"
+            strokeWidth={2.5}
             fill="url(#hero-fill)"
-            activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--hero-bg)", fill: "var(--hero-line)" }}
+            filter="url(#hero-glow)"
+            dot={(d: { cx?: number; cy?: number; index?: number }) =>
+              d.index === pico && d.cx != null && d.cy != null ? <PontoPico key="pico" cx={d.cx} cy={d.cy} /> : <g key={d.index} />
+            }
+            activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--hero-bg)", fill: "oklch(0.9 0.08 300)" }}
             isAnimationActive={!reduce}
-            animationDuration={600}
+            animationDuration={1100}
             animationEasing="ease-out"
           />
         </AreaChart>
       </ResponsiveContainer>
     </div>
+  );
+}
+
+/** Ponto no pico: núcleo claro, halo e anel pulsando (como na referência). */
+function PontoPico({ cx, cy }: { cx: number; cy: number }) {
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={16} className="hero-pulse" fill="oklch(0.75 0.2 295)" />
+      <circle cx={cx} cy={cy} r={10} fill="oklch(0.7 0.22 295 / 0.35)" />
+      <circle cx={cx} cy={cy} r={6} fill="oklch(0.93 0.06 300)" stroke="oklch(0.75 0.2 295)" strokeWidth={2} />
+    </g>
   );
 }
 
@@ -157,24 +218,33 @@ function HeroTooltip({ active, payload }: { active?: boolean; payload?: Readonly
   );
 }
 
-function EmptyHero() {
+/**
+ * Sem vendas ainda: a curva aparece apagada, só como forma, com o ponto
+ * pulsando. Deixa claro onde o gráfico vai nascer, sem inventar números.
+ */
+function CurvaFantasma() {
   return (
-    <div className="absolute inset-0 grid place-items-center">
-      <GridGlow color="var(--hero-fg)" intensity={0.12} />
-      <svg viewBox="0 0 320 90" className="absolute inset-x-6 bottom-6 h-20 w-[calc(100%-3rem)]" preserveAspectRatio="none" aria-hidden>
+    <div className="absolute inset-0">
+      <svg viewBox="0 0 400 160" preserveAspectRatio="none" className="absolute inset-0 size-full" aria-hidden>
+        <defs>
+          <linearGradient id="fantasma" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="oklch(0.75 0.16 295)" stopOpacity="0.15" />
+            <stop offset="0.5" stopColor="oklch(0.85 0.12 300)" stopOpacity="0.7" />
+            <stop offset="1" stopColor="oklch(0.75 0.16 295)" stopOpacity="0.2" />
+          </linearGradient>
+        </defs>
         <path
-          d="M0 80 C 60 78, 90 70, 140 58 S 230 30, 320 12"
+          className="hero-ghost"
+          d="M0 120 C 60 112, 110 128, 170 110 C 205 98, 210 26, 240 26 C 272 26, 280 108, 320 116 C 350 122, 380 112, 400 104"
           fill="none"
-          stroke="var(--hero-fg)"
-          strokeOpacity=".35"
-          strokeWidth="1.5"
-          strokeDasharray="3 5"
+          stroke="url(#fantasma)"
+          strokeWidth="2.5"
+          vectorEffect="non-scaling-stroke"
+          pathLength={1}
         />
       </svg>
-      <div className="relative text-center">
-        <p className="text-16 font-medium">Sua primeira venda aparece aqui</p>
-        <p className="mt-1 text-13 text-hero-muted">Nada pago neste período. Tente um intervalo maior.</p>
-      </div>
+      <span className="hero-ghost-dot absolute left-[60%] top-[16%] -ml-2 -mt-2 size-4 rounded-full" aria-hidden />
+      <p className="absolute inset-x-0 bottom-0 text-center text-13 text-hero-muted">Sua primeira venda desenha esta curva.</p>
     </div>
   );
 }
@@ -203,7 +273,7 @@ function OneDay({
           {vendas.length > 4 && <li className="text-12 text-hero-muted">e mais {vendas.length - 4}</li>}
         </ul>
       )}
-      <dl className="grid grid-cols-3 gap-4 border-t border-[color-mix(in_oklch,var(--hero-fg)_18%,transparent)] pt-4">
+      <dl className="grid grid-cols-3 gap-4 border-t border-[oklch(1_0_0/0.12)] pt-4">
         {[
           ["Vendas pagas", String(resumo.vendasPagas)],
           ["Entrou", formatBRL(resumo.receitaBruta)],
@@ -215,7 +285,7 @@ function OneDay({
           </div>
         ))}
       </dl>
-      <p className="mt-4 text-13 text-hero-muted">
+      <p className="mt-3 text-13 text-hero-muted">
         Um dia só não faz curva.{" "}
         <Link
           href={`?p=7d`}

@@ -19,7 +19,7 @@ export function Providers({ children, initialCollapsed }: { children: React.Reac
   }, []);
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
       {/* reducedMotion="user": o Motion respeita prefers-reduced-motion em transform/layout. */}
       <MotionConfig reducedMotion="user">
         <Ctx.Provider value={{ collapsed, toggle }}>{children}</Ctx.Provider>

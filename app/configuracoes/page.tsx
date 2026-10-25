@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
-import { googleEnabled } from "@/lib/google/places";
+import { googleEnabled, testarChave } from "@/lib/google/places";
 import { bancoRemoto, persistente } from "@/lib/db";
 import { PageIntro } from "@/components/shell/page-intro";
 import { StatusDot } from "@/components/ui/chip";
 
 export const metadata: Metadata = { title: "Configurações" };
+export const dynamic = "force-dynamic";
 
-export default function ConfiguracoesPage() {
-  const google = googleEnabled();
+export default async function ConfiguracoesPage() {
+  // Com a chave colada, testa de verdade: chave presente não quer dizer chave aceita.
+  const teste = googleEnabled() ? await testarChave() : null;
+  const google = !!teste?.ok;
   const auth = !!(process.env.PANEL_USER && process.env.PANEL_PASS);
   const remoto = bancoRemoto;
 
@@ -32,11 +35,13 @@ export default function ConfiguracoesPage() {
           title="Google Places"
           ok={google}
           okText="Conectado"
-          offText="Desligado"
+          offText={teste ? "Chave recusada" : "Desligado"}
           body={
             google
-              ? "Notas, fotos e avaliações são medidas todo dia às 9h (Vercel Cron) e quando você pede na ficha do cliente."
-              : "Sem GOOGLE_PLACES_API_KEY, você cadastra clientes à mão e anota as contagens de avaliações. Crie a chave no Google Cloud com a Places API (New) ativa."
+              ? "Chave testada agora e aceita pelo Google. Notas, fotos e avaliações são medidas todo dia às 9h (Vercel Cron) e quando você pede na ficha do cliente."
+              : teste && !teste.ok
+                ? teste.motivo
+                : "Sem GOOGLE_PLACES_API_KEY, você cadastra clientes à mão e anota as contagens de avaliações. Crie a chave no Google Cloud com a Places API (New) ativa."
           }
         />
         <Item

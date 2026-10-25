@@ -8,6 +8,7 @@ import { Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { activeNav, NAV } from "./nav";
 import { LogoMark } from "./logo";
+import { NeonIcon, useBurst } from "./neon-icon";
 import { ThemeToggle } from "./theme-toggle";
 import { useSidebar } from "./providers";
 
@@ -68,6 +69,7 @@ function NavLinks() {
   const pathname = usePathname();
   const sp = useSearchParams();
   const active = activeNav(pathname);
+  const { bursts, fire } = useBurst();
   const p = sp.get("p");
   const periodQs = p ? `?${new URLSearchParams(Object.fromEntries(["p", "de", "ate"].filter((k) => sp.get(k)).map((k) => [k, sp.get(k)!]))).toString()}` : "";
 
@@ -80,21 +82,18 @@ function NavLinks() {
         href={item.period ? `${item.href}${periodQs}` : item.href}
         aria-current={isActive ? "page" : undefined}
         title={item.label}
+        onClick={() => fire(item.href)}
         className={cn(
           "relative flex h-10 items-center gap-3 rounded-control px-3 text-14 outline-hidden transition-[color,transform] duration-150 ease-out-strong active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-sidebar-accent coarse:h-11",
           isActive ? "text-sidebar-strong" : "text-sidebar-foreground hover-fine:text-sidebar-strong",
         )}
       >
         {isActive && (
-          <motion.span
-            layoutId="nav-active"
-            className="absolute inset-0 rounded-control bg-sidebar-active"
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          >
-            <span className="absolute inset-y-2.5 left-0 w-[2px] rounded-full bg-sidebar-accent" />
+          <motion.span layoutId="nav-active" className="nav-glow absolute inset-0 rounded-control" transition={{ type: "spring", stiffness: 300, damping: 30 }}>
+            <span className="nav-glow-bar absolute inset-y-2.5 left-0 w-[2px] rounded-full" />
           </motion.span>
         )}
-        <Icon className={cn("relative size-[18px] shrink-0", isActive && "text-sidebar-accent")} strokeWidth={1.5} />
+        <NeonIcon icon={Icon} active={isActive} burst={bursts[item.href] ?? 0} size={18} />
         <span className="relative hidden truncate group-data-[wide=true]/sb:xl:inline">{item.label}</span>
       </Link>
     );
