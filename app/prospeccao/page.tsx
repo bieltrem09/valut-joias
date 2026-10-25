@@ -16,7 +16,7 @@ export default async function ProspeccaoPage() {
 
   return (
     <div className="grid gap-6 md:gap-8">
-      <Prospector buscas={buscas} temGoogle={temGoogle} uso={uso} />
+      <Prospector buscas={buscas} temGoogle={temGoogle} uso={uso} funil={Object.fromEntries(leads.map((l) => [l.placeId, l.status]))} />
 
       <details className="surface group p-0 [&[open]_.seta]:rotate-180">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">

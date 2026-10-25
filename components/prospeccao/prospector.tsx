@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import {
   ArrowRight,
+  AtSign,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -15,7 +15,6 @@ import {
   ExternalLink,
   Globe,
   ImageOff,
-  KeyRound,
   Loader2,
   MapPin,
   Phone,
@@ -27,9 +26,10 @@ import { Button } from "@/components/ui/button";
 import { Select, fieldClass } from "@/components/ui/input";
 import { Orb } from "@/components/ui/orb";
 import { Stars } from "@/components/clientes/stars";
-import { enviarAoFunil } from "@/app/actions";
+import { enviarAoFunil, registrarBusca } from "@/app/actions";
+import { buscarNoNavegador } from "@/lib/osm-cliente";
 import type { LeadGoogle } from "@/app/api/prospeccao/buscar/route";
-import { ordenar, whatsappUrl } from "@/lib/prospeccao";
+import { distanciaKm, ordenar, qualificarAberto, whatsappUrl } from "@/lib/prospeccao";
 import { urlBuscaMaps, urlEmbedMaps } from "@/lib/maps-link";
 import { formatInt, formatRating } from "@/lib/format";
 import type { BuscaSalva } from "@/lib/data/leads";
@@ -49,13 +49,25 @@ const FILTROS: [Filtro, string][] = [
   ["notaAlta", "Nota 4,5+"],
 ];
 
-const foto = (nome: string, w = 480) => `/api/google/foto-lugar?n=${encodeURIComponent(nome)}&w=${w}`;
+/** Foto do Google passa pelo servidor (a chave fica lá); link direto (mapa aberto) vai como está. */
+const foto = (f: string, w = 480) => (f.startsWith("places/") ? `/api/google/foto-lugar?n=${encodeURIComponent(f)}&w=${w}` : f);
 
 /**
  * Prospecção: alvo à esquerda, estabelecimentos do Google com foto e tudo o que o Google sabe,
  * e o Google Maps de verdade à direita. Sem a chave, o mapa funciona e a lista mostra como ligar.
  */
-export function Prospector({ buscas, temGoogle, uso }: { buscas: BuscaSalva[]; temGoogle: boolean; uso: Uso | null }) {
+export function Prospector({
+  buscas,
+  temGoogle,
+  uso,
+  funil,
+}: {
+  buscas: BuscaSalva[];
+  temGoogle: boolean;
+  uso: Uso | null;
+  /** placeId → etapa do funil, para marcar quem já está lá. */
+  funil: Record<string, string>;
+}) {
   const router = useRouter();
   const reduce = useReducedMotion();
   const segRef = React.useRef<HTMLInputElement>(null);
@@ -161,8 +173,36 @@ export function Prospector({ buscas, temGoogle, uso }: { buscas: BuscaSalva[]; t
       setCarregandoMapa(true);
       setContexto({ segmento: seg, onde: m === "perto" ? `até ${raio} km de você` : loc });
       if (!temGoogle) {
+        // Sem a chave: o próprio navegador busca no mapa aberto (o servidor é bloqueado lá).
+        const { lugares, onde } = await buscarNoNavegador({ segmento: seg, modo: m, local: loc, centro, raioKm: raio });
+        const ref = centro ?? onde?.centro ?? null;
+        const leads: LeadGoogle[] = lugares
+          .map((l) => ({
+            ...l,
+            ...qualificarAberto(l),
+            mapsUrl: urlBuscaMaps({ segmento: l.nome, local: l.endereco ?? onde?.nome ?? loc }),
+            distanciaKm: ref && l.lat != null && l.lng != null ? distanciaKm(ref, { lat: l.lat, lng: l.lng }) : null,
+            fotos: l.fotoUrl ? [l.fotoUrl] : [],
+            horario: l.horario ? [l.horario] : null,
+            abertoAgora: null,
+            preco: null,
+            jaCliente: false,
+            noFunil: funil[l.placeId] ?? null,
+          }))
+          .filter((l) => m !== "perto" || l.distanciaKm == null || l.distanciaKm <= raio);
+        setResultados(ordenar(leads, m === "perto" ? "distancia" : "score") as LeadGoogle[]);
+        setFiltros(new Set());
+        setOrdem(m === "perto" ? "distancia" : "score");
+        setContexto({ segmento: seg, onde: m === "perto" ? `até ${raio} km de você` : (onde?.nome ?? loc) });
         setAba("lista");
         irParaMapa();
+        registrarBusca({
+          segmento: seg,
+          local: m === "perto" ? "Perto de você" : (onde?.nome ?? loc),
+          modo: m,
+          raioKm: m === "perto" ? raio : null,
+          total: leads.length,
+        }).catch(() => {});
         return;
       }
       const res = await fetch("/api/prospeccao/buscar", {
@@ -402,10 +442,10 @@ export function Prospector({ buscas, temGoogle, uso }: { buscas: BuscaSalva[]; t
                 </Etapa>
               )}
             </form>
-          ) : !temGoogle ? (
-            <SemChave segmento={contexto?.segmento} />
           ) : !resultados ? (
-            <p className="py-8 text-center text-13 text-muted-foreground">Escolha o que procurar e toque em “Buscar no Google”.</p>
+            <p className="py-8 text-center text-13 text-muted-foreground">
+              Escolha o que procurar e toque em “{temGoogle ? "Buscar no Google" : "Buscar estabelecimentos"}”.
+            </p>
           ) : (
             <div className="grid gap-3">
               <div className="flex items-center justify-between gap-2">
@@ -415,12 +455,12 @@ export function Prospector({ buscas, temGoogle, uso }: { buscas: BuscaSalva[]; t
                 <Select value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)} className="h-8 w-auto text-12" aria-label="Ordenar">
                   <option value="score">Melhores para a placa</option>
                   <option value="distancia">Mais perto</option>
-                  <option value="avaliacoes">Menos avaliações</option>
-                  <option value="nota">Melhor nota</option>
+                  {temGoogle && <option value="avaliacoes">Menos avaliações</option>}
+                  {temGoogle && <option value="nota">Melhor nota</option>}
                 </Select>
               </div>
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtros">
-                {FILTROS.map(([k, l]) => (
+                {FILTROS.filter(([k]) => temGoogle || (k !== "aberto" && k !== "notaAlta")).map(([k, l]) => (
                   <button
                     key={k}
                     type="button"
@@ -445,11 +485,17 @@ export function Prospector({ buscas, temGoogle, uso }: { buscas: BuscaSalva[]; t
                 ))}
               </div>
               <p className="text-11 text-muted-foreground">
-                <span className="font-mono text-foreground tabular">{lista.length}</span> de {total} estabelecimentos
+                <span className="font-mono text-foreground tabular">{lista.length}</span> de {total} estabelecimentos ·{" "}
+                {temGoogle ? "dados do Google" : "OpenStreetMap; toque num deles para ver nota e fotos no Google"}
               </p>
               {lista.length === 0 ? (
                 <div className="rounded-card bg-background/50 p-5 text-center ring-1 ring-border">
-                  <p className="text-14 font-medium">Nenhum com esses filtros</p>
+                  <p className="text-14 font-medium">{total ? "Nenhum com esses filtros" : "Nenhum estabelecimento cadastrado nesse lugar"}</p>
+                  {!total && (
+                    <p className="mt-1 text-12 text-muted-foreground">
+                      O mapa do Google ao lado mostra todos. Para os que faltarem aqui, use “Anote à mão”, abaixo.
+                    </p>
+                  )}
                   <button type="button" onClick={() => setFiltros(new Set())} className="mt-1 text-12 font-medium text-primary">
                     Limpar filtros
                   </button>
@@ -484,7 +530,7 @@ export function Prospector({ buscas, temGoogle, uso }: { buscas: BuscaSalva[]; t
             ) : (
               <Search className="size-5" strokeWidth={1.75} />
             )}
-            <span className="flex-1 text-left">{carregando ? "Buscando no Google…" : temGoogle ? "Buscar no Google" : "Ver no Google Maps"}</span>
+            <span className="flex-1 text-left">{carregando ? "Buscando estabelecimentos…" : temGoogle ? "Buscar no Google" : "Buscar estabelecimentos"}</span>
             <ArrowRight className="size-5 transition-transform duration-200 ease-out-strong group-hover:translate-x-0.5" strokeWidth={1.75} />
           </button>
           {uso && (
@@ -658,7 +704,7 @@ function ItemLista({ l, numero, ativo, onClick }: { l: LeadGoogle; numero: numbe
               <span className="text-muted-foreground">({formatInt(l.totalAvaliacoes ?? 0)})</span>
             </>
           ) : (
-            <span className="text-muted-foreground">Sem avaliações</span>
+            <span className="text-muted-foreground">{l.placeId.startsWith("osm:") ? "Nota: veja no Google" : "Sem avaliações"}</span>
           )}
         </span>
         <span className="mt-1 flex flex-wrap gap-1 text-[10px]">
@@ -689,25 +735,6 @@ function Tag({ tom, children }: { tom?: "ok" | "off" | "marca"; children: React.
     >
       {children}
     </span>
-  );
-}
-
-function SemChave({ segmento }: { segmento?: string }) {
-  return (
-    <div className="grid gap-3 rounded-card bg-background/50 p-4 ring-1 ring-border">
-      <span className="grid size-10 place-items-center rounded-control bg-accent text-accent-foreground">
-        <KeyRound className="size-5" strokeWidth={1.5} />
-      </span>
-      <p className="text-14 font-semibold">{segmento ? `Os resultados de “${segmento}” estão no mapa do Google.` : "O mapa é o Google Maps de verdade."}</p>
-      <p className="text-12 text-muted-foreground">
-        Toque num pino para ver foto, nota e avaliações. Para a lista aqui com{" "}
-        <span className="text-foreground">foto, telefone, site e horário de cada um</span>, o painel precisa da chave do Google, que tem uma cota grátis por
-        mês. O painel para sozinho antes de passar dela, então não gera cobrança.
-      </p>
-      <Link href="/configuracoes" className="text-12 font-medium text-primary">
-        Como ligar a lista com fotos →
-      </Link>
-    </div>
   );
 }
 
@@ -757,8 +784,9 @@ function Ficha({
             className="size-full object-cover"
           />
         ) : (
-          <div className="grid size-full place-items-center text-muted-foreground">
+          <div className="grid size-full place-items-center content-center gap-1 bg-[radial-gradient(circle_at_30%_20%,color-mix(in_oklch,var(--primary)_30%,transparent),transparent_70%)] text-muted-foreground">
             <ImageOff className="size-6" strokeWidth={1.25} />
+            <span className="text-11">Fotos na ficha do Google, no mapa</span>
           </div>
         )}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
@@ -817,7 +845,7 @@ function Ficha({
                 <span className="text-muted-foreground">({formatInt(l.totalAvaliacoes ?? 0)} avaliações)</span>
               </span>
             ) : (
-              <span className="text-muted-foreground">Sem avaliações no Google</span>
+              <span className="text-muted-foreground">Nota e avaliações: veja na ficha do Google, no mapa</span>
             )}
             {l.abertoAgora != null && <Tag tom={l.abertoAgora ? "ok" : "off"}>{l.abertoAgora ? "Aberto agora" : "Fechado agora"}</Tag>}
           </div>
@@ -846,6 +874,16 @@ function Ficha({
               )}
             </dd>
           </div>
+          {l.instagram && (
+            <div className="flex min-w-0 gap-2">
+              <AtSign className="mt-0.5 size-3.5 shrink-0 text-primary" strokeWidth={1.75} />
+              <dd className="min-w-0 truncate">
+                <a href={l.instagram} target="_blank" rel="noreferrer" className="text-primary underline-offset-2 hover-fine:underline">
+                  Instagram
+                </a>
+              </dd>
+            </div>
+          )}
           {l.horario?.length ? (
             <div className="flex gap-2">
               <Clock className="mt-0.5 size-3.5 shrink-0 text-primary" strokeWidth={1.75} />

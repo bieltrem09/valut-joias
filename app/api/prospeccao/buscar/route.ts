@@ -20,10 +20,13 @@ type Onde = { nome: string; centro: { lat: number; lng: number }; limites: Limit
 
 /** O que a tela recebe de cada estabelecimento: tudo o que o Google tem dele. */
 export type LeadGoogle = Lead & {
+  /** Nomes de foto do Google ("places/…/photos/…") ou endereços diretos de imagem. */
   fotos: string[];
   horario: string[] | null;
   abertoAgora: boolean | null;
   preco: number | null;
+  /** Só do mapa aberto (sem a chave do Google). */
+  instagram?: string | null;
   jaCliente: boolean;
   noFunil: string | null;
 };

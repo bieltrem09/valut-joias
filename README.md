@@ -68,7 +68,7 @@ O mapa é o **Google Maps de verdade**, pelo embed público (`maps.google.com/ma
 
 **Trava de gasto.** `lib/google/uso.ts` conta cada chamada por mês (buscas, fotos, atualizações de clientes) na tabela `uso_google` e para antes da cota grátis do Google: 900 de cada por padrão (`GOOGLE_LIMITE_BUSCAS_MES`, `GOOGLE_LIMITE_FOTOS_MES`, `GOOGLE_LIMITE_DETALHES_MES`). O uso aparece embaixo da busca e em Configurações. `GOOGLE_PLACES_BASE_URL` só serve para apontar a um simulador nos testes.
 
-**Sem a chave**, o mapa do Google funciona e a lista explica como ligar. "Não achou no mapa? Anote à mão" aceita o link do Compartilhar do Google Maps (`lib/maps-link.ts`, com testes).
+**Sem a chave**, a lista vem do OpenStreetMap, buscada **pelo navegador** (`lib/osm-cliente.ts`): do servidor da Vercel os serviços públicos do OSM recusam, do aparelho da pessoa respondem. Duas fontes juntas, Overpass (etiquetas e nome, `lib/osm.ts` com testes) e Nominatim (reserva), sem duplicar. Sem nota no OSM, a pontuação mede contato e presença online (`qualificarAberto`); tocar num estabelecimento abre a ficha dele no Google Maps, com nota e fotos. "Não achou no mapa? Anote à mão" aceita o link do Compartilhar do Google Maps (`lib/maps-link.ts`, com testes).
 
 Cada estabelecimento recebe uma nota de 0 a 100 para o seu produto (`lib/prospeccao.ts`, com testes): poucas avaliações para o movimento, nota alta, celular público (WhatsApp) e falta de site. "Por quê" mostra cada ponto. Os leads vão para o **funil** (Novo → Contatado → Negociando → Fechado/Perdido); "Virar cliente" cadastra a empresa.
 
