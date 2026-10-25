@@ -26,8 +26,11 @@ const g = globalThis as unknown as { __ecloura?: Estado };
 function conectar(): Estado {
   if (DB_URL) {
     const local = /@(localhost|127\.0\.0\.1)[:/]/.test(DB_URL);
+    // A URL da integração vem com ?sslmode=…&supa=…; o SSL já vai nas opções e o resto não é do Postgres.
+    const url = new URL(DB_URL);
+    url.search = "";
     // prepare:false: o pooler do Supabase (porta 6543) não aceita prepared statements.
-    const sql = postgres(DB_URL, { prepare: false, max: Number(process.env.DATABASE_POOL_MAX) || 5, ssl: local ? false : "require", idle_timeout: 20 });
+    const sql = postgres(url.toString(), { prepare: false, max: Number(process.env.DATABASE_POOL_MAX) || 5, ssl: local ? false : "require", idle_timeout: 20 });
     return { db: drizzle(sql, { schema }), ddl: () => sql.unsafe(DDL) };
   }
   // PGlite só é carregado quando não há banco remoto.
