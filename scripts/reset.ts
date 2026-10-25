@@ -2,8 +2,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-if (process.env.DATABASE_URL) {
-  console.error("DATABASE_URL aponta para um banco remoto. Por segurança, este script só apaga o banco local.");
+if (process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL) {
+  console.error("O banco configurado é remoto (Turso) para um banco remoto. Por segurança, este script só apaga o banco local.");
   process.exit(1);
 }
 const dir = path.join(process.cwd(), "data");

@@ -24,7 +24,7 @@ O painel começa **vazio**: sem nenhum dado de exemplo. Na primeira requisição
 
 | Variável | Para quê |
 | --- | --- |
-| `DATABASE_URL`, `DATABASE_AUTH_TOKEN` | Banco no Turso (`libsql://…`). **Obrigatório em produção**: sem ele, na Vercel o banco fica em `/tmp` e é apagado. Local: usa `data/ecloura.db`. |
+| `DATABASE_URL`, `DATABASE_AUTH_TOKEN` (ou `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) | Banco no Turso (`libsql://…`). **Obrigatório em produção**: sem ele, na Vercel o banco fica em `/tmp` e é apagado. Local: usa `data/ecloura.db`. |
 | `PANEL_USER`, `PANEL_PASS` | HTTP Basic Auth no `middleware.ts`. Vazias: acesso livre. |
 | `GOOGLE_PLACES_API_KEY` | Places API (New): busca de empresas, foto, nota e medição diária das avaliações. |
 | `CRON_SECRET` | Protege a rota da medição diária (`/api/cron/google`). A Vercel envia esse segredo sozinha. |
@@ -33,9 +33,9 @@ O painel começa **vazio**: sem nenhum dado de exemplo. Na primeira requisição
 
 ### Banco no Turso (grátis)
 
-1. Crie uma conta em turso.tech e um banco (`turso db create ecloura`).
-2. Pegue a URL (`turso db show ecloura --url`) e um token (`turso db tokens create ecloura`).
-3. Na Vercel: Project → Settings → Environment Variables → `DATABASE_URL` e `DATABASE_AUTH_TOKEN`. Publique de novo.
+Pelo painel da Vercel (mais simples): **Storage → Create Database → Turso → conectar ao projeto `ecloura-painel`**. A Vercel cria `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN` sozinha, e o app reconhece esses nomes. Depois, publique de novo.
+
+Ou por fora: crie o banco em turso.tech (`turso db create ecloura`), pegue a URL e um token, e defina `DATABASE_URL` e `DATABASE_AUTH_TOKEN`.
 
 As tabelas são criadas sozinhas na primeira requisição.
 

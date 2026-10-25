@@ -12,20 +12,25 @@ import { DDL } from "./ddl";
  * - Sem ele, local: data/ecloura.db.
  * - Sem ele, na Vercel: /tmp, que é apagado — o painel avisa (ver `persistente`).
  */
+// Aceita os nomes que a integração Turso da Vercel cria sozinha (TURSO_*) e os nossos (DATABASE_*).
+const DB_URL = process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL || "";
+const DB_TOKEN = process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || undefined;
+
 function resolveUrl() {
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  if (DB_URL) return DB_URL;
   if (process.env.VERCEL) return "file:/tmp/ecloura.db";
   const file = path.join(process.cwd(), "data", "ecloura.db");
   fs.mkdirSync(path.dirname(file), { recursive: true });
   return `file:${file}`;
 }
 
-export const persistente = !!process.env.DATABASE_URL || !process.env.VERCEL;
+export const persistente = !!DB_URL || !process.env.VERCEL;
+export const bancoRemoto = !!DB_URL;
 
 type Client = ReturnType<typeof createClient>;
 const g = globalThis as unknown as { __eclouraClient?: Client; __eclouraReady?: Promise<void> };
 
-const client = g.__eclouraClient ?? createClient({ url: resolveUrl(), authToken: process.env.DATABASE_AUTH_TOKEN });
+const client = g.__eclouraClient ?? createClient({ url: resolveUrl(), authToken: DB_TOKEN });
 if (process.env.NODE_ENV !== "production") g.__eclouraClient = client;
 
 export const db = drizzle(client, { schema });

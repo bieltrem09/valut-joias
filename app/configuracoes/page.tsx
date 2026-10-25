@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { googleEnabled } from "@/lib/google/places";
-import { persistente } from "@/lib/db";
+import { bancoRemoto, persistente } from "@/lib/db";
 import { PageIntro } from "@/components/shell/page-intro";
 import { StatusDot } from "@/components/ui/chip";
 
@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Configurações" };
 export default function ConfiguracoesPage() {
   const google = googleEnabled();
   const auth = !!(process.env.PANEL_USER && process.env.PANEL_PASS);
-  const remoto = !!process.env.DATABASE_URL;
+  const remoto = bancoRemoto;
 
   return (
     <div className="grid max-w-2xl gap-6 md:gap-8">
@@ -25,7 +25,7 @@ export default function ConfiguracoesPage() {
               ? remoto
                 ? "Seus dados ficam guardados no Turso e sobrevivem a qualquer novo deploy."
                 : "Os dados ficam em data/ecloura.db neste computador."
-              : "Na Vercel sem DATABASE_URL, o banco vive em /tmp e é apagado de tempos em tempos. Crie um banco grátis no Turso e defina DATABASE_URL e DATABASE_AUTH_TOKEN."
+              : "Sem banco conectado, o painel usa /tmp na Vercel, que é apagado de tempos em tempos. Na Vercel: Storage → Create Database → Turso → conecte ao projeto e publique de novo."
           }
         />
         <Item
