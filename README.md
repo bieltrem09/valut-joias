@@ -78,6 +78,14 @@ Os leads escolhidos vão para o **funil** (Novo → Contatado → Negociando →
 
 Custo: cada página de até 20 empresas é uma chamada de Text Search, e uma busca completa usa até 3 (mais uma para achar a cidade). Telefone e site estão no field mask, o que coloca a chamada na faixa mais cara da Places API. Confira os preços no Google Cloud.
 
+## Estoque
+
+A aba **Estoque** guarda o que você tem para vender: até 8 fotos por produto (a primeira é a capa), nome, código (SKU), categoria, descrição, preço, custo (com a margem na hora), estoque mínimo, unidade, fornecedor, onde fica guardado e detalhes livres (cor, tamanho, material…).
+
+- As fotos são reduzidas no navegador (lado maior de 1400 px, WEBP) antes de subir e ficam no banco (`produto_fotos`), servidas por `/api/estoque/foto/[id]`.
+- A quantidade só muda por **entrada**, **saída** ou **contagem** (ou pelos botões −/+ do cartão), e cada mudança fica no histórico (`movimentos_estoque`). A saída não deixa o saldo ficar negativo.
+- No topo: valor para vender, custo do estoque (dinheiro parado) e quantos produtos precisam de reposição (no mínimo ou esgotados). As regras estão em `lib/estoque.ts`, com testes.
+
 ## Dados do Google
 
 A API do Business Profile só cobre empresas que você administra. Para os clientes, o app usa a **Places API (New)**, sempre no servidor. A chave nunca vai ao navegador. A foto da empresa é guardada no banco e servida por `/api/google/photo/[id]`. A atribuição "Dados: Google" aparece onde esses dados são exibidos.

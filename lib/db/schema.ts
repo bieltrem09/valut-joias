@@ -1,4 +1,4 @@
-import { pgTable, text, integer, doublePrecision, serial, primaryKey, index, uniqueIndex, customType } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, doublePrecision, serial, primaryKey, index, uniqueIndex, customType, jsonb } from "drizzle-orm/pg-core";
 
 /** bytea ↔ Buffer (fotos guardadas no banco). */
 const bytea = customType<{ data: Buffer; driverData: Buffer | Uint8Array }>({
@@ -184,6 +184,59 @@ export const buscas = pgTable("buscas", {
   criadaEm: text("criada_em").notNull(),
 });
 
+/** Produtos em estoque para vender. A quantidade só muda por movimento (fica o histórico). */
+export const produtos = pgTable("produtos", {
+  id: serial("id").primaryKey(),
+  nome: text("nome").notNull(),
+  sku: text("sku"),
+  categoria: text("categoria"),
+  descricao: text("descricao"),
+  custo: doublePrecision("custo").notNull().default(0),
+  preco: doublePrecision("preco").notNull().default(0),
+  quantidade: integer("quantidade").notNull().default(0),
+  estoqueMinimo: integer("estoque_minimo").notNull().default(0),
+  unidade: text("unidade").notNull().default("un"),
+  fornecedor: text("fornecedor"),
+  localizacao: text("localizacao"),
+  /** Detalhes livres: [{ nome: "Cor", valor: "Preto" }, …] */
+  atributos: jsonb("atributos").$type<{ nome: string; valor: string }[]>().notNull().default([]),
+  criadoEm: text("criado_em").notNull(),
+  atualizadoEm: text("atualizado_em").notNull(),
+});
+
+/** Fotos do produto no banco; a de menor `ordem` é a capa. */
+export const produtoFotos = pgTable(
+  "produto_fotos",
+  {
+    id: serial("id").primaryKey(),
+    produtoId: integer("produto_id")
+      .notNull()
+      .references(() => produtos.id, { onDelete: "cascade" }),
+    ordem: integer("ordem").notNull().default(0),
+    mime: text("mime").notNull(),
+    bytes: bytea("bytes").notNull(),
+    criadaEm: text("criada_em").notNull(),
+  },
+  (t) => [index("produto_fotos_produto_idx").on(t.produtoId)],
+);
+
+/** Entradas, saídas e ajustes. `delta` positivo entra, negativo sai. */
+export const movimentos = pgTable(
+  "movimentos_estoque",
+  {
+    id: serial("id").primaryKey(),
+    produtoId: integer("produto_id")
+      .notNull()
+      .references(() => produtos.id, { onDelete: "cascade" }),
+    tipo: text("tipo", { enum: ["entrada", "saida", "ajuste"] }).notNull(),
+    delta: integer("delta").notNull(),
+    saldo: integer("saldo").notNull(),
+    motivo: text("motivo"),
+    criadoEm: text("criado_em").notNull(),
+  },
+  (t) => [index("movimentos_produto_idx").on(t.produtoId)],
+);
+
 export type LeadStatus = (typeof leads.$inferSelect)["status"];
 
 export type Empresa = typeof empresas.$inferSelect;
@@ -195,3 +248,5 @@ export type PlacaTipo = Placa["tipo"];
 export type PlacaStatus = Placa["status"];
 export type VendaStatus = Venda["status"];
 export type DespesaCategoria = Despesa["categoria"];
+export type Produto = typeof produtos.$inferSelect;
+export type Movimento = typeof movimentos.$inferSelect;

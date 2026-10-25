@@ -122,4 +122,40 @@ create table if not exists buscas (
   total integer not null,
   criada_em text not null
 );
+create table if not exists produtos (
+  id serial primary key,
+  nome text not null,
+  sku text,
+  categoria text,
+  descricao text,
+  custo double precision not null default 0,
+  preco double precision not null default 0,
+  quantidade integer not null default 0,
+  estoque_minimo integer not null default 0,
+  unidade text not null default 'un',
+  fornecedor text,
+  localizacao text,
+  atributos jsonb not null default '[]'::jsonb,
+  criado_em text not null,
+  atualizado_em text not null
+);
+create table if not exists produto_fotos (
+  id serial primary key,
+  produto_id integer not null references produtos(id) on delete cascade,
+  ordem integer not null default 0,
+  mime text not null,
+  bytes bytea not null,
+  criada_em text not null
+);
+create index if not exists produto_fotos_produto_idx on produto_fotos(produto_id);
+create table if not exists movimentos_estoque (
+  id serial primary key,
+  produto_id integer not null references produtos(id) on delete cascade,
+  tipo text not null,
+  delta integer not null,
+  saldo integer not null,
+  motivo text,
+  criado_em text not null
+);
+create index if not exists movimentos_produto_idx on movimentos_estoque(produto_id);
 `;
