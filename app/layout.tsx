@@ -67,7 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Suspense fallback={<div className="h-16" />}>
                 <Topbar />
               </Suspense>
-              <main id="conteudo" className="mx-auto w-full max-w-[1280px] flex-1 px-4 pb-32 pt-6 md:px-8 md:pb-16 md:pt-8">
+              <main id="conteudo" className="mx-auto w-full max-w-[1280px] shell-largura flex-1 px-4 pb-32 pt-6 md:px-8 md:pb-16 md:pt-8">
                 {children}
               </main>
             </div>

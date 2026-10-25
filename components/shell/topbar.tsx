@@ -17,7 +17,7 @@ export function Topbar() {
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/75 backdrop-blur-md">
-      <div className="mx-auto flex min-h-16 w-full max-w-[1280px] flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 md:flex-nowrap md:px-8">
+      <div className="mx-auto flex min-h-16 w-full max-w-[1280px] shell-largura flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 md:flex-nowrap md:px-8">
         <Link
           href="/"
           aria-label="Basik7: ir para o início"
