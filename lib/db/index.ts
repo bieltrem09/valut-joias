@@ -1,47 +1,77 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 import { DDL } from "./ddl";
 
 /**
- * libSQL: o mesmo código fala com um arquivo local (dev) ou com o Turso (produção).
- * - DATABASE_URL definido (libsql://…): dados persistem na nuvem.
- * - Sem ele, local: data/ecloura.db.
- * - Sem ele, na Vercel: /tmp, que é apagado — o painel avisa (ver `persistente`).
+ * Postgres em todo lugar:
+ * - Produção: Supabase (ou qualquer Postgres). A integração Supabase da Vercel
+ *   cria POSTGRES_URL sozinha; DATABASE_URL também vale.
+ * - Local, sem URL: PGlite (Postgres embutido) em data/pglite. Nada para instalar.
+ * - Na Vercel sem URL: PGlite em memória, que some — o painel avisa (ver `persistente`).
  */
-// Aceita os nomes que a integração Turso da Vercel cria sozinha (TURSO_*) e os nossos (DATABASE_*).
-const DB_URL = process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL || "";
-const DB_TOKEN = process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || undefined;
+const DB_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
 
-function resolveUrl() {
-  if (DB_URL) return DB_URL;
-  if (process.env.VERCEL) return "file:/tmp/ecloura.db";
-  const file = path.join(process.cwd(), "data", "ecloura.db");
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  return `file:${file}`;
+export const bancoRemoto = !!DB_URL;
+export const persistente = bancoRemoto || !process.env.VERCEL;
+
+type DB = PostgresJsDatabase<typeof schema>;
+type Estado = { db: DB; ddl: () => Promise<unknown>; ready?: Promise<void> };
+const g = globalThis as unknown as { __ecloura?: Estado };
+
+function conectar(): Estado {
+  if (DB_URL) {
+    const local = /@(localhost|127\.0\.0\.1)[:/]/.test(DB_URL);
+    // prepare:false: o pooler do Supabase (porta 6543) não aceita prepared statements.
+    const sql = postgres(DB_URL, { prepare: false, max: Number(process.env.DATABASE_POOL_MAX) || 5, ssl: local ? false : "require", idle_timeout: 20 });
+    return { db: drizzle(sql, { schema }), ddl: () => sql.unsafe(DDL) };
+  }
+  // PGlite só é carregado quando não há banco remoto.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PGlite } = require("@electric-sql/pglite") as typeof import("@electric-sql/pglite");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { drizzle: drizzlePglite } = require("drizzle-orm/pglite") as typeof import("drizzle-orm/pglite");
+  let dir: string | undefined;
+  if (!process.env.VERCEL) {
+    dir = path.join(process.cwd(), "data", "pglite");
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  const client = new PGlite(dir);
+  // A API do drizzle é a mesma; o tipo do postgres-js serve para os dois.
+  return { db: drizzlePglite(client, { schema }) as unknown as DB, ddl: () => client.exec(DDL) };
 }
 
-export const persistente = !!DB_URL || !process.env.VERCEL;
-export const bancoRemoto = !!DB_URL;
+const estado = g.__ecloura ?? conectar();
+g.__ecloura = estado;
 
-type Client = ReturnType<typeof createClient>;
-const g = globalThis as unknown as { __eclouraClient?: Client; __eclouraReady?: Promise<void> };
-
-const client = g.__eclouraClient ?? createClient({ url: resolveUrl(), authToken: DB_TOKEN });
-if (process.env.NODE_ENV !== "production") g.__eclouraClient = client;
-
-export const db = drizzle(client, { schema });
+export const db = estado.db;
 
 /** Garante as tabelas uma vez por processo. Toda leitura/escrita passa por aqui. */
 export function ready(): Promise<void> {
-  g.__eclouraReady ??= client.executeMultiple(DDL + "\npragma foreign_keys = on;").catch((e) => {
-    g.__eclouraReady = undefined;
-    throw e;
-  });
-  return g.__eclouraReady;
+  estado.ready ??= estado
+    .ddl()
+    .then(() => undefined)
+    .catch((e) => {
+      estado.ready = undefined;
+      throw e;
+    });
+  return estado.ready;
+}
+
+/** Primeira linha ou undefined (substitui o .get() do SQLite). */
+export const one = <T>(rows: T[]): T | undefined => rows[0];
+/** Primeira linha; para INSERT … RETURNING, que sempre devolve uma. */
+export const must = <T>(rows: T[]): T => {
+  if (!rows[0]) throw new Error("Consulta não retornou linha.");
+  return rows[0];
+};
+/** Executa as consultas em sequência, na ordem dada. */
+export async function emSerie(qs: PromiseLike<unknown>[]) {
+  for (const q of qs) await q;
 }
 
 export { schema };

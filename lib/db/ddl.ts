@@ -1,11 +1,11 @@
 /**
- * Criação idempotente das tabelas. Espelha `schema.ts`; roda uma vez por
- * processo, então o app sobe sem passo de migração (painel de um usuário só).
- * Para gerar migrações formais: `npx drizzle-kit generate`.
+ * Criação idempotente das tabelas (Postgres). Espelha `schema.ts`; roda uma vez
+ * por processo, então o app sobe sem passo de migração (painel de um usuário só).
+ * Funciona igual no Supabase e no PGlite local.
  */
 export const DDL = /* sql */ `
 create table if not exists empresas (
-  id integer primary key autoincrement,
+  id serial primary key,
   nome text not null,
   place_id text,
   categoria text not null,
@@ -13,7 +13,7 @@ create table if not exists empresas (
   endereco text,
   maps_url text,
   foto_url text,
-  rating real,
+  rating double precision,
   total_avaliacoes integer,
   avaliacoes_na_instalacao integer,
   contato_nome text,
@@ -24,7 +24,7 @@ create table if not exists empresas (
   criada_em text not null
 );
 create table if not exists placas (
-  id integer primary key autoincrement,
+  id serial primary key,
   codigo text not null unique,
   tipo text not null,
   destino_url text not null,
@@ -35,14 +35,14 @@ create table if not exists placas (
 );
 create index if not exists placas_empresa_idx on placas(empresa_id);
 create table if not exists vendas (
-  id integer primary key autoincrement,
+  id serial primary key,
   empresa_id integer not null references empresas(id) on delete cascade,
   data text not null,
-  valor_venda real not null,
-  custo_placa real not null,
-  custo_gravacao real not null,
-  frete real not null,
-  taxa_pagamento real not null,
+  valor_venda double precision not null,
+  custo_placa double precision not null,
+  custo_gravacao double precision not null,
+  frete double precision not null,
+  taxa_pagamento double precision not null,
   status text not null,
   metodo text not null
 );
@@ -54,10 +54,10 @@ create table if not exists venda_placas (
   primary key (venda_id, placa_id)
 );
 create table if not exists despesas (
-  id integer primary key autoincrement,
+  id serial primary key,
   descricao text not null,
   categoria text not null,
-  valor real not null,
+  valor double precision not null,
   data text not null
 );
 create index if not exists despesas_data_idx on despesas(data);
@@ -68,16 +68,16 @@ create table if not exists leituras (
   primary key (placa_id, data)
 );
 create table if not exists avaliacoes_historico (
-  id integer primary key autoincrement,
+  id serial primary key,
   empresa_id integer not null references empresas(id) on delete cascade,
   data text not null,
-  rating real,
+  rating double precision,
   total integer not null,
   fonte text not null default 'google'
 );
 create unique index if not exists aval_hist_empresa_dia on avaliacoes_historico(empresa_id, data);
 create table if not exists reviews (
-  id integer primary key autoincrement,
+  id serial primary key,
   empresa_id integer not null references empresas(id) on delete cascade,
   autor text not null,
   nota integer not null,
@@ -88,21 +88,21 @@ create index if not exists reviews_empresa_idx on reviews(empresa_id);
 create table if not exists fotos (
   empresa_id integer primary key references empresas(id) on delete cascade,
   mime text not null,
-  bytes blob not null,
+  bytes bytea not null,
   atualizada_em text not null
 );
 create table if not exists leads (
-  id integer primary key autoincrement,
+  id serial primary key,
   place_id text not null unique,
   nome text not null,
   categoria text,
   endereco text,
-  lat real,
-  lng real,
+  lat double precision,
+  lng double precision,
   telefone text,
   website text,
   maps_url text,
-  rating real,
+  rating double precision,
   total_avaliacoes integer,
   score integer not null,
   status text not null default 'novo',
@@ -114,11 +114,11 @@ create table if not exists leads (
 );
 create index if not exists leads_status_idx on leads(status);
 create table if not exists buscas (
-  id integer primary key autoincrement,
+  id serial primary key,
   segmento text not null,
   local text not null,
   modo text not null,
-  raio_km real,
+  raio_km double precision,
   total integer not null,
   criada_em text not null
 );

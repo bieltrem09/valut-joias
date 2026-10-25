@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
-import { db, ready, schema as s } from "@/lib/db";
+import { db, ready, schema as s, one, emSerie } from "@/lib/db";
 import { todaySP } from "@/lib/dates";
 
 /**
@@ -11,14 +11,14 @@ import { todaySP } from "@/lib/dates";
 export async function GET(_req: Request, { params }: { params: Promise<{ codigo: string }> }) {
   const codigo = decodeURIComponent((await params).codigo).toUpperCase();
   await ready();
-  const placa = await db.select().from(s.placas).where(eq(s.placas.codigo, codigo)).get();
+  const placa = await db.select().from(s.placas).where(eq(s.placas.codigo, codigo)).then(one);
   if (!placa) return new NextResponse("Placa não encontrada.", { status: 404 });
   if (placa.status !== "Ativa") {
     return new NextResponse("Esta placa está pausada no momento.", { status: 410, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
 
   const hoje = todaySP();
-  await db.batch([
+  await emSerie([
     db
       .update(s.placas)
       .set({ leituras: sql`${s.placas.leituras} + 1` })

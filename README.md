@@ -16,7 +16,7 @@ O painel começa **vazio**: sem nenhum dado de exemplo. Na primeira requisição
 | --- | --- |
 | `npm run dev` | Servidor de desenvolvimento |
 | `npm run build && npm start` | Produção |
-| `npm run db:reset` | Apaga o banco **local** para recomeçar do zero |
+| `npm run db:reset` | Apaga o banco **local** (PGlite) para recomeçar do zero |
 | `npm test` | Testes de `lib/finance.ts` e `lib/crescimento.ts` (vitest) |
 | `npm run typecheck` / `npm run lint` | `tsc --noEmit` / ESLint |
 
@@ -24,20 +24,20 @@ O painel começa **vazio**: sem nenhum dado de exemplo. Na primeira requisição
 
 | Variável | Para quê |
 | --- | --- |
-| `DATABASE_URL`, `DATABASE_AUTH_TOKEN` (ou `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) | Banco no Turso (`libsql://…`). **Obrigatório em produção**: sem ele, na Vercel o banco fica em `/tmp` e é apagado. Local: usa `data/ecloura.db`. |
+| `DATABASE_URL` (ou `POSTGRES_URL`) | Postgres do Supabase. **Obrigatório em produção**: sem ele, na Vercel o banco fica em memória e se apaga. Local: PGlite em `data/pglite`. |
 | `PANEL_USER`, `PANEL_PASS` | HTTP Basic Auth no `middleware.ts`. Vazias: acesso livre. |
 | `GOOGLE_PLACES_API_KEY` | Places API (New): busca de empresas, foto, nota e medição diária das avaliações. |
 | `CRON_SECRET` | Protege a rota da medição diária (`/api/cron/google`). A Vercel envia esse segredo sozinha. |
 | `PUBLIC_URL` | Opcional. Domínio usado no link das placas (`https://seu-dominio/r/NFC-0001`). Sem ele, usa o endereço atual. |
 | `OWNER_EMAIL` | E-mail mostrado no rodapé da sidebar. |
 
-### Banco no Turso (grátis)
+### Banco no Supabase (grátis)
 
-Pelo painel da Vercel (mais simples): **Storage → Create Database → Turso → conectar ao projeto `ecloura-painel`**. A Vercel cria `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN` sozinha, e o app reconhece esses nomes. Depois, publique de novo.
+Pela Vercel (mais simples): **Storage → Create Database → Supabase → conectar ao projeto `ecloura-painel`**. A integração cria `POSTGRES_URL` sozinha, e o app usa essa variável. Depois, publique de novo. As tabelas são criadas sozinhas na primeira requisição.
 
-Ou por fora: crie o banco em turso.tech (`turso db create ecloura`), pegue a URL e um token, e defina `DATABASE_URL` e `DATABASE_AUTH_TOKEN`.
+Ou por fora: crie o projeto em supabase.com e copie a connection string do **Transaction pooler** (porta 6543), em Project Settings → Database. Coloque essa string em `DATABASE_URL`.
 
-As tabelas são criadas sozinhas na primeira requisição.
+Local, sem nenhuma URL, o app usa **PGlite** (Postgres embutido, em `data/pglite`): é o mesmo SQL do Supabase, sem instalar nada.
 
 ## Leituras reais das placas
 
@@ -87,7 +87,7 @@ components/<tela>/   compostos de cada tela
 lib/finance.ts       fórmulas financeiras, com testes
 lib/crescimento.ts   base, ganho e ritmo das avaliações, com testes
 lib/data/*           única porta de leitura do banco (tipada); trocar o banco não mexe na UI
-lib/db/*             schema Drizzle (libSQL), DDL idempotente
+lib/db/*             schema Drizzle (Postgres), DDL idempotente
 app/r/[codigo]       link gravado na placa: conta o toque e redireciona
 app/api/cron/google  medição diária das avaliações
 app/api/prospeccao   busca de leads no Google (cidade, raio, área)

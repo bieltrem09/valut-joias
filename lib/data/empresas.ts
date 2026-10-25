@@ -1,6 +1,6 @@
 import "server-only";
 import { asc, desc, eq } from "drizzle-orm";
-import { db, ready, schema as s } from "@/lib/db";
+import { db, ready, schema as s, one } from "@/lib/db";
 import { cents } from "@/lib/finance";
 import { todaySP, type ISODate } from "@/lib/dates";
 import { calcularCrescimento, ganhoAgregado, type Crescimento, type Medicao } from "@/lib/crescimento";
@@ -123,5 +123,5 @@ export async function getEmpresaDetalhe(id: number): Promise<EmpresaDetalhe> {
 
 export async function getEmpresa(id: number) {
   await ready();
-  return db.select().from(s.empresas).where(eq(s.empresas.id, id)).get();
+  return db.select().from(s.empresas).where(eq(s.empresas.id, id)).then(one);
 }

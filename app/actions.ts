@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
-import { db, ready, schema as s } from "@/lib/db";
+import { db, ready, schema as s, one, must, emSerie } from "@/lib/db";
 import { isISODate, todaySP } from "@/lib/dates";
 import { getEmpresaDetalhe, type EmpresaDetalhe } from "@/lib/data/empresas";
 import { proximoCodigo } from "@/lib/data/placas";
@@ -37,7 +37,7 @@ async function medirNaAtivacao(placaIds: number[]) {
   const placas = await db.select().from(s.placas).where(inArray(s.placas.id, placaIds));
   const empresaIds = [...new Set(placas.filter((p) => p.tipo === "Avaliação Google").map((p) => p.empresaId))];
   for (const id of empresaIds) {
-    const e = await db.select().from(s.empresas).where(eq(s.empresas.id, id)).get();
+    const e = await db.select().from(s.empresas).where(eq(s.empresas.id, id)).then(one);
     if (e?.placeId) await syncEmpresa(id, e.placeId).catch((err) => console.error("medição na ativação", err));
   }
 }
@@ -45,7 +45,7 @@ async function medirNaAtivacao(placaIds: number[]) {
 /** Apaga placas e o que depende delas (sem depender de cascade do banco remoto). */
 async function apagarPlacas(ids: number[]) {
   if (!ids.length) return;
-  await db.batch([
+  await emSerie([
     db.delete(s.leituras).where(inArray(s.leituras.placaId, ids)),
     db.delete(s.vendaPlacas).where(inArray(s.vendaPlacas.placaId, ids)),
     db.delete(s.placas).where(inArray(s.placas.id, ids)),
@@ -69,7 +69,7 @@ export type NovaVenda = {
 
 export async function criarVenda(v: NovaVenda): Promise<Result<{ codigos: string[] }>> {
   await ready();
-  const empresa = await db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.id, v.empresaId)).get();
+  const empresa = await db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.id, v.empresaId)).then(one);
   if (!empresa) return { ok: false, error: "Escolha o cliente." };
   if (!isISODate(v.data) || v.data > todaySP()) return { ok: false, error: "Use a data de hoje ou anterior." };
   if (!v.placas.length) return { ok: false, error: "Adicione pelo menos uma placa." };
@@ -101,7 +101,7 @@ export async function criarVenda(v: NovaVenda): Promise<Result<{ codigos: string
       metodo: v.metodo,
     })
     .returning({ id: s.vendas.id })
-    .get();
+    .then(must);
 
   let n = await proximoCodigo();
   const codigos: string[] = [];
@@ -120,7 +120,7 @@ export async function criarVenda(v: NovaVenda): Promise<Result<{ codigos: string
         ativadaEm: v.entregue ? v.data : null,
       })
       .returning({ id: s.placas.id })
-      .get();
+      .then(must);
     await db.insert(s.vendaPlacas).values({ vendaId: venda.id, placaId: placa.id });
     codigos.push(codigo);
     ids.push(placa.id);
@@ -164,7 +164,7 @@ export async function criarDespesa(input: { descricao: string; categoria: string
     .insert(s.despesas)
     .values({ descricao, categoria: input.categoria as DespesaCategoria, valor: r2(input.valor), data: input.data })
     .returning({ id: s.despesas.id })
-    .get();
+    .then(must);
   revalidateAll();
   return { ok: true, data: { id: row.id } };
 }
@@ -239,13 +239,13 @@ export async function criarEmpresa(
 
   if ("placeId" in input) {
     if (!googleEnabled()) return { ok: false, error: "Configure a chave do Google para importar." };
-    const existente = await db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.placeId, input.placeId)).get();
+    const existente = await db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.placeId, input.placeId)).then(one);
     if (existente) return { ok: false, error: "Essa empresa já está na sua lista." };
     const row = await db
       .insert(s.empresas)
       .values({ nome, categoria: "Comércio local", cidade: "", criadaEm: todaySP() })
       .returning({ id: s.empresas.id })
-      .get();
+      .then(must);
     try {
       await syncEmpresa(row.id, input.placeId, { foto: true });
     } catch (e) {
@@ -269,7 +269,7 @@ export async function criarEmpresa(
       criadaEm: todaySP(),
     })
     .returning({ id: s.empresas.id })
-    .get();
+    .then(must);
   revalidatePath("/clientes");
   return { ok: true, data: { id: row.id } };
 }
@@ -300,7 +300,7 @@ async function apagarEmpresa(id: number) {
   const vendaIds = (await db.select({ id: s.vendas.id }).from(s.vendas).where(eq(s.vendas.empresaId, id))).map((v) => v.id);
   const placaIds = (await db.select({ id: s.placas.id }).from(s.placas).where(eq(s.placas.empresaId, id))).map((p) => p.id);
   await apagarPlacas(placaIds);
-  await db.batch([
+  await emSerie([
     db.delete(s.vendas).where(inArray(s.vendas.id, vendaIds.length ? vendaIds : [-1])),
     db.delete(s.avaliacoesHistorico).where(eq(s.avaliacoesHistorico.empresaId, id)),
     db.delete(s.reviews).where(eq(s.reviews.empresaId, id)),
@@ -433,11 +433,11 @@ export async function excluirLeads(ids: number[]): Promise<Result> {
 /** Fechou: o lead vira cliente (com os dados do Google) e sai como "fechado". */
 export async function virarCliente(id: number): Promise<Result<{ empresaId: number }>> {
   await ready();
-  const lead = await db.select().from(s.leads).where(eq(s.leads.id, id)).get();
+  const lead = await db.select().from(s.leads).where(eq(s.leads.id, id)).then(one);
   if (!lead) return { ok: false, error: "Lead não encontrado." };
   if (lead.empresaId) return { ok: true, data: { empresaId: lead.empresaId } };
 
-  const existente = await db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.placeId, lead.placeId)).get();
+  const existente = await db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.placeId, lead.placeId)).then(one);
   let empresaId = existente?.id;
   if (!empresaId) {
     const cidade = lead.endereco?.match(/,\s*([^,]+?)\s*-\s*[A-Z]{2}/)?.[1] ?? "";
@@ -456,7 +456,7 @@ export async function virarCliente(id: number): Promise<Result<{ empresaId: numb
         criadaEm: todaySP(),
       })
       .returning({ id: s.empresas.id })
-      .get();
+      .then(must);
     empresaId = row.id;
     // Foto, avaliações recentes e a primeira medição: direto do Google.
     const sincronizou = googleEnabled()

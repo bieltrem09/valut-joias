@@ -18,14 +18,14 @@ export default function ConfiguracoesPage() {
         <Item
           title="Banco de dados"
           ok={persistente}
-          okText={remoto ? "Turso (nuvem)" : "Arquivo local"}
+          okText={remoto ? "Supabase (Postgres)" : "Postgres local"}
           offText="Temporário"
           body={
             persistente
               ? remoto
-                ? "Seus dados ficam guardados no Turso e sobrevivem a qualquer novo deploy."
-                : "Os dados ficam em data/ecloura.db neste computador."
-              : "Sem banco conectado, o painel usa /tmp na Vercel, que é apagado de tempos em tempos. Na Vercel: Storage → Create Database → Turso → conecte ao projeto e publique de novo."
+                ? "Seus dados ficam guardados no Supabase e sobrevivem a qualquer novo deploy."
+                : "Os dados ficam em data/pglite neste computador (Postgres embutido)."
+              : "Sem banco conectado, o painel usa um Postgres em memória na Vercel, que se apaga. Na Vercel: Storage → Create Database → Supabase → conecte ao projeto e publique de novo."
           }
         />
         <Item

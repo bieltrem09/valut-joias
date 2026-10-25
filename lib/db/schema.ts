@@ -1,7 +1,13 @@
-import { sqliteTable, text, integer, real, primaryKey, index, uniqueIndex, blob } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, doublePrecision, serial, primaryKey, index, uniqueIndex, customType } from "drizzle-orm/pg-core";
 
-export const empresas = sqliteTable("empresas", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+/** bytea ↔ Buffer (fotos guardadas no banco). */
+const bytea = customType<{ data: Buffer; driverData: Buffer | Uint8Array }>({
+  dataType: () => "bytea",
+  fromDriver: (v) => Buffer.from(v),
+});
+
+export const empresas = pgTable("empresas", {
+  id: serial("id").primaryKey(),
   nome: text("nome").notNull(),
   placeId: text("place_id"),
   categoria: text("categoria").notNull(),
@@ -9,7 +15,7 @@ export const empresas = sqliteTable("empresas", {
   endereco: text("endereco"),
   mapsUrl: text("maps_url"),
   fotoUrl: text("foto_url"),
-  rating: real("rating"),
+  rating: doublePrecision("rating"),
   totalAvaliacoes: integer("total_avaliacoes"),
   avaliacoesNaInstalacao: integer("avaliacoes_na_instalacao"),
   contatoNome: text("contato_nome"),
@@ -20,10 +26,10 @@ export const empresas = sqliteTable("empresas", {
   criadaEm: text("criada_em").notNull(),
 });
 
-export const placas = sqliteTable(
+export const placas = pgTable(
   "placas",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     codigo: text("codigo").notNull().unique(),
     tipo: text("tipo", { enum: ["Avaliação Google", "Instagram", "WhatsApp", "Pix", "Cardápio"] }).notNull(),
     destinoUrl: text("destino_url").notNull(),
@@ -37,26 +43,26 @@ export const placas = sqliteTable(
   (t) => [index("placas_empresa_idx").on(t.empresaId)],
 );
 
-export const vendas = sqliteTable(
+export const vendas = pgTable(
   "vendas",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     empresaId: integer("empresa_id")
       .notNull()
       .references(() => empresas.id, { onDelete: "cascade" }),
     data: text("data").notNull(), // YYYY-MM-DD
-    valorVenda: real("valor_venda").notNull(),
-    custoPlaca: real("custo_placa").notNull(),
-    custoGravacao: real("custo_gravacao").notNull(),
-    frete: real("frete").notNull(),
-    taxaPagamento: real("taxa_pagamento").notNull(),
+    valorVenda: doublePrecision("valor_venda").notNull(),
+    custoPlaca: doublePrecision("custo_placa").notNull(),
+    custoGravacao: doublePrecision("custo_gravacao").notNull(),
+    frete: doublePrecision("frete").notNull(),
+    taxaPagamento: doublePrecision("taxa_pagamento").notNull(),
     status: text("status", { enum: ["paga", "pendente", "cancelada"] }).notNull(),
     metodo: text("metodo", { enum: ["Pix", "Cartão", "Boleto"] }).notNull(),
   },
   (t) => [index("vendas_data_idx").on(t.data), index("vendas_empresa_idx").on(t.empresaId)],
 );
 
-export const vendaPlacas = sqliteTable(
+export const vendaPlacas = pgTable(
   "venda_placas",
   {
     vendaId: integer("venda_id")
@@ -69,20 +75,20 @@ export const vendaPlacas = sqliteTable(
   (t) => [primaryKey({ columns: [t.vendaId, t.placaId] })],
 );
 
-export const despesas = sqliteTable(
+export const despesas = pgTable(
   "despesas",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     descricao: text("descricao").notNull(),
     categoria: text("categoria", { enum: ["Anúncios", "Ferramentas", "Frete", "Taxas", "Outros"] }).notNull(),
-    valor: real("valor").notNull(),
+    valor: doublePrecision("valor").notNull(),
     data: text("data").notNull(),
   },
   (t) => [index("despesas_data_idx").on(t.data)],
 );
 
 /** Toques reais por dia em cada placa, contados pelo redirecionador /r/[codigo]. */
-export const leituras = sqliteTable(
+export const leituras = pgTable(
   "leituras",
   {
     placaId: integer("placa_id")
@@ -95,15 +101,15 @@ export const leituras = sqliteTable(
 );
 
 /** Uma medição por empresa por dia: total de avaliações e nota. Alimenta o gráfico de crescimento. */
-export const avaliacoesHistorico = sqliteTable(
+export const avaliacoesHistorico = pgTable(
   "avaliacoes_historico",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     empresaId: integer("empresa_id")
       .notNull()
       .references(() => empresas.id, { onDelete: "cascade" }),
     data: text("data").notNull(),
-    rating: real("rating"),
+    rating: doublePrecision("rating"),
     total: integer("total").notNull(),
     /** "google" (Places API) ou "manual" (o dono digitou o que viu no Google). */
     fonte: text("fonte", { enum: ["google", "manual"] })
@@ -113,10 +119,10 @@ export const avaliacoesHistorico = sqliteTable(
   (t) => [uniqueIndex("aval_hist_empresa_dia").on(t.empresaId, t.data)],
 );
 
-export const reviews = sqliteTable(
+export const reviews = pgTable(
   "reviews",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     empresaId: integer("empresa_id")
       .notNull()
       .references(() => empresas.id, { onDelete: "cascade" }),
@@ -129,30 +135,30 @@ export const reviews = sqliteTable(
 );
 
 /** Foto da empresa vinda do Google, guardada no banco (o disco da Vercel é temporário). */
-export const fotos = sqliteTable("fotos", {
+export const fotos = pgTable("fotos", {
   empresaId: integer("empresa_id")
     .primaryKey()
     .references(() => empresas.id, { onDelete: "cascade" }),
   mime: text("mime").notNull(),
-  bytes: blob("bytes", { mode: "buffer" }).notNull(),
+  bytes: bytea("bytes").notNull(),
   atualizadaEm: text("atualizada_em").notNull(),
 });
 
 /** Empresas achadas na prospecção (Google Places) e em que ponto do funil estão. */
-export const leads = sqliteTable(
+export const leads = pgTable(
   "leads",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     placeId: text("place_id").notNull().unique(),
     nome: text("nome").notNull(),
     categoria: text("categoria"),
     endereco: text("endereco"),
-    lat: real("lat"),
-    lng: real("lng"),
+    lat: doublePrecision("lat"),
+    lng: doublePrecision("lng"),
     telefone: text("telefone"),
     website: text("website"),
     mapsUrl: text("maps_url"),
-    rating: real("rating"),
+    rating: doublePrecision("rating"),
     totalAvaliacoes: integer("total_avaliacoes"),
     score: integer("score").notNull(),
     status: text("status", { enum: ["novo", "contatado", "negociando", "fechado", "perdido"] })
@@ -168,12 +174,12 @@ export const leads = sqliteTable(
 );
 
 /** Histórico das buscas de prospecção. */
-export const buscas = sqliteTable("buscas", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const buscas = pgTable("buscas", {
+  id: serial("id").primaryKey(),
   segmento: text("segmento").notNull(),
   local: text("local").notNull(),
   modo: text("modo", { enum: ["cidade", "perto", "area"] }).notNull(),
-  raioKm: real("raio_km"),
+  raioKm: doublePrecision("raio_km"),
   total: integer("total").notNull(),
   criadaEm: text("criada_em").notNull(),
 });

@@ -42,6 +42,7 @@ next-env.d.ts
 
 # local db
 /data/*.db*
+/data/pglite/
 /data/photos/
 .env
 .env*.local

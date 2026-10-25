@@ -1,6 +1,6 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
-import { db, ready, schema as s } from "@/lib/db";
+import { db, ready, schema as s, one } from "@/lib/db";
 import { todaySP } from "@/lib/dates";
 
 /**
@@ -110,7 +110,7 @@ export async function registrarMedicao(empresaId: number, total: number, rating:
 export async function syncEmpresa(empresaId: number, placeId: string, opts: { foto?: boolean } = {}) {
   await ready();
   const d = await placeDetails(placeId);
-  const atual = await db.select().from(s.empresas).where(eq(s.empresas.id, empresaId)).get();
+  const atual = await db.select().from(s.empresas).where(eq(s.empresas.id, empresaId)).then(one);
   // Foto: na criação e quando ainda não há; o cron diário não baixa de novo.
   const precisaFoto = opts.foto ?? !atual?.fotoUrl;
   const fotoUrl = precisaFoto && d.photos?.[0] ? await savePhoto(d.photos[0].name, empresaId) : null;
