@@ -339,3 +339,138 @@ export async function definirBaseInstalacao(empresaId: number, total: number | n
   revalidatePath("/clientes");
   return { ok: true };
 }
+
+/* ----------------------------- Prospecção ----------------------------- */
+
+type LeadEntrada = {
+  placeId: string;
+  nome: string;
+  categoria: string | null;
+  endereco: string | null;
+  lat: number | null;
+  lng: number | null;
+  telefone: string | null;
+  website: string | null;
+  mapsUrl: string | null;
+  rating: number | null;
+  totalAvaliacoes: number | null;
+  score: number;
+};
+
+const STATUS_LEAD = ["novo", "contatado", "negociando", "fechado", "perdido"] as const;
+type StatusLead = (typeof STATUS_LEAD)[number];
+
+export async function enviarAoFunil(leads: LeadEntrada[], segmento: string): Promise<Result<{ novos: number }>> {
+  if (!leads.length) return { ok: true, data: { novos: 0 } };
+  await ready();
+  const agora = new Date().toISOString();
+  const existentes = new Set(
+    (
+      await db
+        .select({ placeId: s.leads.placeId })
+        .from(s.leads)
+        .where(
+          inArray(
+            s.leads.placeId,
+            leads.map((l) => l.placeId),
+          ),
+        )
+    ).map((l) => l.placeId),
+  );
+  const novos = leads.filter((l) => !existentes.has(l.placeId));
+  if (novos.length) {
+    await db.insert(s.leads).values(
+      novos.map((l) => ({
+        placeId: l.placeId,
+        nome: l.nome,
+        categoria: l.categoria,
+        endereco: l.endereco,
+        lat: l.lat,
+        lng: l.lng,
+        telefone: l.telefone,
+        website: l.website,
+        mapsUrl: l.mapsUrl,
+        rating: l.rating,
+        totalAvaliacoes: l.totalAvaliacoes,
+        score: Math.round(l.score),
+        segmento: segmento.trim() || null,
+        status: "novo" as const,
+        criadoEm: agora,
+        atualizadoEm: agora,
+      })),
+    );
+  }
+  revalidatePath("/prospeccao");
+  return { ok: true, data: { novos: novos.length } };
+}
+
+export async function mudarStatusLead(id: number, status: StatusLead): Promise<Result> {
+  if (!STATUS_LEAD.includes(status)) return { ok: false, error: "Status inválido." };
+  await ready();
+  await db.update(s.leads).set({ status, atualizadoEm: new Date().toISOString() }).where(eq(s.leads.id, id));
+  revalidatePath("/prospeccao");
+  return { ok: true };
+}
+
+export async function anotarLead(id: number, anotacao: string): Promise<Result> {
+  await ready();
+  await db
+    .update(s.leads)
+    .set({ anotacao: anotacao.trim().slice(0, 2000) || null, atualizadoEm: new Date().toISOString() })
+    .where(eq(s.leads.id, id));
+  revalidatePath("/prospeccao");
+  return { ok: true };
+}
+
+export async function excluirLeads(ids: number[]): Promise<Result> {
+  if (!ids.length) return { ok: true };
+  await ready();
+  await db.delete(s.leads).where(inArray(s.leads.id, ids));
+  revalidatePath("/prospeccao");
+  return { ok: true };
+}
+
+/** Fechou: o lead vira cliente (com os dados do Google) e sai como "fechado". */
+export async function virarCliente(id: number): Promise<Result<{ empresaId: number }>> {
+  await ready();
+  const lead = await db.select().from(s.leads).where(eq(s.leads.id, id)).get();
+  if (!lead) return { ok: false, error: "Lead não encontrado." };
+  if (lead.empresaId) return { ok: true, data: { empresaId: lead.empresaId } };
+
+  const existente = await db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.placeId, lead.placeId)).get();
+  let empresaId = existente?.id;
+  if (!empresaId) {
+    const cidade = lead.endereco?.match(/,\s*([^,]+?)\s*-\s*[A-Z]{2}/)?.[1] ?? "";
+    const row = await db
+      .insert(s.empresas)
+      .values({
+        nome: lead.nome,
+        placeId: lead.placeId,
+        categoria: lead.categoria ?? "Comércio local",
+        cidade,
+        endereco: lead.endereco,
+        mapsUrl: lead.mapsUrl,
+        telefone: lead.telefone,
+        rating: lead.rating,
+        totalAvaliacoes: lead.totalAvaliacoes,
+        criadaEm: todaySP(),
+      })
+      .returning({ id: s.empresas.id })
+      .get();
+    empresaId = row.id;
+    // Foto, avaliações recentes e a primeira medição: direto do Google.
+    const sincronizou = googleEnabled()
+      ? await syncEmpresa(empresaId, lead.placeId, { foto: true }).then(
+          () => true,
+          (e) => (console.error("virarCliente", e), false),
+        )
+      : false;
+    // Sem Google agora: os números que vieram na busca viram a primeira medição, com a data da busca.
+    if (!sincronizou && lead.totalAvaliacoes != null)
+      await registrarMedicao(empresaId, lead.totalAvaliacoes, lead.rating, "google", lead.criadoEm.slice(0, 10));
+  }
+  await db.update(s.leads).set({ status: "fechado", empresaId, atualizadoEm: new Date().toISOString() }).where(eq(s.leads.id, id));
+  revalidateAll();
+  revalidatePath("/prospeccao");
+  return { ok: true, data: { empresaId } };
+}

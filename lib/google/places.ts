@@ -168,3 +168,84 @@ export async function refreshStale(limit = 50) {
   const r = await Promise.allSettled(stale.map((e) => syncEmpresa(e.id, e.placeId!)));
   return { atualizadas: r.filter((x) => x.status === "fulfilled").length, falhas: r.filter((x) => x.status === "rejected").length };
 }
+
+/* --------------------------- Prospecção --------------------------- */
+
+const LEAD_FIELDS = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.location",
+  "places.primaryTypeDisplayName",
+  "places.rating",
+  "places.userRatingCount",
+  "places.nationalPhoneNumber",
+  "places.websiteUri",
+  "places.googleMapsUri",
+  "places.businessStatus",
+  "nextPageToken",
+].join(",");
+
+type LatLng = { latitude: number; longitude: number };
+export type Viewport = { low: LatLng; high: LatLng };
+
+type LeadPlace = {
+  id: string;
+  displayName?: LocalizedText;
+  formattedAddress?: string;
+  location?: LatLng;
+  primaryTypeDisplayName?: LocalizedText;
+  rating?: number;
+  userRatingCount?: number;
+  nationalPhoneNumber?: string;
+  websiteUri?: string;
+  googleMapsUri?: string;
+  businessStatus?: string;
+};
+
+/** Acha a cidade e devolve o retângulo dela (para buscar "na cidade inteira" de verdade). */
+export async function localizarCidade(nome: string): Promise<{ nome: string; centro: LatLng; viewport: Viewport } | null> {
+  const data = await call<{ places?: { displayName?: LocalizedText; formattedAddress?: string; location?: LatLng; viewport?: Viewport }[] }>(
+    `${BASE}/places:searchText`,
+    {
+      method: "POST",
+      fieldMask: "places.displayName,places.formattedAddress,places.location,places.viewport",
+      body: JSON.stringify({ textQuery: nome, includedType: "locality", strictTypeFiltering: true, languageCode: "pt-BR", regionCode: "BR", pageSize: 1 }),
+    },
+  );
+  const p = data.places?.[0];
+  if (!p?.location || !p.viewport) return null;
+  return { nome: p.displayName?.text ?? nome, centro: p.location, viewport: p.viewport };
+}
+
+/**
+ * Text Search com paginação (até 3 páginas = 60 lugares, limite do Google).
+ * `restricao` corta fora do retângulo; `vies` só favorece o círculo.
+ */
+export async function buscarLugares(opts: {
+  query: string;
+  restricao?: Viewport;
+  vies?: { centro: LatLng; raioM: number };
+  porDistancia?: boolean;
+  paginas?: number;
+}): Promise<LeadPlace[]> {
+  const out: LeadPlace[] = [];
+  let pageToken: string | undefined;
+  for (let i = 0; i < (opts.paginas ?? 3); i++) {
+    const body: Record<string, unknown> = { textQuery: opts.query, languageCode: "pt-BR", regionCode: "BR", pageSize: 20 };
+    if (opts.restricao) body.locationRestriction = { rectangle: opts.restricao };
+    else if (opts.vies) body.locationBias = { circle: { center: opts.vies.centro, radius: Math.min(50000, opts.vies.raioM) } };
+    if (opts.porDistancia) body.rankPreference = "DISTANCE";
+    if (pageToken) body.pageToken = pageToken;
+    const data = await call<{ places?: LeadPlace[]; nextPageToken?: string }>(`${BASE}/places:searchText`, {
+      method: "POST",
+      fieldMask: LEAD_FIELDS,
+      body: JSON.stringify(body),
+    });
+    out.push(...(data.places ?? []));
+    if (!data.nextPageToken) break;
+    pageToken = data.nextPageToken;
+  }
+  // A mesma empresa pode vir em duas páginas.
+  return [...new Map(out.map((p) => [p.id, p])).values()];
+}

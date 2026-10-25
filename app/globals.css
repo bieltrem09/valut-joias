@@ -364,3 +364,69 @@
   background: oklch(0.3 0.05 var(--hue));
   color: oklch(0.88 0.06 var(--hue));
 }
+
+/* Mapa da prospecção (Leaflet). Pins por prioridade, no tom do tema. */
+.lead-map.leaflet-container {
+  background: var(--muted);
+  font-family: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  border-radius: inherit;
+}
+.lead-map.leaflet-container .leaflet-control-attribution {
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+.lead-map.leaflet-container .leaflet-control-attribution a {
+  color: var(--subtle-foreground);
+}
+.lead-map.leaflet-container .leaflet-bar a {
+  background: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.lead-pin {
+  stroke: var(--card);
+  stroke-width: 2px;
+  cursor: pointer;
+  transition: stroke-width 150ms var(--ease-out);
+}
+.lead-pin-maxima {
+  fill: var(--profit);
+}
+.lead-pin-alta {
+  fill: var(--chart-1);
+}
+.lead-pin-media {
+  fill: var(--chart-4);
+}
+.lead-pin-baixa {
+  fill: var(--chart-5);
+}
+.lead-pin.is-selected {
+  stroke: var(--foreground);
+  stroke-width: 3px;
+}
+.lead-raio {
+  stroke: var(--primary);
+  stroke-width: 1.5px;
+  stroke-dasharray: 4 6;
+  fill: var(--primary);
+  fill-opacity: 0.05;
+}
+.lead-voce {
+  fill: var(--primary);
+  stroke: var(--card);
+  stroke-width: 3px;
+}
+.leaflet-tooltip.lead-tip {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 0;
+  border-radius: 8px;
+  box-shadow: var(--shadow-pop);
+  font-size: 12px;
+  padding: 4px 8px;
+}
+.leaflet-tooltip.lead-tip::before {
+  display: none;
+}

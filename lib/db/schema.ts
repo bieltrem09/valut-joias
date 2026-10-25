@@ -138,6 +138,48 @@ export const fotos = sqliteTable("fotos", {
   atualizadaEm: text("atualizada_em").notNull(),
 });
 
+/** Empresas achadas na prospecção (Google Places) e em que ponto do funil estão. */
+export const leads = sqliteTable(
+  "leads",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    placeId: text("place_id").notNull().unique(),
+    nome: text("nome").notNull(),
+    categoria: text("categoria"),
+    endereco: text("endereco"),
+    lat: real("lat"),
+    lng: real("lng"),
+    telefone: text("telefone"),
+    website: text("website"),
+    mapsUrl: text("maps_url"),
+    rating: real("rating"),
+    totalAvaliacoes: integer("total_avaliacoes"),
+    score: integer("score").notNull(),
+    status: text("status", { enum: ["novo", "contatado", "negociando", "fechado", "perdido"] })
+      .notNull()
+      .default("novo"),
+    anotacao: text("anotacao"),
+    segmento: text("segmento"),
+    empresaId: integer("empresa_id"),
+    criadoEm: text("criado_em").notNull(),
+    atualizadoEm: text("atualizado_em").notNull(),
+  },
+  (t) => [index("leads_status_idx").on(t.status)],
+);
+
+/** Histórico das buscas de prospecção. */
+export const buscas = sqliteTable("buscas", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  segmento: text("segmento").notNull(),
+  local: text("local").notNull(),
+  modo: text("modo", { enum: ["cidade", "perto", "area"] }).notNull(),
+  raioKm: real("raio_km"),
+  total: integer("total").notNull(),
+  criadaEm: text("criada_em").notNull(),
+});
+
+export type LeadStatus = (typeof leads.$inferSelect)["status"];
+
 export type Empresa = typeof empresas.$inferSelect;
 export type Placa = typeof placas.$inferSelect;
 export type Venda = typeof vendas.$inferSelect;

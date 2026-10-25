@@ -60,6 +60,20 @@ O Google não entrega histórico de avaliações, só o total de hoje. Por isso 
 - **Antes × depois**: só quando há 7 dias ou mais medidos antes da placa.
 - **Gráfico**: o eixo X é tempo real e cada ponto é uma medição. A faixa verde marca o período com placa. No total geral de Clientes a linha é em degrau: o valor só muda quando há medição nova, sem estimativa entre pontos.
 
+## Prospecção
+
+A aba **Prospecção** busca empresas reais no Google pela Places API (New), sem nenhum dado inventado:
+
+- **Cidade inteira**: acha o contorno da cidade (ex.: "Limeira, SP") e varre só dentro dele, com até 60 empresas, o limite do Google. A opção "só endereços dentro da cidade" corta as vizinhas que caem no retângulo.
+- **Perto de mim**: usa o GPS do aparelho e um raio (1 a 20 km), ordenando pelo mais perto.
+- **Área do mapa**: busca só no que está na tela.
+
+Cada empresa recebe uma nota de 0 a 100 para o seu produto (`lib/prospeccao.ts`, com testes). Os critérios são: poucas avaliações para o movimento, nota alta, celular público (WhatsApp) e falta de site. O botão "Por que 87?" mostra cada ponto.
+
+Os leads escolhidos vão para o **funil** (Novo → Contatado → Negociando → Fechado/Perdido). O WhatsApp já abre com uma mensagem inicial. "Virar cliente" cadastra a empresa com os dados do Google. Cada busca fica no histórico.
+
+Custo: cada página de até 20 empresas é uma chamada de Text Search, e uma busca completa usa até 3 (mais uma para achar a cidade). Telefone e site estão no field mask, o que coloca a chamada na faixa mais cara da Places API. Confira os preços no Google Cloud.
+
 ## Dados do Google
 
 A API do Business Profile só cobre empresas que você administra. Para os clientes, o app usa a **Places API (New)**, sempre no servidor. A chave nunca vai ao navegador. A foto da empresa é guardada no banco e servida por `/api/google/photo/[id]`. A atribuição "Dados: Google" aparece onde esses dados são exibidos.
@@ -76,6 +90,8 @@ lib/data/*           única porta de leitura do banco (tipada); trocar o banco n
 lib/db/*             schema Drizzle (libSQL), DDL idempotente
 app/r/[codigo]       link gravado na placa: conta o toque e redireciona
 app/api/cron/google  medição diária das avaliações
+app/api/prospeccao   busca de leads no Google (cidade, raio, área)
+lib/prospeccao.ts    qualificação dos leads, com testes
 ```
 
 O período fica na URL (`?p=hoje|ontem|7d|30d|custom&de=…&ate=…`).

@@ -91,4 +91,35 @@ create table if not exists fotos (
   bytes blob not null,
   atualizada_em text not null
 );
+create table if not exists leads (
+  id integer primary key autoincrement,
+  place_id text not null unique,
+  nome text not null,
+  categoria text,
+  endereco text,
+  lat real,
+  lng real,
+  telefone text,
+  website text,
+  maps_url text,
+  rating real,
+  total_avaliacoes integer,
+  score integer not null,
+  status text not null default 'novo',
+  anotacao text,
+  segmento text,
+  empresa_id integer,
+  criado_em text not null,
+  atualizado_em text not null
+);
+create index if not exists leads_status_idx on leads(status);
+create table if not exists buscas (
+  id integer primary key autoincrement,
+  segmento text not null,
+  local text not null,
+  modo text not null,
+  raio_km real,
+  total integer not null,
+  criada_em text not null
+);
 `;
