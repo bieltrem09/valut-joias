@@ -94,31 +94,3 @@ export function ordenar(leads: Lead[], por: "score" | "distancia" | "avaliacoes"
     return b.score - a.score || (b.rating ?? 0) - (a.rating ?? 0);
   });
 }
-
-/**
- * Pontuação sem nota/avaliações (mapa aberto, OpenStreetMap): mede só o que dá
- * para saber sem o Google — se dá para abordar e se o perfil do Google é a vitrine.
- * Quando a pessoa confere e anota a nota, vale o `qualificar` completo.
- */
-export function qualificarAberto(l: LugarBruto & { instagram?: string | null; horario?: string | null }): {
-  score: number;
-  prioridade: Prioridade;
-  motivos: Motivo[];
-} {
-  const motivos: Motivo[] = [];
-  if (l.telefone && celular(l.telefone)) motivos.push({ texto: "Celular público: dá para chamar no WhatsApp", pontos: 35 });
-  else if (l.telefone) motivos.push({ texto: "Telefone público", pontos: 22 });
-  else motivos.push({ texto: "Sem telefone no mapa: procure no Google ou Instagram", pontos: 0 });
-
-  if (!l.website) motivos.push({ texto: "Sem site: a ficha do Google é a vitrine", pontos: 30 });
-  else motivos.push({ texto: "Tem site próprio", pontos: 8 });
-
-  if (l.instagram) motivos.push({ texto: "Ativo no Instagram: liga para reputação online", pontos: 10 });
-  if (l.endereco) motivos.push({ texto: "Endereço completo: dá para visitar", pontos: 10 });
-  if (l.horario) motivos.push({ texto: "Horário informado: negócio em atividade", pontos: 5 });
-  motivos.push({ texto: "Nota e avaliações: confira no Google para a pontuação completa", pontos: 0 });
-
-  const score = Math.max(0, Math.min(100, motivos.reduce((a, m) => a + m.pontos, 0) + 10));
-  const prioridade: Prioridade = score >= 85 ? "maxima" : score >= 70 ? "alta" : score >= 50 ? "media" : "baixa";
-  return { score, prioridade, motivos };
-}

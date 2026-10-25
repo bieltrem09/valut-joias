@@ -62,23 +62,15 @@ O Google não entrega histórico de avaliações, só o total de hoje. Por isso 
 
 ## Prospecção
 
-**Radar (estilo mapa de território).** Painel do alvo à esquerda (segmento, localidade, território: cidade inteira, perto de mim com raio ou área do mapa), mapa escuro tingido de roxo com pinos numerados pela pontuação (01 = melhor), cartões de cobertura e potencial do território, e a ficha da empresa por cima do mapa com WhatsApp, ligar e "Mandar para o funil".
+O mapa é o **Google Maps de verdade**, pelo embed público (`maps.google.com/maps?…&output=embed`, sem chave e sem custo), com a busca do segmento na cidade ou perto de você (`urlEmbedMaps` em `lib/maps-link.ts`). No escuro ele é tingido de roxo por CSS (`.mapa-roxo`); "Cores originais" tira o filtro.
 
-**Google Maps no radar (grátis).** A aba "Google Maps" do mapa é o Google de verdade, pelo embed público (`maps.google.com/maps?…&output=embed`, sem chave), com a busca do segmento na cidade ou perto de você (`urlEmbedMaps` em `lib/maps-link.ts`). Tocar numa empresa da lista abre a ficha dela no Google (nota, avaliações, fotos). No escuro, o mapa é tingido de roxo por CSS (`.mapa-roxo`); "Cores originais" tira o filtro. A aba "Radar" mostra os pinos numerados.
+**Com `GOOGLE_PLACES_API_KEY`: lista completa.** A busca (`/api/prospeccao/buscar`) traz da Places API (New) todos os estabelecimentos (até 60, o limite do Google) com fotos, nota, avaliações, telefone, site, horário, aberto agora e faixa de preço. A lista tem filtros (WhatsApp, sem site, aberto agora, nota 4,5+) e ordenação; tocar num estabelecimento abre a ficha dele no mapa do Google e o cartão com fotos, dados e ações (WhatsApp, ligar, Google Maps, mandar para o funil). As fotos passam por `/api/google/foto-lugar`, que devolve o endereço público da imagem sem expor a chave.
 
-**Lista sem chave do Google: OpenStreetMap.** O Nominatim acha a cidade e o Overpass traz as empresas reais do território (`lib/osm.ts`, com testes; rede em `lib/osm-server.ts`, com servidores reserva). O nicho em português vira etiquetas do OSM ("hamburgueria" → `cuisine=burger` + nomes com "burg"). O OSM não tem nota nem avaliações, então a pontuação mede o que dá para saber (celular/WhatsApp, sem site, Instagram, endereço, horário) e a ficha tem "Conferir" (abre a empresa no Google Maps) com dois campos: anotada a nota e as avaliações, vale a pontuação completa. Cidades do interior podem ter menos lojas mapeadas que no Google; para essas, "Não achou no mapa? Anote à mão" aceita o link do Compartilhar do Google Maps. `OSM_OVERPASS_URL`/`OSM_NOMINATIM_URL` só servem para apontar a um servidor próprio ou de teste.
+**Trava de gasto.** `lib/google/uso.ts` conta cada chamada por mês (buscas, fotos, atualizações de clientes) na tabela `uso_google` e para antes da cota grátis do Google: 900 de cada por padrão (`GOOGLE_LIMITE_BUSCAS_MES`, `GOOGLE_LIMITE_FOTOS_MES`, `GOOGLE_LIMITE_DETALHES_MES`). O uso aparece embaixo da busca e em Configurações. `GOOGLE_PLACES_BASE_URL` só serve para apontar a um simulador nos testes.
 
-**Com `GOOGLE_PLACES_API_KEY`: Google.** O mesmo radar busca empresas reais no Google pela Places API (New), sem nenhum dado inventado:
+**Sem a chave**, o mapa do Google funciona e a lista explica como ligar. "Não achou no mapa? Anote à mão" aceita o link do Compartilhar do Google Maps (`lib/maps-link.ts`, com testes).
 
-- **Cidade inteira**: acha o contorno da cidade (ex.: "Limeira, SP") e varre só dentro dele, com até 60 empresas, o limite do Google. A opção "só endereços dentro da cidade" corta as vizinhas que caem no retângulo.
-- **Perto de mim**: usa o GPS do aparelho e um raio (1 a 20 km), ordenando pelo mais perto.
-- **Área do mapa**: busca só no que está na tela.
-
-Cada empresa recebe uma nota de 0 a 100 para o seu produto (`lib/prospeccao.ts`, com testes). Os critérios são: poucas avaliações para o movimento, nota alta, celular público (WhatsApp) e falta de site. O botão "Por que 87?" mostra cada ponto.
-
-Os leads escolhidos vão para o **funil** (Novo → Contatado → Negociando → Fechado/Perdido). O WhatsApp já abre com uma mensagem inicial. "Virar cliente" cadastra a empresa com os dados do Google. Cada busca fica no histórico.
-
-Custo: cada página de até 20 empresas é uma chamada de Text Search, e uma busca completa usa até 3 (mais uma para achar a cidade). Telefone e site estão no field mask, o que coloca a chamada na faixa mais cara da Places API. Confira os preços no Google Cloud.
+Cada estabelecimento recebe uma nota de 0 a 100 para o seu produto (`lib/prospeccao.ts`, com testes): poucas avaliações para o movimento, nota alta, celular público (WhatsApp) e falta de site. "Por quê" mostra cada ponto. Os leads vão para o **funil** (Novo → Contatado → Negociando → Fechado/Perdido); "Virar cliente" cadastra a empresa.
 
 ## Estoque
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { googleEnabled, testarChave } from "@/lib/google/places";
+import { usoDoMes } from "@/lib/google/uso";
 import { bancoRemoto, persistente } from "@/lib/db";
 import { PageIntro } from "@/components/shell/page-intro";
 import { StatusDot } from "@/components/ui/chip";
@@ -11,6 +12,7 @@ export default async function ConfiguracoesPage() {
   // Com a chave colada, testa de verdade: chave presente não quer dizer chave aceita.
   const teste = googleEnabled() ? await testarChave() : null;
   const google = !!teste?.ok;
+  const uso = googleEnabled() ? await usoDoMes() : null;
   const auth = !!(process.env.PANEL_USER && process.env.PANEL_PASS);
   const remoto = bancoRemoto;
 
@@ -38,10 +40,10 @@ export default async function ConfiguracoesPage() {
           offText={teste ? "Chave recusada" : "Desligado"}
           body={
             google
-              ? "Chave testada agora e aceita pelo Google. Notas, fotos e avaliações são medidas todo dia às 9h (Vercel Cron) e quando você pede na ficha do cliente."
+              ? `Chave testada agora e aceita pelo Google. Este mês: ${uso!.buscas} de ${uso!.limites.buscas} buscas, ${uso!.fotos} de ${uso!.limites.fotos} fotos e ${uso!.detalhes} de ${uso!.limites.detalhes} atualizações de clientes. Ao chegar no limite, o painel para sozinho até o dia 1º, para ficar dentro da cota grátis do Google.`
               : teste && !teste.ok
                 ? teste.motivo
-                : "Sem GOOGLE_PLACES_API_KEY, você cadastra clientes à mão e anota as contagens de avaliações. Crie a chave no Google Cloud com a Places API (New) ativa."
+                : "Sem a chave, o mapa do Google funciona, mas a lista com fotos e dados de cada estabelecimento não. Veja abaixo como ligar sem gerar cobrança."
           }
         />
         <Item
@@ -56,6 +58,28 @@ export default async function ConfiguracoesPage() {
           }
         />
       </ul>
+
+      {!google && (
+        <section aria-labelledby="chave" className="surface grid gap-4 p-5">
+          <h2 id="chave" className="text-16 font-semibold tracking-[-0.01em]">
+            Ligar a lista com fotos, sem cobrança
+          </h2>
+          <p className="text-13 text-muted-foreground">
+            O Google dá uma cota grátis por mês para cada tipo de chamada. O painel conta tudo e para antes do limite (900 buscas e 900 fotos por mês). Mesmo
+            assim o Google exige um cartão no cadastro.
+          </p>
+          <ol className="grid list-decimal gap-2 pl-5 text-13 text-subtle-foreground">
+            <li>Em console.cloud.google.com, crie um projeto e vincule uma conta de faturamento (cartão).</li>
+            <li>Em APIs e serviços → Biblioteca, ative a “Places API (New)”.</li>
+            <li>Em Credenciais → Criar credenciais → Chave de API. Em “Restrições de API”, marque só a Places API (New).</li>
+            <li>
+              Proteção extra: em Faturamento → Orçamentos e alertas, crie um orçamento de R$ 1 com alerta por e-mail. Em APIs e serviços → Places API (New) →
+              Cotas, limite as chamadas por dia (ex.: 30).
+            </li>
+            <li>Na Vercel, em Settings → Environment Variables, crie GOOGLE_PLACES_API_KEY com a chave (Production e Preview) e publique de novo.</li>
+          </ol>
+        </section>
+      )}
     </div>
   );
 }

@@ -237,6 +237,14 @@ export const movimentos = pgTable(
   (t) => [index("movimentos_produto_idx").on(t.produtoId)],
 );
 
+/** Chamadas à Places API por mês: o painel para antes de sair da cota grátis do Google. */
+export const usoGoogle = pgTable("uso_google", {
+  mes: text("mes").primaryKey(),
+  buscas: integer("buscas").notNull().default(0),
+  detalhes: integer("detalhes").notNull().default(0),
+  fotos: integer("fotos").notNull().default(0),
+});
+
 export type LeadStatus = (typeof leads.$inferSelect)["status"];
 
 export type Empresa = typeof empresas.$inferSelect;

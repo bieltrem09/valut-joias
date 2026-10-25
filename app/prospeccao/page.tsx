@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
 import { googleEnabled } from "@/lib/google/places";
 import { listBuscas, listLeads } from "@/lib/data/leads";
-import { Radar } from "@/components/prospeccao/radar";
+import { Prospector } from "@/components/prospeccao/prospector";
+import { usoDoMes } from "@/lib/google/uso";
 import { AnotarLead } from "@/components/prospeccao/anotar-lead";
 import { Funil } from "@/components/prospeccao/funil";
 
 export const metadata: Metadata = { title: "Prospecção" };
 
 export default async function ProspeccaoPage() {
-  // Com a chave da Places API, a busca traz nota e avaliações; sem ela, usa o mapa aberto (grátis).
-  const fonte = googleEnabled() ? "google" : "osm";
-  const [leads, buscas] = await Promise.all([listLeads(), listBuscas()]);
+  // Sem a chave, o mapa do Google funciona (embed grátis); com ela, vem a lista com fotos e tudo.
+  const temGoogle = googleEnabled();
+  const [leads, buscas, uso] = await Promise.all([listLeads(), listBuscas(), temGoogle ? usoDoMes() : null]);
   const abertos = leads.filter((l) => l.status !== "fechado" && l.status !== "perdido").length;
 
   return (
     <div className="grid gap-6 md:gap-8">
-      <Radar buscas={buscas} fonte={fonte} />
+      <Prospector buscas={buscas} temGoogle={temGoogle} uso={uso} />
 
       <details className="surface group p-0 [&[open]_.seta]:rotate-180">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">

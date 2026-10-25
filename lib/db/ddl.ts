@@ -158,4 +158,10 @@ create table if not exists movimentos_estoque (
   criado_em text not null
 );
 create index if not exists movimentos_produto_idx on movimentos_estoque(produto_id);
+create table if not exists uso_google (
+  mes text primary key,
+  buscas integer not null default 0,
+  detalhes integer not null default 0,
+  fotos integer not null default 0
+);
 `;
