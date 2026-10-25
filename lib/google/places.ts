@@ -15,7 +15,7 @@ const DETAIL_FIELDS =
   "id,displayName,rating,userRatingCount,photos,formattedAddress,googleMapsUri,primaryTypeDisplayName,nationalPhoneNumber,reviews,addressComponents";
 const SEARCH_FIELDS = "places.id,places.displayName,places.formattedAddress,places.primaryTypeDisplayName,places.rating,places.userRatingCount";
 const REFRESH_TTL_MS = 24 * 60 * 60 * 1000;
-export const PHOTO_DIR = path.join(process.cwd(), "data", "photos");
+export const PHOTO_DIR = process.env.VERCEL ? "/tmp/photos" : path.join(process.cwd(), "data", "photos");
 
 export const googleKey = () => process.env.GOOGLE_PLACES_API_KEY?.trim() || null;
 export const googleEnabled = () => !!googleKey();

@@ -7,7 +7,8 @@ import * as schema from "./schema";
 import { DDL } from "./ddl";
 import { runSeed } from "./seed";
 
-const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "ecloura.db");
+// Na Vercel só /tmp aceita escrita: o banco nasce do seed em cada instância (modo demonstração).
+const DB_PATH = process.env.DATABASE_PATH ?? (process.env.VERCEL ? "/tmp/ecloura.db" : path.join(process.cwd(), "data", "ecloura.db"));
 
 function create() {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
