@@ -388,27 +388,103 @@
   color: var(--foreground);
   border-color: var(--border);
 }
-.lead-pin {
-  stroke: var(--card);
-  stroke-width: 2px;
+/* Pinos numerados (estilo radar): gota com o número, cor pela prioridade. */
+.pin-num-wrap {
+  background: none;
+  border: 0;
+}
+.pin-num {
+  --pin: var(--chart-5);
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50% 50% 50% 4px;
+  transform: rotate(-45deg);
+  background: radial-gradient(circle at 30% 30%, color-mix(in oklch, var(--pin) 70%, white), var(--pin) 60%);
+  border: 2px solid color-mix(in oklch, white 80%, var(--pin));
+  box-shadow:
+    0 0 0 4px color-mix(in oklch, var(--pin) 22%, transparent),
+    0 6px 18px -4px color-mix(in oklch, var(--pin) 80%, transparent);
   cursor: pointer;
-  transition: stroke-width 150ms var(--ease-out);
+  transition:
+    transform 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out);
 }
-.lead-pin-maxima {
-  fill: var(--profit);
+.pin-num span {
+  transform: rotate(45deg);
+  font:
+    600 11px/1 var(--font-jetbrains),
+    ui-monospace,
+    monospace;
+  color: white;
+  letter-spacing: 0.02em;
 }
-.lead-pin-alta {
-  fill: var(--chart-1);
+.pin-maxima {
+  --pin: oklch(0.62 0.25 300);
 }
-.lead-pin-media {
-  fill: var(--chart-4);
+.pin-alta {
+  --pin: oklch(0.56 0.22 285);
 }
-.lead-pin-baixa {
-  fill: var(--chart-5);
+.pin-media {
+  --pin: oklch(0.5 0.12 280);
 }
-.lead-pin.is-selected {
-  stroke: var(--foreground);
-  stroke-width: 3px;
+.pin-baixa {
+  --pin: oklch(0.42 0.04 280);
+}
+@media (hover: hover) {
+  .pin-num:hover {
+    transform: rotate(-45deg) scale(1.1);
+  }
+}
+.pin-num.is-selected {
+  transform: rotate(-45deg) scale(1.22);
+  box-shadow:
+    0 0 0 5px color-mix(in oklch, var(--pin) 35%, transparent),
+    0 0 28px 4px color-mix(in oklch, var(--pin) 75%, transparent);
+}
+.pin-num.is-selected::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  border: 2px solid var(--pin);
+  animation: pin-pulso 1.6s var(--ease-out) infinite;
+}
+@keyframes pin-pulso {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pin-num,
+  .pin-num.is-selected::after {
+    transition: none;
+    animation: none;
+  }
+}
+/* Tinta roxa nas ruas: o mapa base é cinza; sépia + giro de matiz vira violeta. */
+.dark .lead-map .leaflet-tile-pane {
+  filter: sepia(1) hue-rotate(215deg) saturate(2.6) brightness(0.85) contrast(1.05);
+}
+.lead-map .leaflet-tile-pane {
+  filter: sepia(0.35) hue-rotate(215deg) saturate(1.4);
+}
+.dark .lead-map.leaflet-container {
+  background: oklch(0.13 0.04 288);
+}
+.lead-limites {
+  stroke: var(--primary);
+  stroke-width: 1px;
+  stroke-dasharray: 2 6;
+  fill: none;
+  opacity: 0.6;
 }
 .lead-raio {
   stroke: var(--primary);
@@ -739,20 +815,20 @@ html:not(.dark) .aurora-grain {
   }
 }
 
-/* ---------------- Mapa do Google com a cara do painel ----------------
- * O embed público do Maps não aceita estilo; o filtro inverte para o escuro
- * mantendo os matizes (pinos continuam vermelhos) e a tinta roxa dá a cor da marca. */
-.mapa-roxo {
-  filter: saturate(0.85);
+/* ---------------- Radar de prospecção ---------------- */
+/* Cartões de vidro por cima do mapa. */
+.glass-card {
+  border-radius: var(--radius-card, 16px);
+  background: color-mix(in oklch, var(--card) 82%, transparent);
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, white 8%, transparent),
+    0 0 0 1px var(--border),
+    0 18px 40px -18px oklch(0.05 0.05 290 / 0.7);
 }
-.dark .mapa-roxo {
-  filter: invert(0.9) hue-rotate(180deg) saturate(0.8);
-}
-.mapa-roxo-tinta {
-  background: radial-gradient(120% 90% at 20% 0%, #9b6bff 0%, #6d3bff 45%, #3a1d8f 100%);
-  mix-blend-mode: soft-light;
-  opacity: 0.35;
-}
-.dark .mapa-roxo-tinta {
-  opacity: 0.6;
+/* Bolinhas e selos com a cor da prioridade (mesma dos pinos). */
+.pin-chip {
+  background: radial-gradient(circle at 30% 30%, color-mix(in oklch, var(--pin) 70%, white), var(--pin) 65%);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--pin) 22%, transparent);
 }

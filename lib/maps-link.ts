@@ -96,26 +96,5 @@ export function chaveLead(l: { chave: string | null; nome: string; endereco?: st
   return `manual:${norm(l.nome)}${l.endereco ? `:${norm(l.endereco).slice(0, 40)}` : ""}`;
 }
 
-export const leadManual = (placeId: string) => placeId.startsWith("manual:") || placeId.startsWith("maps:");
-
-/** Raio da busca "perto de mim" → zoom do mapa (quanto menor o raio, mais perto). */
-export const zoomDoRaio = (km: number) => (km <= 1 ? 16 : km <= 3 ? 15 : km <= 5 ? 14 : km <= 10 ? 13 : 12);
-
-/**
- * Mapa do Google embutido no painel, sem chave e sem custo (o embed público do Maps).
- * Mostra os pinos da busca; tocando num pino aparece a ficha com nota e avaliações.
- */
-export function urlEmbedMaps(o: { segmento?: string; local?: string; perto?: { lat: number; lng: number }; raioKm?: number }): string {
-  const q = o.segmento?.trim() ?? "";
-  const p = new URLSearchParams({ hl: "pt-BR", output: "embed" });
-  if (o.perto) {
-    const ll = `${o.perto.lat.toFixed(5)},${o.perto.lng.toFixed(5)}`;
-    p.set("q", q ? `${q} near ${ll}` : ll);
-    p.set("ll", ll);
-    p.set("z", String(zoomDoRaio(o.raioKm ?? 3)));
-  } else {
-    p.set("q", [q, o.local?.trim()].filter(Boolean).join(" em ") || "Limeira, SP");
-    p.set("z", q ? "14" : "13");
-  }
-  return `https://maps.google.com/maps?${p.toString()}`;
-}
+/** Lead que não veio da Places API (anotado à mão ou do mapa aberto): não sincroniza com o Google. */
+export const leadManual = (placeId: string) => /^(manual|maps|osm):/.test(placeId);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chaveLead, hostDoMaps, lerLinkMaps, urlBuscaMaps, urlEmbedMaps } from "./maps-link";
+import { chaveLead, hostDoMaps, lerLinkMaps, urlBuscaMaps } from "./maps-link";
 
 describe("lerLinkMaps", () => {
   it("lê o texto do Compartilhar do celular", () => {
@@ -69,22 +69,5 @@ describe("chaveLead", () => {
   });
   it("normaliza nome e endereço", () => {
     expect(chaveLead({ chave: null, nome: "Açaí do João!", endereco: "R. São Paulo, 10" })).toBe("manual:acai-do-joao:r-sao-paulo-10");
-  });
-});
-
-describe("urlEmbedMaps", () => {
-  it("monta a busca na cidade", () => {
-    const u = new URL(urlEmbedMaps({ segmento: "pizzaria", local: "Limeira, SP" }));
-    expect(u.origin).toBe("https://maps.google.com");
-    expect(u.searchParams.get("q")).toBe("pizzaria em Limeira, SP");
-    expect(u.searchParams.get("output")).toBe("embed");
-  });
-  it("sem nicho mostra só a cidade", () => {
-    expect(new URL(urlEmbedMaps({ local: "Limeira, SP" })).searchParams.get("q")).toBe("Limeira, SP");
-  });
-  it("perto de mim usa coordenadas e zoom do raio", () => {
-    const u = new URL(urlEmbedMaps({ segmento: "barbearia", perto: { lat: -22.5, lng: -47.4 }, raioKm: 1 }));
-    expect(u.searchParams.get("q")).toBe("barbearia near -22.50000,-47.40000");
-    expect(u.searchParams.get("z")).toBe("16");
   });
 });
