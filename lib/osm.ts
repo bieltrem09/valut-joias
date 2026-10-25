@@ -81,8 +81,11 @@ export type Escopo =
   | { tipo: "raio"; lat: number; lng: number; metros: number }
   | { tipo: "caixa"; south: number; west: number; north: number; east: number };
 
-/** Só o que é comércio/serviço entra na busca por nome (evita "Rua Hamburgo"). */
-const COMERCIO = ['["amenity"]', '["shop"]', '["craft"]', '["office"]', '["leisure"]', '["healthcare"]'];
+/**
+ * Busca por nome é cara no Overpass (regex em toda a cidade): só em comércio
+ * (amenity/shop), e só como reforço das etiquetas; sem etiqueta conhecida, é o que sobra.
+ */
+const COMERCIO = ['["amenity"]', '["shop"]'];
 
 export function montarConsulta(segmento: string, escopo: Escopo, limite = 120): string {
   const r = regraDoNicho(segmento);
@@ -94,7 +97,7 @@ export function montarConsulta(segmento: string, escopo: Escopo, limite = 120): 
         : `(${[escopo.south, escopo.west, escopo.north, escopo.east].map((n) => n.toFixed(6)).join(",")})`;
   const linhas = [...r.tags.map((t) => `nwr${t}["name"]${onde};`), ...COMERCIO.map((c) => `nwr["name"~"${r.nome}",i]${c}${onde};`)];
   return [
-    "[out:json][timeout:25];",
+    "[out:json][timeout:15];",
     escopo.tipo === "area" ? `area(id:${escopo.areaId})->.alvo;` : "",
     "(",
     ...linhas.map((l) => `  ${l}`),

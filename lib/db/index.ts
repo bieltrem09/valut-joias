@@ -30,7 +30,13 @@ function conectar(): Estado {
     const url = new URL(DB_URL);
     url.search = "";
     // prepare:false: o pooler do Supabase (porta 6543) não aceita prepared statements.
-    const sql = postgres(url.toString(), { prepare: false, max: Number(process.env.DATABASE_POOL_MAX) || 5, ssl: local ? false : "require", idle_timeout: 20 });
+    const sql = postgres(url.toString(), {
+      prepare: false,
+      max: Number(process.env.DATABASE_POOL_MAX) || 5,
+      ssl: local ? false : "require",
+      idle_timeout: 20,
+      onnotice: () => {},
+    });
     return { db: drizzle(sql, { schema }), ddl: () => sql.unsafe(DDL) };
   }
   // PGlite só é carregado quando não há banco remoto.

@@ -6,6 +6,9 @@ import { distanciaKm, ordenar, qualificar, qualificarAberto, type Lead, type Lug
 import { urlBuscaMaps } from "@/lib/maps-link";
 import type { Escopo } from "@/lib/osm";
 
+// Overpass pode levar alguns segundos; o padrão da Vercel corta antes.
+export const maxDuration = 30;
+
 type Body = {
   segmento: string;
   local: string;

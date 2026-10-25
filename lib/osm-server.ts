@@ -17,11 +17,21 @@ export type Lugar = { nome: string; centro: { lat: number; lng: number }; limite
 
 export class OsmError extends Error {}
 
-/** "Limeira, SP" → contorno da cidade. Bairro ou endereço vira um raio em volta do ponto. */
+const cacheLugar = new Map<string, Lugar | null>();
+
+/** "Limeira, SP" → contorno da cidade. Bairro ou endereço vira um raio em volta do ponto. Guardado por processo. */
 export async function localizar(texto: string): Promise<Lugar | null> {
+  const chave = texto.trim().toLowerCase();
+  if (cacheLugar.has(chave)) return cacheLugar.get(chave)!;
+  const lugar = await localizarSemCache(texto);
+  cacheLugar.set(chave, lugar);
+  return lugar;
+}
+
+async function localizarSemCache(texto: string): Promise<Lugar | null> {
   const url = new URL(NOMINATIM);
   url.search = new URLSearchParams({ q: texto, format: "jsonv2", limit: "5", countrycodes: "br", "accept-language": "pt-BR" }).toString();
-  const res = await fetch(url, { headers: { "User-Agent": UA }, cache: "no-store", signal: AbortSignal.timeout(10000) });
+  const res = await fetch(url, { headers: { "User-Agent": UA }, cache: "no-store", signal: AbortSignal.timeout(8000) });
   if (!res.ok) throw new OsmError(`Nominatim ${res.status}`);
   const lista = (await res.json()) as {
     osm_type: string;
@@ -46,26 +56,30 @@ export async function localizar(texto: string): Promise<Lugar | null> {
   return { nome, centro, limites, escopo: { tipo: "raio", ...centro, metros: Math.min(6000, Math.max(800, diag / 2)) } };
 }
 
-/** Roda a consulta no primeiro servidor Overpass que responder. */
+/** Pergunta aos servidores Overpass ao mesmo tempo e fica com o primeiro que responder. */
 async function overpass(consulta: string): Promise<ElementoOSM[]> {
-  let ultimo: unknown;
-  for (const base of OVERPASS) {
-    try {
-      const res = await fetch(base, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": UA },
-        body: new URLSearchParams({ data: consulta }).toString(),
-        cache: "no-store",
-        signal: AbortSignal.timeout(20000),
-      });
-      if (!res.ok) throw new OsmError(`Overpass ${res.status}`);
-      const j = (await res.json()) as { elements?: ElementoOSM[] };
-      return j.elements ?? [];
-    } catch (e) {
-      ultimo = e;
-    }
+  const ctrl = new AbortController();
+  const um = async (base: string) => {
+    const res = await fetch(base, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": UA },
+      body: new URLSearchParams({ data: consulta }).toString(),
+      cache: "no-store",
+      signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(16000)]),
+    });
+    if (!res.ok) throw new OsmError(`Overpass ${res.status}`);
+    const j = (await res.json()) as { elements?: ElementoOSM[]; remark?: string };
+    // "runtime error: Query timed out" vem com 200 e lista vazia: conta como falha.
+    if (j.remark && /error|timed out/i.test(j.remark) && !j.elements?.length) throw new OsmError(j.remark);
+    return j.elements ?? [];
+  };
+  try {
+    return await Promise.any(OVERPASS.map(um));
+  } catch {
+    throw new OsmError("Overpass indisponível");
+  } finally {
+    ctrl.abort();
   }
-  throw ultimo instanceof Error ? ultimo : new OsmError("Overpass indisponível");
 }
 
 export async function buscarAberto(segmento: string, escopo: Escopo, cidade?: string): Promise<LugarAberto[]> {

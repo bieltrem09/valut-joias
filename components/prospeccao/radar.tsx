@@ -32,6 +32,7 @@ import { Select, fieldClass } from "@/components/ui/input";
 import { Orb } from "@/components/ui/orb";
 import { enviarAoFunil } from "@/app/actions";
 import { ordenar, qualificar, whatsappUrl, type Lead } from "@/lib/prospeccao";
+import { urlBuscaMaps, urlEmbedMaps } from "@/lib/maps-link";
 import { formatInt, formatRating } from "@/lib/format";
 import type { BuscaSalva } from "@/lib/data/leads";
 import { cn } from "@/lib/utils";
@@ -80,6 +81,30 @@ export function Radar({ buscas, fonte }: { buscas: BuscaSalva[]; fonte: "google"
   const [enquadrar, setEnquadrar] = React.useState<{ key: string; bounds?: Area; centro?: { lat: number; lng: number }; zoom?: number } | null>(null);
   const [zoom, setZoom] = React.useState(13);
 
+  // Mapa do Google (embed público, grátis): mostra tudo o que o Google tem. O radar numerado fica ao lado.
+  const [visao, setVisao] = React.useState<"google" | "radar">(fonte === "osm" ? "google" : "radar");
+  const [alvoMaps, setAlvoMaps] = React.useState<{ segmento: string; local: string; perto: { lat: number; lng: number } | null; raio: number } | null>(null);
+  const [focoMaps, setFocoMaps] = React.useState<string | null>(null);
+  const [cores, setCores] = React.useState<"painel" | "original">("painel");
+  const [carregandoMapa, setCarregandoMapa] = React.useState(true);
+  const [montado, setMontado] = React.useState(false);
+  const [erroLista, setErroLista] = React.useState<string>();
+  React.useEffect(() => setMontado(true), []);
+  // Se o Google demorar, a esfera sai da frente mesmo assim.
+  React.useEffect(() => {
+    if (!carregandoMapa) return;
+    const t = setTimeout(() => setCarregandoMapa(false), 8000);
+    return () => clearTimeout(t);
+  }, [carregandoMapa]);
+  const embed = focoMaps
+    ? urlEmbedMaps({ lugar: focoMaps })
+    : alvoMaps
+      ? urlEmbedMaps({ segmento: alvoMaps.segmento, local: alvoMaps.local, perto: alvoMaps.perto, raioKm: alvoMaps.raio })
+      : urlEmbedMaps({ local });
+  const noApp = alvoMaps
+    ? urlBuscaMaps({ segmento: alvoMaps.segmento, local: alvoMaps.local, perto: alvoMaps.perto ?? undefined })
+    : urlBuscaMaps({ segmento: "", local });
+
   // A numeração segue a pontuação (01 = melhor), não muda quando reordena a lista.
   const numeros = React.useMemo(() => new Map((resultados ?? []).map((l, i) => [l.placeId, i + 1])), [resultados]);
   const lista = React.useMemo(() => (resultados ? (ordenar(resultados, ordem) as Resultado[]) : []), [resultados, ordem]);
@@ -91,6 +116,14 @@ export function Radar({ buscas, fonte }: { buscas: BuscaSalva[]; fonte: "google"
     [resultados, numeros],
   );
   const atual = lista.find((l) => l.placeId === selecionado) ?? null;
+
+  // Escolheu uma empresa com o mapa do Google aberto: o Google mostra a ficha dela (nota, avaliações, fotos).
+  React.useEffect(() => {
+    if (visao !== "google" || !atual) return;
+    setFocoMaps([atual.nome, atual.endereco ?? contexto?.onde ?? local].filter(Boolean).join(", "));
+    setCarregandoMapa(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [atual?.placeId, visao]);
 
   // "/" leva direto para o campo de busca.
   React.useEffect(() => {
@@ -140,21 +173,37 @@ export function Radar({ buscas, fonte }: { buscas: BuscaSalva[]; fonte: "google"
       }
       if (m === "area") area = mapa.current?.area() ?? undefined;
 
+      // O Google Maps já mostra a busca enquanto a lista numerada é montada.
+      setAlvoMaps({ segmento: seg, local: loc, perto: centro ?? null, raio });
+      setFocoMaps(null);
+      setCarregandoMapa(true);
+      setErroLista(undefined);
+      setContexto({ segmento: seg, onde: m === "cidade" ? loc : m === "perto" ? "Perto de você" : "Área do mapa", modo: m, raio });
+      if (m === "area") setVisao("radar");
+      if (window.matchMedia("(max-width: 1023px)").matches)
+        setTimeout(() => mapaBox.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }), 120);
+
       const res = await fetch("/api/prospeccao/buscar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ segmento: seg, local: loc, modo: m, centro, raioKm: raio, area }),
       });
-      const body = (await res.json()) as { ok: boolean; error?: string; leads?: Resultado[]; onde?: Onde };
-      if (!body.ok || !body.leads) throw new Error(body.error ?? "A busca falhou.");
+      const body = (await res.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string; leads?: Resultado[]; onde?: Onde };
+      if (!body.ok || !body.leads) {
+        // Lista falhou, mas o mapa do Google continua mostrando tudo.
+        setResultados([]);
+        setAba("lista");
+        setErroLista(body.error ?? "A lista automática não respondeu agora.");
+        return;
+      }
 
       setResultados(body.leads);
       setOnde(body.onde ?? null);
       setOrdem(m === "perto" ? "distancia" : "score");
       setContexto({ segmento: seg, onde: m === "cidade" ? (body.onde?.nome ?? loc) : m === "perto" ? "Perto de você" : "Área do mapa", modo: m, raio });
       setAba("lista");
-      // Abre a ficha da melhor oportunidade.
-      setSelecionado(body.leads[0]?.placeId ?? null);
+      // No radar, abre a ficha da melhor oportunidade; no Google, deixa o mapa com todos.
+      setSelecionado(visao === "radar" ? (body.leads[0]?.placeId ?? null) : null);
 
       const comPos = body.leads.filter((l) => l.lat != null && l.lng != null);
       if (m === "perto" && centro) {
@@ -171,10 +220,6 @@ export function Radar({ buscas, fonte }: { buscas: BuscaSalva[]; fonte: "google"
           },
         });
       } else if (body.onde) setEnquadrar({ key: `c${Date.now()}`, bounds: body.onde.limites });
-      // No celular o mapa fica abaixo do painel: leva a pessoa até ele.
-      if (window.matchMedia("(max-width: 1023px)").matches)
-        // Espera a lista encolher (aba nova) para não passar do ponto.
-        setTimeout(() => mapaBox.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }), 120);
       router.refresh(); // atualiza "Recentes"
     } catch (e) {
       setErro(e instanceof Error ? e.message : "A busca falhou.");
@@ -432,9 +477,17 @@ export function Radar({ buscas, fonte }: { buscas: BuscaSalva[]; fonte: "google"
                 </Select>
               </div>
               {lista.length === 0 ? (
-                <div className="rounded-card bg-background/50 p-6 text-center ring-1 ring-border">
-                  <p className="text-14 font-medium">Nenhuma empresa nesse território</p>
-                  <p className="mt-1 text-12 text-muted-foreground">Tente outro nome para o nicho, aumente o raio ou anote à mão abaixo do mapa.</p>
+                <div className="rounded-card bg-background/50 p-5 text-center ring-1 ring-border">
+                  <p className="text-14 font-medium">{erroLista ? "A lista numerada não respondeu agora" : "A lista numerada não achou ninguém"}</p>
+                  <p className="mt-1 text-12 text-muted-foreground">
+                    O <span className="text-foreground">Google Maps</span> ao lado mostra todos os resultados de “{contexto?.segmento}”. Toque num pino para ver
+                    nota e avaliações, e anote à mão abaixo do mapa.
+                  </p>
+                  {erroLista && (
+                    <Button variant="secondary" size="sm" className="mt-3" onClick={() => buscar()} disabled={carregando}>
+                      Tentar a lista de novo
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <ol className="grid gap-1.5">
@@ -506,140 +559,260 @@ export function Radar({ buscas, fonte }: { buscas: BuscaSalva[]; fonte: "google"
       </aside>
 
       {/* ------------------------------- Mapa ------------------------------- */}
-      <div ref={mapaBox} className="relative h-[68vh] min-h-[480px] scroll-mt-20 lg:h-full">
-        <Mapa
-          ref={mapa}
-          centro={LIMEIRA}
-          pins={pins}
-          selecionado={selecionado}
-          onSelecionar={setSelecionado}
-          enquadrar={enquadrar}
-          raio={contexto?.modo === "perto" && voce ? { ...voce, km: contexto.raio } : null}
-          voce={voce}
-          limites={contexto?.modo === "cidade" ? (onde?.limites ?? null) : null}
-          onZoom={setZoom}
-        />
-        {/* Vinheta: o mapa "afunda" nas bordas, como uma tela de radar. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 z-[400] shadow-[inset_0_0_120px_30px_color-mix(in_oklch,var(--background)_85%,transparent)]"
-        />
-
-        {/* Cobertura */}
-        <div className="pointer-events-none absolute top-3 left-3 z-[500] max-w-[calc(100%-1.5rem)] sm:max-w-80">
-          <div className="glass-card px-4 py-3">
-            <p className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] text-primary uppercase">
-              <span className="size-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]" /> Cobertura territorial
-            </p>
-            <div className="mt-1 flex items-baseline justify-between gap-3">
-              <p className="truncate text-20 font-semibold tracking-[-0.02em]">{contexto?.onde ?? "Limeira"}</p>
-              <span className="shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle-foreground uppercase ring-1 ring-border">
-                {contexto?.modo === "perto" ? `${contexto.raio} km` : contexto?.modo === "area" ? "Área" : "Local"}
-              </span>
+      <div ref={mapaBox} className="flex h-[72vh] min-h-[520px] scroll-mt-20 flex-col lg:h-full">
+        {/* Barra do mapa: Google Maps (tudo o que o Google tem) ou Radar (lista numerada) */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
+          <LayoutGroup id="visao-mapa">
+            <div role="tablist" aria-label="Mapa" className="flex gap-0.5 rounded-full bg-muted p-1">
+              {(
+                [
+                  ["google", "Google Maps"],
+                  ["radar", resultados?.length ? `Radar · ${total}` : "Radar"],
+                ] as const
+              ).map(([k, l]) => (
+                <button
+                  key={k}
+                  type="button"
+                  role="tab"
+                  aria-selected={visao === k}
+                  onClick={() => setVisao(k)}
+                  className={cn(
+                    "relative h-8 rounded-full px-3 text-12 font-medium outline-hidden focus-visible:ring-2 focus-visible:ring-ring coarse:h-10",
+                    visao === k ? "text-foreground" : "text-muted-foreground hover-fine:text-foreground",
+                  )}
+                >
+                  {visao === k && (
+                    <motion.span
+                      layoutId="visao-pill"
+                      className="absolute inset-0 rounded-full bg-card shadow-hairline"
+                      transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative">{l}</span>
+                </button>
+              ))}
             </div>
-            <p className="mt-1 text-11 text-muted-foreground">
-              {resultados ? (
-                <>
-                  <span className="font-mono text-foreground tabular">{total}</span> {total === 1 ? "empresa encontrada" : "empresas encontradas"}
-                  {contexto && <> · {contexto.segmento}</>}
-                </>
-              ) : (
-                "Defina o alvo e mapeie"
-              )}
-            </p>
-          </div>
-        </div>
-
-        {/* Potencial */}
-        {potencial != null && (
-          <div className="pointer-events-none absolute top-3 right-3 z-[500] hidden sm:block">
-            <div className="glass-card flex items-center gap-3 px-4 py-3">
-              <Medidor valor={potencial} tamanho={48} rotulo="%" />
-              <div>
-                <p className="text-13 font-semibold">Potencial do território</p>
-                <p className="text-11 text-muted-foreground">
-                  {fortes} de {total} com alta oportunidade
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Zoom */}
-        <div className="glass-card absolute top-[104px] right-3 z-[500] hidden flex-col items-center gap-1 p-1.5 sm:flex">
-          <BotaoMapa rotulo="Aproximar" onClick={() => mapa.current?.zoom(1)}>
-            <Plus className="size-4" strokeWidth={1.75} />
-          </BotaoMapa>
-          <div className="grid place-items-center py-1">
-            <span className="font-mono text-[9px] tracking-[0.12em] text-muted-foreground uppercase">Zoom</span>
-            <span className="font-mono text-16 font-semibold tabular">{zoom}</span>
-          </div>
-          <BotaoMapa rotulo="Afastar" onClick={() => mapa.current?.zoom(-1)}>
-            <Minus className="size-4" strokeWidth={1.75} />
-          </BotaoMapa>
-          <span className="my-1 h-px w-6 bg-border" />
-          <BotaoMapa
-            rotulo="Onde estou"
-            onClick={async () => {
-              try {
-                const c = await localizar();
-                setVoce(c);
-                setEnquadrar({ key: `v${Date.now()}`, centro: c, zoom: 15 });
-              } catch (e) {
-                toast.error((e as Error).message);
-              }
-            }}
-          >
-            <LocateFixed className="size-4" strokeWidth={1.75} />
-          </BotaoMapa>
-        </div>
-
-        {/* Carregando */}
-        <AnimatePresence>
-          {carregando && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="absolute inset-0 z-[600] grid place-items-center bg-background/55 backdrop-blur-[3px]"
+          </LayoutGroup>
+          <p className="min-w-0 flex-1 truncate text-12 text-muted-foreground">
+            {focoMaps ? (
+              <span className="text-foreground">{focoMaps}</span>
+            ) : alvoMaps ? (
+              <>
+                <span className="font-medium text-foreground">{alvoMaps.segmento}</span> · {alvoMaps.perto ? `até ${alvoMaps.raio} km de você` : alvoMaps.local}
+              </>
+            ) : (
+              "Escolha o segmento e toque em Mapear"
+            )}
+          </p>
+          <div className="flex gap-1.5">
+            {visao === "google" && focoMaps && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFocoMaps(null);
+                  setSelecionado(null);
+                  setCarregandoMapa(true);
+                }}
+                className="h-8 rounded-full px-3 text-12 font-medium ring-1 ring-border transition-[background-color,transform] duration-150 hover-fine:bg-muted active:scale-[0.96] coarse:h-10"
+              >
+                Ver todos
+              </button>
+            )}
+            {visao === "google" && (
+              <button
+                type="button"
+                onClick={() => setCores((c) => (c === "painel" ? "original" : "painel"))}
+                aria-pressed={cores === "original"}
+                title={cores === "painel" ? "Cores originais do Google (melhor para fotos)" : "Cores do painel"}
+                className="h-8 rounded-full px-3 text-12 font-medium ring-1 ring-border transition-[background-color,transform] duration-150 hover-fine:bg-muted active:scale-[0.96] coarse:h-10"
+              >
+                {cores === "painel" ? "Cores originais" : "Cores do painel"}
+              </button>
+            )}
+            <a
+              href={noApp}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-8 items-center gap-1.5 rounded-full bg-primary px-3 text-12 font-medium text-primary-foreground shadow-hairline transition-transform duration-150 active:scale-[0.96] coarse:h-10"
             >
-              <div className="grid justify-items-center gap-3">
-                <Orb size={140} energia={1} />
-                <p className="text-14 text-subtle-foreground">Varrendo o território…</p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Ficha da empresa */}
-        <AnimatePresence mode="wait">
-          {atual && (
-            <Ficha
-              key={atual.placeId}
-              lead={atual}
-              numero={numeros.get(atual.placeId)!}
-              fonte={fonte}
-              onFechar={() => setSelecionado(null)}
-              onNavegar={lista.length > 1 ? navegar : undefined}
-              onEnviar={enviar}
-            />
-          )}
-        </AnimatePresence>
-
-        {/* Legenda + fonte */}
-        {!atual && (
-          <div className="glass-card absolute bottom-3 left-3 z-[500] hidden items-center gap-3 px-3 py-2 text-11 text-subtle-foreground sm:flex">
-            {(["maxima", "alta", "media", "baixa"] as const).map((k) => (
-              <span key={k} className="flex items-center gap-1.5">
-                <span className={cn("pin-chip size-2.5 rounded-full", `pin-${k}`)} aria-hidden />
-                {k === "maxima" ? "Máxima" : k === "alta" ? "Alta" : k === "media" ? "Média" : "Baixa"}
-              </span>
-            ))}
-            <span className="h-3 w-px bg-border" />
-            <span>{fonte === "google" ? "Dados: Google" : "Dados: OpenStreetMap"}</span>
+              <ExternalLink className="size-3.5" strokeWidth={1.75} /> Abrir no app
+            </a>
           </div>
-        )}
+        </div>
+
+        <div className="relative isolate min-h-0 flex-1">
+          {/* Camada própria: os controles do Leaflet (z 800) não passam por cima do Google. */}
+          <div className="absolute inset-0 z-0">
+            <Mapa
+              ref={mapa}
+              centro={LIMEIRA}
+              pins={pins}
+              selecionado={selecionado}
+              onSelecionar={setSelecionado}
+              enquadrar={enquadrar}
+              raio={contexto?.modo === "perto" && voce ? { ...voce, km: contexto.raio } : null}
+              voce={voce}
+              limites={contexto?.modo === "cidade" ? (onde?.limites ?? null) : null}
+              onZoom={setZoom}
+            />
+          </div>
+
+          {visao === "google" ? (
+            <>
+              {/* Só no navegador: assim o onLoad nunca escapa antes da hidratação. */}
+              {montado && (
+                <iframe
+                  key={embed}
+                  src={embed}
+                  title={alvoMaps ? `Google Maps: ${alvoMaps.segmento}` : "Google Maps"}
+                  referrerPolicy="no-referrer-when-downgrade"
+                  onLoad={() => setCarregandoMapa(false)}
+                  className={cn("absolute inset-0 z-[450] size-full border-0 bg-muted", cores === "painel" && "mapa-roxo")}
+                />
+              )}
+              {cores === "painel" && <div aria-hidden className="mapa-roxo-tinta pointer-events-none absolute inset-0 z-[460]" />}
+              <AnimatePresence>
+                {carregandoMapa && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="pointer-events-none absolute inset-0 z-[600] grid place-items-center bg-background/60 backdrop-blur-[2px]"
+                  >
+                    <div className="grid justify-items-center gap-3">
+                      <Orb size={130} energia={1} />
+                      <p className="text-14 text-subtle-foreground">{alvoMaps ? "Abrindo no Google Maps…" : "Abrindo o mapa…"}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          ) : (
+            <>
+              {/* Vinheta: o mapa "afunda" nas bordas, como uma tela de radar. */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 z-[400] shadow-[inset_0_0_120px_30px_color-mix(in_oklch,var(--background)_85%,transparent)]"
+              />
+              {/* Cobertura */}
+              <div className="pointer-events-none absolute top-3 left-3 z-[500] max-w-[calc(100%-1.5rem)] sm:max-w-80">
+                <div className="glass-card px-4 py-3">
+                  <p className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] text-primary uppercase">
+                    <span className="size-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]" /> Cobertura territorial
+                  </p>
+                  <div className="mt-1 flex items-baseline justify-between gap-3">
+                    <p className="truncate text-20 font-semibold tracking-[-0.02em]">{contexto?.onde ?? "Limeira"}</p>
+                    <span className="shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle-foreground uppercase ring-1 ring-border">
+                      {contexto?.modo === "perto" ? `${contexto.raio} km` : contexto?.modo === "area" ? "Área" : "Local"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-11 text-muted-foreground">
+                    {resultados ? (
+                      <>
+                        <span className="font-mono text-foreground tabular">{total}</span> {total === 1 ? "empresa encontrada" : "empresas encontradas"}
+                        {contexto && <> · {contexto.segmento}</>}
+                      </>
+                    ) : (
+                      "Defina o alvo e mapeie"
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Potencial */}
+              {potencial != null && (
+                <div className="pointer-events-none absolute top-3 right-3 z-[500] hidden sm:block">
+                  <div className="glass-card flex items-center gap-3 px-4 py-3">
+                    <Medidor valor={potencial} tamanho={48} rotulo="%" />
+                    <div>
+                      <p className="text-13 font-semibold">Potencial do território</p>
+                      <p className="text-11 text-muted-foreground">
+                        {fortes} de {total} com alta oportunidade
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Zoom */}
+              <div className="glass-card absolute top-[104px] right-3 z-[500] hidden flex-col items-center gap-1 p-1.5 sm:flex">
+                <BotaoMapa rotulo="Aproximar" onClick={() => mapa.current?.zoom(1)}>
+                  <Plus className="size-4" strokeWidth={1.75} />
+                </BotaoMapa>
+                <div className="grid place-items-center py-1">
+                  <span className="font-mono text-[9px] tracking-[0.12em] text-muted-foreground uppercase">Zoom</span>
+                  <span className="font-mono text-16 font-semibold tabular">{zoom}</span>
+                </div>
+                <BotaoMapa rotulo="Afastar" onClick={() => mapa.current?.zoom(-1)}>
+                  <Minus className="size-4" strokeWidth={1.75} />
+                </BotaoMapa>
+                <span className="my-1 h-px w-6 bg-border" />
+                <BotaoMapa
+                  rotulo="Onde estou"
+                  onClick={async () => {
+                    try {
+                      const c = await localizar();
+                      setVoce(c);
+                      setEnquadrar({ key: `v${Date.now()}`, centro: c, zoom: 15 });
+                    } catch (e) {
+                      toast.error((e as Error).message);
+                    }
+                  }}
+                >
+                  <LocateFixed className="size-4" strokeWidth={1.75} />
+                </BotaoMapa>
+              </div>
+
+              {/* Carregando */}
+              <AnimatePresence>
+                {carregando && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="absolute inset-0 z-[600] grid place-items-center bg-background/55 backdrop-blur-[3px]"
+                  >
+                    <div className="grid justify-items-center gap-3">
+                      <Orb size={140} energia={1} />
+                      <p className="text-14 text-subtle-foreground">Varrendo o território…</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {/* Legenda + fonte */}
+              {!atual && (
+                <div className="glass-card absolute bottom-3 left-3 z-[500] hidden items-center gap-3 px-3 py-2 text-11 text-subtle-foreground sm:flex">
+                  {(["maxima", "alta", "media", "baixa"] as const).map((k) => (
+                    <span key={k} className="flex items-center gap-1.5">
+                      <span className={cn("pin-chip size-2.5 rounded-full", `pin-${k}`)} aria-hidden />
+                      {k === "maxima" ? "Máxima" : k === "alta" ? "Alta" : k === "media" ? "Média" : "Baixa"}
+                    </span>
+                  ))}
+                  <span className="h-3 w-px bg-border" />
+                  <span>{fonte === "google" ? "Dados: Google" : "Dados: OpenStreetMap"}</span>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Ficha da empresa */}
+          <AnimatePresence mode="wait">
+            {atual && (
+              <Ficha
+                key={atual.placeId}
+                lead={atual}
+                numero={numeros.get(atual.placeId)!}
+                fonte={fonte}
+                onFechar={() => setSelecionado(null)}
+                onNavegar={lista.length > 1 ? navegar : undefined}
+                onEnviar={enviar}
+                noGoogle={visao === "google"}
+              />
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </section>
   );
@@ -679,6 +852,7 @@ function Ficha({
   onFechar,
   onNavegar,
   onEnviar,
+  noGoogle,
 }: {
   lead: Resultado;
   numero: number;
@@ -686,6 +860,8 @@ function Ficha({
   onFechar: () => void;
   onNavegar?: (d: number) => void;
   onEnviar: (l: Resultado) => Promise<void>;
+  /** Sobre o mapa do Google: sai do canto dos botões de zoom dele. */
+  noGoogle?: boolean;
 }) {
   const reduce = useReducedMotion();
   const [porque, setPorque] = React.useState(false);
@@ -709,7 +885,10 @@ function Ficha({
       exit={reduce ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.98 }}
       transition={reduce ? { duration: 0.15 } : { type: "spring", stiffness: 380, damping: 32 }}
       aria-label={`Ficha de ${l.nome}`}
-      className="glass-card absolute inset-x-3 bottom-3 z-[550] max-h-[calc(100%-6rem)] overflow-y-auto p-4 sm:inset-x-auto sm:right-3 sm:w-[400px] sm:p-5"
+      className={cn(
+        "glass-card absolute inset-x-3 bottom-3 z-[550] max-h-[calc(100%-6rem)] overflow-y-auto p-4 sm:inset-x-auto sm:w-[400px] sm:p-5",
+        noGoogle ? "sm:right-14" : "sm:right-3",
+      )}
     >
       <div className="flex items-start gap-3">
         <span

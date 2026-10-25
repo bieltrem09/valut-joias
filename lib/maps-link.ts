@@ -98,3 +98,29 @@ export function chaveLead(l: { chave: string | null; nome: string; endereco?: st
 
 /** Lead que não veio da Places API (anotado à mão ou do mapa aberto): não sincroniza com o Google. */
 export const leadManual = (placeId: string) => /^(manual|maps|osm):/.test(placeId);
+
+/** Raio da busca "perto de mim" → zoom do mapa (quanto menor o raio, mais perto). */
+export const zoomDoRaio = (km: number) => (km <= 1 ? 16 : km <= 3 ? 15 : km <= 5 ? 14 : km <= 10 ? 13 : 12);
+
+/**
+ * Google Maps embutido no painel, sem chave e sem custo (o embed público do Maps).
+ * Mostra os pinos reais da busca; tocando num pino aparece a ficha com nota e avaliações.
+ * Com `lugar`, abre direto a ficha daquela empresa.
+ */
+export function urlEmbedMaps(o: { segmento?: string; local?: string; perto?: { lat: number; lng: number } | null; raioKm?: number; lugar?: string }): string {
+  const p = new URLSearchParams({ hl: "pt-BR", output: "embed" });
+  const q = o.segmento?.trim() ?? "";
+  if (o.lugar) {
+    p.set("q", o.lugar);
+    p.set("z", "17");
+  } else if (o.perto) {
+    const ll = `${o.perto.lat.toFixed(5)},${o.perto.lng.toFixed(5)}`;
+    p.set("q", q ? `${q} near ${ll}` : ll);
+    p.set("ll", ll);
+    p.set("z", String(zoomDoRaio(o.raioKm ?? 3)));
+  } else {
+    p.set("q", [q, o.local?.trim()].filter(Boolean).join(" em ") || "Limeira, SP");
+    p.set("z", q ? "14" : "13");
+  }
+  return `https://maps.google.com/maps?${p.toString()}`;
+}

@@ -815,6 +815,24 @@ html:not(.dark) .aurora-grain {
   }
 }
 
+/* ---------------- Mapa do Google com a cara do painel ----------------
+ * O embed público do Maps não aceita estilo; no escuro, o filtro inverte mantendo
+ * os matizes (pinos continuam vermelhos) e a tinta roxa dá a cor da marca. */
+.mapa-roxo {
+  filter: saturate(0.85);
+}
+.dark .mapa-roxo {
+  filter: invert(0.9) hue-rotate(180deg) saturate(0.8);
+}
+.mapa-roxo-tinta {
+  background: radial-gradient(120% 90% at 20% 0%, #9b6bff 0%, #6d3bff 45%, #3a1d8f 100%);
+  mix-blend-mode: soft-light;
+  opacity: 0.35;
+}
+.dark .mapa-roxo-tinta {
+  opacity: 0.6;
+}
+
 /* ---------------- Radar de prospecção ---------------- */
 /* Cartões de vidro por cima do mapa. */
 .glass-card {
