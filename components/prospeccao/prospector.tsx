@@ -27,6 +27,7 @@ import { Select, fieldClass } from "@/components/ui/input";
 import { Orb } from "@/components/ui/orb";
 import { Stars } from "@/components/clientes/stars";
 import { enviarAoFunil, registrarBusca } from "@/app/actions";
+import { Qualificador } from "./qualificador";
 import { buscarNoNavegador } from "@/lib/osm-cliente";
 import type { LeadGoogle } from "@/app/api/prospeccao/buscar/route";
 import { distanciaKm, ordenar, qualificarAberto, whatsappUrl } from "@/lib/prospeccao";
@@ -240,6 +241,27 @@ export function Prospector({
     router.refresh();
   };
 
+  const repetir = (b: BuscaSalva) => {
+    const m: Modo = b.modo === "perto" ? "perto" : "cidade";
+    setSegmento(b.segmento);
+    setModo(m);
+    if (m === "cidade") setLocal(b.local);
+    if (b.raioKm) setRaioKm(b.raioKm);
+    buscar({ segmento: b.segmento, local: b.local, modo: m, raioKm: b.raioKm });
+  };
+
+  /** Envio em lote (bancada do computador): só quem ainda não está no funil. */
+  const enviarVarios = async (ls: LeadGoogle[]) => {
+    const novos = ls.filter((l) => !l.noFunil && !l.jaCliente);
+    if (!novos.length) return;
+    const r = await enviarAoFunil(novos, contexto?.segmento ?? "");
+    if (!r.ok) return void toast.error(r.error);
+    const ids = new Set(novos.map((l) => l.placeId));
+    setResultados((rs) => rs?.map((x) => (ids.has(x.placeId) ? { ...x, noFunil: "novo" } : x)) ?? null);
+    toast.success(novos.length === 1 ? `${novos[0].nome} entrou no funil` : `${novos.length} leads entraram no funil`);
+    router.refresh();
+  };
+
   const navegar = (d: number) => {
     if (!lista.length) return;
     const i = Math.max(
@@ -252,383 +274,398 @@ export function Prospector({
   const total = resultados?.length ?? 0;
 
   return (
-    <section
-      aria-label="Prospecção"
-      className="surface relative overflow-hidden p-0 lg:grid lg:h-[calc(100dvh-9.5rem)] lg:min-h-[680px] lg:grid-cols-[400px_minmax(0,1fr)]"
-    >
-      {/* ------------------------------ Painel ------------------------------ */}
-      <aside className="flex min-h-0 flex-col border-b border-border bg-card/70 lg:border-r lg:border-b-0">
-        <header className="relative overflow-hidden px-5 pt-5 pb-4">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_120%_at_0%_0%,color-mix(in_oklch,var(--primary)_45%,transparent),transparent_70%)]"
-          />
-          <div aria-hidden className="hero-grid pointer-events-none absolute inset-0 opacity-40" />
-          <div className="relative flex items-center gap-3">
-            <Orb size={52} energia={carregando ? 1 : resultados ? 0.45 : 0.2} label={carregando ? "Buscando no Google" : "Prospecção"} />
-            <div>
-              <p className="font-mono text-11 tracking-[0.14em] text-primary uppercase">Basik7 / Google Maps</p>
-              <h1 className="text-28 leading-none font-semibold tracking-[-0.03em]">Prospecção.</h1>
+    <>
+      <section
+        aria-label="Prospecção"
+        className="surface relative overflow-hidden p-0 lg:grid lg:h-[calc(100dvh-9.5rem)] lg:min-h-[680px] lg:grid-cols-[400px_minmax(0,1fr)]"
+      >
+        {/* ------------------------------ Painel ------------------------------ */}
+        <aside className="flex min-h-0 flex-col border-b border-border bg-card/70 lg:border-r lg:border-b-0">
+          <header className="relative overflow-hidden px-5 pt-5 pb-4">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_120%_at_0%_0%,color-mix(in_oklch,var(--primary)_45%,transparent),transparent_70%)]"
+            />
+            <div aria-hidden className="hero-grid pointer-events-none absolute inset-0 opacity-40" />
+            <div className="relative flex items-center gap-3">
+              <Orb size={52} energia={carregando ? 1 : resultados ? 0.45 : 0.2} label={carregando ? "Buscando no Google" : "Prospecção"} />
+              <div>
+                <p className="font-mono text-11 tracking-[0.14em] text-primary uppercase">Basik7 / Google Maps</p>
+                <h1 className="text-28 leading-none font-semibold tracking-[-0.03em]">Prospecção.</h1>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <LayoutGroup id="abas-prosp">
-          <div role="tablist" aria-label="Painel" className="mx-5 flex gap-1 rounded-full bg-muted p-1">
-            {(
-              [
-                ["alvo", "Alvo"],
-                ["lista", resultados ? `Resultados · ${total}` : "Resultados"],
-              ] as const
-            ).map(([k, l]) => (
-              <button
-                key={k}
-                role="tab"
-                type="button"
-                aria-selected={aba === k}
-                onClick={() => setAba(k)}
-                className={cn(
-                  "relative h-8 flex-1 rounded-full text-13 font-medium outline-hidden focus-visible:ring-2 focus-visible:ring-ring coarse:h-10",
-                  aba === k ? "text-foreground" : "text-muted-foreground hover-fine:text-foreground",
-                )}
-              >
-                {aba === k && (
-                  <motion.span
-                    layoutId="aba-prosp-pill"
-                    className="absolute inset-0 rounded-full bg-card shadow-hairline"
-                    transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
-                  />
-                )}
-                <span className="relative">{l}</span>
-              </button>
-            ))}
-          </div>
-        </LayoutGroup>
-
-        <div className={cn("min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-4 lg:max-h-none lg:no-scrollbar", aba === "lista" && "max-h-[55vh]")}>
-          {aba === "alvo" ? (
-            <form
-              className="grid gap-5"
-              onSubmit={(e) => {
-                e.preventDefault();
-                buscar();
-              }}
-            >
-              <Etapa n="01" titulo="O que procurar">
-                <div className="grid gap-2">
-                  <div className="relative flex items-center">
-                    <Search className="pointer-events-none absolute left-3 size-4 text-primary" strokeWidth={1.75} />
-                    <input
-                      ref={segRef}
-                      value={segmento}
-                      onChange={(e) => setSegmento(e.target.value)}
-                      placeholder="Ex.: restaurante"
-                      aria-label="Segmento"
-                      enterKeyHint="search"
-                      autoComplete="off"
-                      className={cn(fieldClass, "h-11 pr-10 pl-9 text-16")}
+          <LayoutGroup id="abas-prosp">
+            <div role="tablist" aria-label="Painel" className="mx-5 flex gap-1 rounded-full bg-muted p-1">
+              {(
+                [
+                  ["alvo", "Alvo"],
+                  ["lista", resultados ? `Resultados · ${total}` : "Resultados"],
+                ] as const
+              ).map(([k, l]) => (
+                <button
+                  key={k}
+                  role="tab"
+                  type="button"
+                  aria-selected={aba === k}
+                  onClick={() => setAba(k)}
+                  className={cn(
+                    "relative h-8 flex-1 rounded-full text-13 font-medium outline-hidden focus-visible:ring-2 focus-visible:ring-ring coarse:h-10",
+                    aba === k ? "text-foreground" : "text-muted-foreground hover-fine:text-foreground",
+                  )}
+                >
+                  {aba === k && (
+                    <motion.span
+                      layoutId="aba-prosp-pill"
+                      className="absolute inset-0 rounded-full bg-card shadow-hairline"
+                      transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
                     />
-                    {segmento && (
-                      <button
-                        type="button"
-                        aria-label="Limpar"
-                        onClick={() => {
-                          setSegmento("");
-                          segRef.current?.focus();
-                        }}
-                        className="absolute right-1.5 grid size-8 place-items-center rounded-full text-muted-foreground hover-fine:bg-muted"
-                      >
-                        <X className="size-4" strokeWidth={1.5} />
-                      </button>
-                    )}
+                  )}
+                  <span className="relative">{l}</span>
+                </button>
+              ))}
+            </div>
+          </LayoutGroup>
+
+          <div className={cn("min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-4 lg:max-h-none lg:no-scrollbar", aba === "lista" && "max-h-[55vh]")}>
+            {aba === "alvo" ? (
+              <form
+                className="grid gap-5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  buscar();
+                }}
+              >
+                <Etapa n="01" titulo="O que procurar">
+                  <div className="grid gap-2">
+                    <div className="relative flex items-center">
+                      <Search className="pointer-events-none absolute left-3 size-4 text-primary" strokeWidth={1.75} />
+                      <input
+                        ref={segRef}
+                        value={segmento}
+                        onChange={(e) => setSegmento(e.target.value)}
+                        placeholder="Ex.: restaurante"
+                        aria-label="Segmento"
+                        enterKeyHint="search"
+                        autoComplete="off"
+                        className={cn(fieldClass, "h-11 pr-10 pl-9 text-16")}
+                      />
+                      {segmento && (
+                        <button
+                          type="button"
+                          aria-label="Limpar"
+                          onClick={() => {
+                            setSegmento("");
+                            segRef.current?.focus();
+                          }}
+                          className="absolute right-1.5 grid size-8 place-items-center rounded-full text-muted-foreground hover-fine:bg-muted"
+                        >
+                          <X className="size-4" strokeWidth={1.5} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {NICHOS.map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setSegmento(n)}
+                          aria-pressed={segmento === n}
+                          className={cn(
+                            "h-7 rounded-full px-2.5 text-12 ring-1 transition-[color,background-color,transform] duration-150 ease-out-strong active:scale-[0.96] coarse:h-9",
+                            segmento === n
+                              ? "bg-primary text-primary-foreground ring-primary"
+                              : "bg-card/60 text-subtle-foreground ring-border hover-fine:text-foreground",
+                          )}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {NICHOS.map((n) => (
+                </Etapa>
+
+                <Etapa n="02" titulo="Onde">
+                  <div role="radiogroup" aria-label="Onde" className="grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        ["cidade", Globe, "Cidade inteira"],
+                        ["perto", Crosshair, "Perto de mim"],
+                      ] as const
+                    ).map(([k, Icone, t]) => (
                       <button
-                        key={n}
+                        key={k}
                         type="button"
-                        onClick={() => setSegmento(n)}
-                        aria-pressed={segmento === n}
+                        role="radio"
+                        aria-checked={modo === k}
+                        onClick={() => setModo(k)}
                         className={cn(
-                          "h-7 rounded-full px-2.5 text-12 ring-1 transition-[color,background-color,transform] duration-150 ease-out-strong active:scale-[0.96] coarse:h-9",
-                          segmento === n
-                            ? "bg-primary text-primary-foreground ring-primary"
-                            : "bg-card/60 text-subtle-foreground ring-border hover-fine:text-foreground",
+                          "flex items-center gap-2 rounded-card p-3 text-left text-13 font-medium ring-1 transition-[background-color,box-shadow,transform] duration-150 ease-out-strong active:scale-[0.98]",
+                          modo === k ? "bg-accent/60 ring-primary/60" : "ring-border hover-fine:bg-muted/60",
                         )}
                       >
-                        {n}
+                        <Icone className={cn("size-4", modo === k ? "text-primary" : "text-muted-foreground")} strokeWidth={1.75} />
+                        {t}
                       </button>
                     ))}
                   </div>
-                </div>
-              </Etapa>
+                  {modo === "cidade" ? (
+                    <div className="relative flex items-center">
+                      <MapPin className="pointer-events-none absolute left-3 size-4 text-primary" strokeWidth={1.75} />
+                      <input
+                        value={local}
+                        onChange={(e) => setLocal(e.target.value)}
+                        placeholder="Cidade ou bairro"
+                        aria-label="Cidade ou bairro"
+                        autoComplete="off"
+                        className={cn(fieldClass, "h-11 pl-9 text-16")}
+                      />
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-between gap-3 rounded-card px-3 py-2 text-12 text-subtle-foreground ring-1 ring-border">
+                      Até quantos km de você
+                      <Select value={raioKm} onChange={(e) => setRaioKm(Number(e.target.value))} aria-label="Raio" className="h-8 w-24 font-mono text-12">
+                        {[1, 2, 3, 5, 10, 20].map((r) => (
+                          <option key={r} value={r}>
+                            {r} km
+                          </option>
+                        ))}
+                      </Select>
+                    </label>
+                  )}
+                </Etapa>
 
-              <Etapa n="02" titulo="Onde">
-                <div role="radiogroup" aria-label="Onde" className="grid grid-cols-2 gap-2">
-                  {(
-                    [
-                      ["cidade", Globe, "Cidade inteira"],
-                      ["perto", Crosshair, "Perto de mim"],
-                    ] as const
-                  ).map(([k, Icone, t]) => (
+                {buscas.length > 0 && (
+                  <Etapa n="03" titulo="Recentes">
+                    <ul className="grid gap-1">
+                      {buscas.slice(0, 5).map((b) => (
+                        <li key={b.id}>
+                          <button
+                            type="button"
+                            onClick={() => repetir(b)}
+                            className="flex w-full items-center gap-2 rounded-control px-2 py-2 text-left transition-colors duration-150 hover-fine:bg-muted/70"
+                          >
+                            <Clock className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                            <span className="min-w-0 flex-1 truncate text-13">
+                              <span className="font-medium capitalize">{b.segmento}</span> <span className="text-muted-foreground">· {b.local}</span>
+                            </span>
+                            {b.total > 0 && <span className="font-mono text-11 text-muted-foreground tabular">{b.total}</span>}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </Etapa>
+                )}
+              </form>
+            ) : !resultados ? (
+              <p className="py-8 text-center text-13 text-muted-foreground">
+                Escolha o que procurar e toque em “{temGoogle ? "Buscar no Google" : "Buscar estabelecimentos"}”.
+              </p>
+            ) : (
+              <div className="grid gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="min-w-0 truncate text-12 text-muted-foreground">
+                    <span className="font-medium text-foreground capitalize">{contexto?.segmento}</span> · {contexto?.onde}
+                  </p>
+                  <Select value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)} className="h-8 w-auto text-12" aria-label="Ordenar">
+                    <option value="score">Melhores para a placa</option>
+                    <option value="distancia">Mais perto</option>
+                    {temGoogle && <option value="avaliacoes">Menos avaliações</option>}
+                    {temGoogle && <option value="nota">Melhor nota</option>}
+                  </Select>
+                </div>
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtros">
+                  {FILTROS.filter(([k]) => temGoogle || (k !== "aberto" && k !== "notaAlta")).map(([k, l]) => (
                     <button
                       key={k}
                       type="button"
-                      role="radio"
-                      aria-checked={modo === k}
-                      onClick={() => setModo(k)}
+                      aria-pressed={filtros.has(k)}
+                      onClick={() =>
+                        setFiltros((f) => {
+                          const n = new Set(f);
+                          if (n.has(k)) n.delete(k);
+                          else n.add(k);
+                          return n;
+                        })
+                      }
                       className={cn(
-                        "flex items-center gap-2 rounded-card p-3 text-left text-13 font-medium ring-1 transition-[background-color,box-shadow,transform] duration-150 ease-out-strong active:scale-[0.98]",
-                        modo === k ? "bg-accent/60 ring-primary/60" : "ring-border hover-fine:bg-muted/60",
+                        "h-7 rounded-full px-2.5 text-12 ring-1 transition-[color,background-color,transform] duration-150 ease-out-strong active:scale-[0.96] coarse:h-9",
+                        filtros.has(k)
+                          ? "bg-primary text-primary-foreground ring-primary"
+                          : "bg-card/60 text-subtle-foreground ring-border hover-fine:text-foreground",
                       )}
                     >
-                      <Icone className={cn("size-4", modo === k ? "text-primary" : "text-muted-foreground")} strokeWidth={1.75} />
-                      {t}
+                      {l}
                     </button>
                   ))}
                 </div>
-                {modo === "cidade" ? (
-                  <div className="relative flex items-center">
-                    <MapPin className="pointer-events-none absolute left-3 size-4 text-primary" strokeWidth={1.75} />
-                    <input
-                      value={local}
-                      onChange={(e) => setLocal(e.target.value)}
-                      placeholder="Cidade ou bairro"
-                      aria-label="Cidade ou bairro"
-                      autoComplete="off"
-                      className={cn(fieldClass, "h-11 pl-9 text-16")}
-                    />
+                <p className="text-11 text-muted-foreground">
+                  <span className="font-mono text-foreground tabular">{lista.length}</span> de {total} estabelecimentos ·{" "}
+                  {temGoogle ? "dados do Google" : "OpenStreetMap; toque num deles para ver nota e fotos no Google"}
+                </p>
+                {lista.length === 0 ? (
+                  <div className="rounded-card bg-background/50 p-5 text-center ring-1 ring-border">
+                    <p className="text-14 font-medium">{total ? "Nenhum com esses filtros" : "Nenhum estabelecimento cadastrado nesse lugar"}</p>
+                    {!total && (
+                      <p className="mt-1 text-12 text-muted-foreground">
+                        O mapa do Google ao lado mostra todos. Para os que faltarem aqui, use “Anote à mão”, abaixo.
+                      </p>
+                    )}
+                    <button type="button" onClick={() => setFiltros(new Set())} className="mt-1 text-12 font-medium text-primary">
+                      Limpar filtros
+                    </button>
                   </div>
                 ) : (
-                  <label className="flex items-center justify-between gap-3 rounded-card px-3 py-2 text-12 text-subtle-foreground ring-1 ring-border">
-                    Até quantos km de você
-                    <Select value={raioKm} onChange={(e) => setRaioKm(Number(e.target.value))} aria-label="Raio" className="h-8 w-24 font-mono text-12">
-                      {[1, 2, 3, 5, 10, 20].map((r) => (
-                        <option key={r} value={r}>
-                          {r} km
-                        </option>
-                      ))}
-                    </Select>
-                  </label>
-                )}
-              </Etapa>
-
-              {buscas.length > 0 && (
-                <Etapa n="03" titulo="Recentes">
-                  <ul className="grid gap-1">
-                    {buscas.slice(0, 5).map((b) => (
-                      <li key={b.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const m: Modo = b.modo === "perto" ? "perto" : "cidade";
-                            setSegmento(b.segmento);
-                            setModo(m);
-                            if (m === "cidade") setLocal(b.local);
-                            if (b.raioKm) setRaioKm(b.raioKm);
-                            buscar({ segmento: b.segmento, local: b.local, modo: m, raioKm: b.raioKm });
-                          }}
-                          className="flex w-full items-center gap-2 rounded-control px-2 py-2 text-left transition-colors duration-150 hover-fine:bg-muted/70"
-                        >
-                          <Clock className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-                          <span className="min-w-0 flex-1 truncate text-13">
-                            <span className="font-medium capitalize">{b.segmento}</span> <span className="text-muted-foreground">· {b.local}</span>
-                          </span>
-                          {b.total > 0 && <span className="font-mono text-11 text-muted-foreground tabular">{b.total}</span>}
-                        </button>
+                  <ol className="grid gap-2">
+                    {lista.map((l) => (
+                      <li key={l.placeId}>
+                        <ItemLista l={l} numero={numeros.get(l.placeId)!} ativo={selecionado === l.placeId} onClick={() => selecionar(l.placeId)} />
                       </li>
                     ))}
-                  </ul>
-                </Etapa>
-              )}
-            </form>
-          ) : !resultados ? (
-            <p className="py-8 text-center text-13 text-muted-foreground">
-              Escolha o que procurar e toque em “{temGoogle ? "Buscar no Google" : "Buscar estabelecimentos"}”.
-            </p>
-          ) : (
-            <div className="grid gap-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="min-w-0 truncate text-12 text-muted-foreground">
-                  <span className="font-medium text-foreground capitalize">{contexto?.segmento}</span> · {contexto?.onde}
-                </p>
-                <Select value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)} className="h-8 w-auto text-12" aria-label="Ordenar">
-                  <option value="score">Melhores para a placa</option>
-                  <option value="distancia">Mais perto</option>
-                  {temGoogle && <option value="avaliacoes">Menos avaliações</option>}
-                  {temGoogle && <option value="nota">Melhor nota</option>}
-                </Select>
+                  </ol>
+                )}
               </div>
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtros">
-                {FILTROS.filter(([k]) => temGoogle || (k !== "aberto" && k !== "notaAlta")).map(([k, l]) => (
-                  <button
-                    key={k}
-                    type="button"
-                    aria-pressed={filtros.has(k)}
-                    onClick={() =>
-                      setFiltros((f) => {
-                        const n = new Set(f);
-                        if (n.has(k)) n.delete(k);
-                        else n.add(k);
-                        return n;
-                      })
-                    }
-                    className={cn(
-                      "h-7 rounded-full px-2.5 text-12 ring-1 transition-[color,background-color,transform] duration-150 ease-out-strong active:scale-[0.96] coarse:h-9",
-                      filtros.has(k)
-                        ? "bg-primary text-primary-foreground ring-primary"
-                        : "bg-card/60 text-subtle-foreground ring-border hover-fine:text-foreground",
-                    )}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
-              <p className="text-11 text-muted-foreground">
-                <span className="font-mono text-foreground tabular">{lista.length}</span> de {total} estabelecimentos ·{" "}
-                {temGoogle ? "dados do Google" : "OpenStreetMap; toque num deles para ver nota e fotos no Google"}
+            )}
+          </div>
+
+          <div className="border-t border-border p-4">
+            {erro && (
+              <p className="mb-3 text-12 text-destructive" role="alert">
+                {erro}
               </p>
-              {lista.length === 0 ? (
-                <div className="rounded-card bg-background/50 p-5 text-center ring-1 ring-border">
-                  <p className="text-14 font-medium">{total ? "Nenhum com esses filtros" : "Nenhum estabelecimento cadastrado nesse lugar"}</p>
-                  {!total && (
-                    <p className="mt-1 text-12 text-muted-foreground">
-                      O mapa do Google ao lado mostra todos. Para os que faltarem aqui, use “Anote à mão”, abaixo.
-                    </p>
-                  )}
-                  <button type="button" onClick={() => setFiltros(new Set())} className="mt-1 text-12 font-medium text-primary">
-                    Limpar filtros
-                  </button>
-                </div>
-              ) : (
-                <ol className="grid gap-2">
-                  {lista.map((l) => (
-                    <li key={l.placeId}>
-                      <ItemLista l={l} numero={numeros.get(l.placeId)!} ativo={selecionado === l.placeId} onClick={() => selecionar(l.placeId)} />
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="border-t border-border p-4">
-          {erro && (
-            <p className="mb-3 text-12 text-destructive" role="alert">
-              {erro}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={() => buscar()}
-            disabled={carregando}
-            className="group relative flex h-12 w-full items-center gap-3 overflow-hidden rounded-card bg-primary px-4 text-14 font-semibold text-primary-foreground shadow-[0_10px_30px_-10px_var(--primary)] transition-transform duration-150 ease-out-strong active:scale-[0.98] disabled:opacity-70"
-          >
-            {carregando ? (
-              <Loader2 className="size-5 animate-spin motion-reduce:animate-none" strokeWidth={1.75} />
-            ) : (
-              <Search className="size-5" strokeWidth={1.75} />
-            )}
-            <span className="flex-1 text-left">{carregando ? "Buscando estabelecimentos…" : temGoogle ? "Buscar no Google" : "Buscar estabelecimentos"}</span>
-            <ArrowRight className="size-5 transition-transform duration-200 ease-out-strong group-hover:translate-x-0.5" strokeWidth={1.75} />
-          </button>
-          {uso && (
-            <p className="mt-2 text-center text-11 text-muted-foreground">
-              Cota grátis do mês: <span className="font-mono tabular">{uso.buscas}</span>/{uso.limites.buscas} buscas ·{" "}
-              <span className="font-mono tabular">{uso.fotos}</span>/{uso.limites.fotos} fotos
-            </p>
-          )}
-        </div>
-      </aside>
-
-      {/* ------------------------------- Mapa ------------------------------- */}
-      <div ref={mapaBox} className="flex h-[72vh] min-h-[520px] scroll-mt-20 flex-col lg:h-full">
-        <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-          <span className="flex h-8 items-center gap-1.5 rounded-full bg-muted px-3 text-12 font-medium">
-            <span className={cn("size-1.5 rounded-full bg-primary", carregandoMapa && "animate-pulse motion-reduce:animate-none")} /> Google Maps
-          </span>
-          <p className="min-w-0 flex-1 truncate text-12 text-muted-foreground">
-            {atual ? (
-              <span className="text-foreground">{atual.nome}</span>
-            ) : alvoMaps ? (
-              <>
-                <span className="font-medium text-foreground">{alvoMaps.segmento}</span> · {contexto?.onde}
-              </>
-            ) : (
-              "Escolha o que procurar"
-            )}
-          </p>
-          <div className="flex gap-1.5">
-            {atual && (
-              <button type="button" onClick={() => selecionar(null)} className={botaoBarra}>
-                Ver todos
-              </button>
             )}
             <button
               type="button"
-              onClick={() => setCores((c) => (c === "painel" ? "original" : "painel"))}
-              aria-pressed={cores === "original"}
-              title={cores === "painel" ? "Cores originais do Google (melhor para fotos)" : "Cores do painel"}
-              className={botaoBarra}
+              onClick={() => buscar()}
+              disabled={carregando}
+              className="group relative flex h-12 w-full items-center gap-3 overflow-hidden rounded-card bg-primary px-4 text-14 font-semibold text-primary-foreground shadow-[0_10px_30px_-10px_var(--primary)] transition-transform duration-150 ease-out-strong active:scale-[0.98] disabled:opacity-70"
             >
-              {cores === "painel" ? "Cores originais" : "Cores do painel"}
+              {carregando ? (
+                <Loader2 className="size-5 animate-spin motion-reduce:animate-none" strokeWidth={1.75} />
+              ) : (
+                <Search className="size-5" strokeWidth={1.75} />
+              )}
+              <span className="flex-1 text-left">{carregando ? "Buscando estabelecimentos…" : temGoogle ? "Buscar no Google" : "Buscar estabelecimentos"}</span>
+              <ArrowRight className="size-5 transition-transform duration-200 ease-out-strong group-hover:translate-x-0.5" strokeWidth={1.75} />
             </button>
-            <a
-              href={noApp}
-              target="_blank"
-              rel="noreferrer"
-              className="flex h-8 items-center gap-1.5 rounded-full bg-primary px-3 text-12 font-medium text-primary-foreground shadow-hairline transition-transform duration-150 active:scale-[0.96] coarse:h-10"
-            >
-              <ExternalLink className="size-3.5" strokeWidth={1.75} /> Abrir no app
-            </a>
-          </div>
-        </div>
-
-        <div className="relative isolate min-h-0 flex-1 bg-muted">
-          {montado && (
-            <iframe
-              key={embed}
-              src={embed}
-              title={atual ? `Google Maps: ${atual.nome}` : alvoMaps ? `Google Maps: ${alvoMaps.segmento}` : "Google Maps"}
-              referrerPolicy="no-referrer-when-downgrade"
-              onLoad={() => setCarregandoMapa(false)}
-              className={cn("absolute inset-0 size-full border-0", cores === "painel" && "mapa-roxo")}
-            />
-          )}
-          {cores === "painel" && <div aria-hidden className="mapa-roxo-tinta pointer-events-none absolute inset-0" />}
-          <AnimatePresence>
-            {carregandoMapa && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-background/60 backdrop-blur-[2px]"
-              >
-                <div className="grid justify-items-center gap-3">
-                  <Orb size={130} energia={1} />
-                  <p className="text-14 text-subtle-foreground">Abrindo o Google Maps…</p>
-                </div>
-              </motion.div>
+            {uso && (
+              <p className="mt-2 text-center text-11 text-muted-foreground">
+                Cota grátis do mês: <span className="font-mono tabular">{uso.buscas}</span>/{uso.limites.buscas} buscas ·{" "}
+                <span className="font-mono tabular">{uso.fotos}</span>/{uso.limites.fotos} fotos
+              </p>
             )}
-          </AnimatePresence>
+          </div>
+        </aside>
 
-          <AnimatePresence mode="wait">
-            {atual && (
-              <Ficha
-                key={atual.placeId}
-                lead={atual}
-                numero={numeros.get(atual.placeId)!}
-                onFechar={() => selecionar(null)}
-                onNavegar={lista.length > 1 ? navegar : undefined}
-                onEnviar={enviar}
+        {/* ------------------------------- Mapa ------------------------------- */}
+        <div ref={mapaBox} className="flex h-[72vh] min-h-[520px] scroll-mt-20 flex-col lg:h-full">
+          <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
+            <span className="flex h-8 items-center gap-1.5 rounded-full bg-muted px-3 text-12 font-medium">
+              <span className={cn("size-1.5 rounded-full bg-primary", carregandoMapa && "animate-pulse motion-reduce:animate-none")} /> Google Maps
+            </span>
+            <p className="min-w-0 flex-1 truncate text-12 text-muted-foreground">
+              {atual ? (
+                <span className="text-foreground">{atual.nome}</span>
+              ) : alvoMaps ? (
+                <>
+                  <span className="font-medium text-foreground">{alvoMaps.segmento}</span> · {contexto?.onde}
+                </>
+              ) : (
+                "Escolha o que procurar"
+              )}
+            </p>
+            <div className="flex gap-1.5">
+              {atual && (
+                <button type="button" onClick={() => selecionar(null)} className={botaoBarra}>
+                  Ver todos
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setCores((c) => (c === "painel" ? "original" : "painel"))}
+                aria-pressed={cores === "original"}
+                title={cores === "painel" ? "Cores originais do Google (melhor para fotos)" : "Cores do painel"}
+                className={botaoBarra}
+              >
+                {cores === "painel" ? "Cores originais" : "Cores do painel"}
+              </button>
+              <a
+                href={noApp}
+                target="_blank"
+                rel="noreferrer"
+                className="flex h-8 items-center gap-1.5 rounded-full bg-primary px-3 text-12 font-medium text-primary-foreground shadow-hairline transition-transform duration-150 active:scale-[0.96] coarse:h-10"
+              >
+                <ExternalLink className="size-3.5" strokeWidth={1.75} /> Abrir no app
+              </a>
+            </div>
+          </div>
+
+          <div className="relative isolate min-h-0 flex-1 bg-muted">
+            {montado && (
+              <iframe
+                key={embed}
+                src={embed}
+                title={atual ? `Google Maps: ${atual.nome}` : alvoMaps ? `Google Maps: ${alvoMaps.segmento}` : "Google Maps"}
+                referrerPolicy="no-referrer-when-downgrade"
+                onLoad={() => setCarregandoMapa(false)}
+                className={cn("absolute inset-0 size-full border-0", cores === "painel" && "mapa-roxo")}
               />
             )}
-          </AnimatePresence>
+            {cores === "painel" && <div aria-hidden className="mapa-roxo-tinta pointer-events-none absolute inset-0" />}
+            <AnimatePresence>
+              {carregandoMapa && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-background/60 backdrop-blur-[2px]"
+                >
+                  <div className="grid justify-items-center gap-3">
+                    <Orb size={130} energia={1} />
+                    <p className="text-14 text-subtle-foreground">Abrindo o Google Maps…</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence mode="wait">
+              {atual && (
+                <Ficha
+                  key={atual.placeId}
+                  lead={atual}
+                  numero={numeros.get(atual.placeId)!}
+                  onFechar={() => selecionar(null)}
+                  onNavegar={lista.length > 1 ? navegar : undefined}
+                  onEnviar={enviar}
+                />
+              )}
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <Qualificador
+        buscas={buscas}
+        lista={resultados ? lista : null}
+        numeros={numeros}
+        contexto={contexto}
+        carregando={carregando}
+        onRepetir={repetir}
+        onFocar={(id) => {
+          selecionar(id);
+          setAba("lista");
+          mapaBox.current?.closest("section")?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+        }}
+        onEnviar={enviarVarios}
+        onMelhoresPrimeiro={() => {
+          setOrdem("score");
+          setFiltros(new Set());
+        }}
+        onSoWhatsapp={() => setFiltros(new Set<Filtro>(["whatsapp"]))}
+      />
+    </>
   );
 }
 

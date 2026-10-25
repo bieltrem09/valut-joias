@@ -456,6 +456,13 @@ export async function registrarBusca(b: { segmento: string; local: string; modo:
   return { ok: true };
 }
 
+export async function excluirBusca(id: number): Promise<Result> {
+  await ready();
+  await db.delete(s.buscas).where(eq(s.buscas.id, id));
+  revalidatePath("/prospeccao");
+  return { ok: true };
+}
+
 export type LeadManualInput = {
   nome: string;
   segmento: string;
