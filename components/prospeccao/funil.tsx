@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/input";
 import { anotarLead, excluirLeads, mudarStatusLead, virarCliente } from "@/app/actions";
 import type { LeadFunil } from "@/lib/data/leads";
 import { whatsappUrl } from "@/lib/prospeccao";
+import { urlBuscaMaps } from "@/lib/maps-link";
 import { formatInt, formatRating } from "@/lib/format";
 import { relativeDays, todaySP } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -137,17 +138,16 @@ function CartaoLead({
             <Phone className="size-3.5" strokeWidth={1.5} />
           </a>
         )}
-        {l.mapsUrl && (
-          <a
-            href={l.mapsUrl}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={`Abrir ${l.nome} no Maps`}
-            className="inline-flex h-7 items-center rounded-[8px] px-2 ring-1 ring-border hover-fine:bg-muted coarse:h-10"
-          >
-            <ArrowUpRight className="size-3.5" strokeWidth={1.5} />
-          </a>
-        )}
+        {/* Sem link guardado, abre a busca pelo nome no Maps. */}
+        <a
+          href={l.mapsUrl ?? urlBuscaMaps({ segmento: l.nome, local: l.endereco ?? undefined })}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Abrir ${l.nome} no Maps`}
+          className="inline-flex h-7 items-center rounded-[8px] px-2 ring-1 ring-border hover-fine:bg-muted coarse:h-10"
+        >
+          <ArrowUpRight className="size-3.5" strokeWidth={1.5} />
+        </a>
       </div>
 
       {editando ? (

@@ -8,6 +8,8 @@ import { getEmpresaDetalhe, type EmpresaDetalhe } from "@/lib/data/empresas";
 import { proximoCodigo } from "@/lib/data/placas";
 import { GoogleApiError, googleEnabled, registrarMedicao, syncEmpresa } from "@/lib/google/places";
 import type { DespesaCategoria, PlacaTipo } from "@/lib/db/schema";
+import { qualificar } from "@/lib/prospeccao";
+import { chaveLead, hostDoMaps, leadManual, lerLinkMaps, type LinkMaps } from "@/lib/maps-link";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -404,6 +406,97 @@ export async function enviarAoFunil(leads: LeadEntrada[], segmento: string): Pro
   return { ok: true, data: { novos: novos.length } };
 }
 
+/**
+ * Abre um link curto do Maps (maps.app.goo.gl) só para ler para onde ele aponta:
+ * o endereço completo traz nome, coordenadas e a chave do lugar. Não lê a página.
+ */
+export async function resolverLinkMaps(texto: string): Promise<LinkMaps> {
+  const lido = lerLinkMaps(texto);
+  if (!lido.curto || !lido.url) return lido;
+  let url = lido.url;
+  try {
+    for (let i = 0; i < 4; i++) {
+      const res = await fetch(url, { redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(5000) });
+      const destino = res.headers.get("location");
+      if (!destino) break;
+      const proximo = new URL(destino, url).toString();
+      if (!hostDoMaps(proximo)) break;
+      url = proximo;
+      if (!lerLinkMaps(url).curto) break; // já saiu do link curto
+    }
+  } catch (e) {
+    console.error("resolverLinkMaps", e);
+    return lido;
+  }
+  const longo = lerLinkMaps(url);
+  // O texto colado manda no nome e no endereço; o link completo traz o resto.
+  return {
+    ...longo,
+    url: lido.url,
+    nome: lido.nome ?? longo.nome,
+    endereco: lido.endereco ?? longo.endereco,
+    curto: true,
+  };
+}
+
+export type LeadManualInput = {
+  nome: string;
+  segmento: string;
+  endereco: string | null;
+  mapsUrl: string | null;
+  chave: string | null;
+  lat: number | null;
+  lng: number | null;
+  telefone: string | null;
+  temSite: boolean;
+  rating: number | null;
+  totalAvaliacoes: number;
+};
+
+/** Lead anotado à mão a partir do Google Maps comum (sem API). */
+export async function adicionarLeadManual(input: LeadManualInput): Promise<Result<{ id: number }>> {
+  const nome = input.nome.trim();
+  if (!nome) return { ok: false, error: "Informe o nome da empresa." };
+  const total = Math.trunc(input.totalAvaliacoes);
+  if (!Number.isFinite(total) || total < 0) return { ok: false, error: "Número de avaliações inválido." };
+  const rating = input.rating == null ? null : Math.round(input.rating * 10) / 10;
+  if (rating != null && (rating < 1 || rating > 5)) return { ok: false, error: "A nota vai de 1,0 a 5,0." };
+  if (total > 0 && rating == null) return { ok: false, error: "Informe a nota que aparece no Google." };
+  const mapsUrl = input.mapsUrl && hostDoMaps(input.mapsUrl) ? input.mapsUrl : null;
+  const telefone = input.telefone?.trim() || null;
+  const endereco = input.endereco?.trim() || null;
+
+  const placeId = chaveLead({ chave: input.chave, nome, endereco });
+  const lugar = {
+    placeId,
+    nome,
+    categoria: input.segmento.trim() || null,
+    endereco,
+    lat: input.lat,
+    lng: input.lng,
+    telefone,
+    // O valor não é mostrado; só conta para a pontuação ("sem site" vale mais).
+    website: input.temSite ? "sim" : null,
+    mapsUrl,
+    rating,
+    totalAvaliacoes: total,
+    status: null,
+  };
+  const { score } = qualificar(lugar);
+
+  await ready();
+  const existe = await db.select({ id: s.leads.id }).from(s.leads).where(eq(s.leads.placeId, placeId)).then(one);
+  if (existe) return { ok: false, error: `${nome} já está no funil.` };
+  const agora = new Date().toISOString();
+  const row = await db
+    .insert(s.leads)
+    .values({ ...lugar, score, segmento: lugar.categoria, status: "novo", criadoEm: agora, atualizadoEm: agora })
+    .returning({ id: s.leads.id })
+    .then(must);
+  revalidatePath("/prospeccao");
+  return { ok: true, data: { id: row.id } };
+}
+
 export async function mudarStatusLead(id: number, status: StatusLead): Promise<Result> {
   if (!STATUS_LEAD.includes(status)) return { ok: false, error: "Status inválido." };
   await ready();
@@ -445,7 +538,8 @@ export async function virarCliente(id: number): Promise<Result<{ empresaId: numb
       .insert(s.empresas)
       .values({
         nome: lead.nome,
-        placeId: lead.placeId,
+        // Lead anotado à mão não tem o ID da Places API; o cliente fica manual.
+        placeId: leadManual(lead.placeId) ? null : lead.placeId,
         categoria: lead.categoria ?? "Comércio local",
         cidade,
         endereco: lead.endereco,
@@ -459,15 +553,16 @@ export async function virarCliente(id: number): Promise<Result<{ empresaId: numb
       .then(must);
     empresaId = row.id;
     // Foto, avaliações recentes e a primeira medição: direto do Google.
-    const sincronizou = googleEnabled()
-      ? await syncEmpresa(empresaId, lead.placeId, { foto: true }).then(
-          () => true,
-          (e) => (console.error("virarCliente", e), false),
-        )
-      : false;
+    const sincronizou =
+      googleEnabled() && !leadManual(lead.placeId)
+        ? await syncEmpresa(empresaId, lead.placeId, { foto: true }).then(
+            () => true,
+            (e) => (console.error("virarCliente", e), false),
+          )
+        : false;
     // Sem Google agora: os números que vieram na busca viram a primeira medição, com a data da busca.
     if (!sincronizou && lead.totalAvaliacoes != null)
-      await registrarMedicao(empresaId, lead.totalAvaliacoes, lead.rating, "google", lead.criadoEm.slice(0, 10));
+      await registrarMedicao(empresaId, lead.totalAvaliacoes, lead.rating, leadManual(lead.placeId) ? "manual" : "google", lead.criadoEm.slice(0, 10));
   }
   await db.update(s.leads).set({ status: "fechado", empresaId, atualizadoEm: new Date().toISOString() }).where(eq(s.leads.id, id));
   revalidateAll();

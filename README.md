@@ -62,7 +62,9 @@ O Google não entrega histórico de avaliações, só o total de hoje. Por isso 
 
 ## Prospecção
 
-A aba **Prospecção** busca empresas reais no Google pela Places API (New), sem nenhum dado inventado:
+**Sem chave do Google (grátis): prospecção guiada.** O painel abre o Google Maps comum com a busca pronta ("hamburgueria em Limeira, SP" ou perto de você). No Maps, toque na empresa → Compartilhar → Copiar e cole no passo 2. O painel lê nome, endereço, localização e a chave do lugar do link (`lib/maps-link.ts`, com testes). Link curto `maps.app.goo.gl` é aberto no servidor só para ler o redirecionamento. Você digita a nota e o número de avaliações que vê na ficha, e a pontuação de 0 a 100 aparece na hora, com o mesmo cálculo da busca automática.
+
+**Com `GOOGLE_PLACES_API_KEY`: busca automática.** A aba **Prospecção** busca empresas reais no Google pela Places API (New), sem nenhum dado inventado:
 
 - **Cidade inteira**: acha o contorno da cidade (ex.: "Limeira, SP") e varre só dentro dele, com até 60 empresas, o limite do Google. A opção "só endereços dentro da cidade" corta as vizinhas que caem no retângulo.
 - **Perto de mim**: usa o GPS do aparelho e um raio (1 a 20 km), ordenando pelo mais perto.

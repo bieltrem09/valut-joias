@@ -3,11 +3,14 @@ import { googleEnabled } from "@/lib/google/places";
 import { listBuscas, listLeads } from "@/lib/data/leads";
 import { PageIntro } from "@/components/shell/page-intro";
 import { ProspeccaoView } from "@/components/prospeccao/prospeccao-view";
+import { ProspeccaoGuiada } from "@/components/prospeccao/prospeccao-guiada";
 import { Funil } from "@/components/prospeccao/funil";
 
 export const metadata: Metadata = { title: "Prospecção" };
 
 export default async function ProspeccaoPage() {
+  // Com a chave da Places API, a busca é automática; sem ela, guiada pelo Google Maps comum (grátis).
+  const automatica = googleEnabled();
   const [leads, buscas] = await Promise.all([listLeads(), listBuscas()]);
   const abertos = leads.filter((l) => l.status !== "fechado" && l.status !== "perdido").length;
   const fechados = leads.filter((l) => l.status === "fechado").length;
@@ -17,7 +20,10 @@ export default async function ProspeccaoPage() {
       <PageIntro eyebrow="Prospecção">
         {leads.length === 0 ? (
           <>
-            Ache quem mais precisa de avaliações. <span className="text-muted-foreground">Busque um nicho na sua cidade e veja no mapa.</span>
+            Ache quem mais precisa de avaliações.{" "}
+            <span className="text-muted-foreground">
+              {automatica ? "Busque um nicho na sua cidade e veja no mapa." : "Busque no Google Maps e mande os melhores para o funil."}
+            </span>
           </>
         ) : (
           <>
@@ -27,7 +33,7 @@ export default async function ProspeccaoPage() {
         )}
       </PageIntro>
 
-      <ProspeccaoView googleEnabled={googleEnabled()} buscas={buscas} />
+      {automatica ? <ProspeccaoView buscas={buscas} /> : <ProspeccaoGuiada />}
 
       <section aria-labelledby="funil" className="grid gap-4">
         <div className="flex items-baseline justify-between">

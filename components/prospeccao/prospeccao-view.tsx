@@ -31,7 +31,7 @@ type Ordem = "score" | "distancia" | "avaliacoes";
 // Centro de Limeira-SP: ponto de partida do mapa até a primeira busca.
 const LIMEIRA = { lat: -22.5647, lng: -47.4017 };
 
-const PRIORIDADE = {
+export const PRIORIDADE = {
   maxima: { label: "Prioridade máxima", cls: "bg-profit-soft text-profit" },
   alta: { label: "Alta oportunidade", cls: "bg-accent text-accent-foreground" },
   media: { label: "Média", cls: "bg-pending-soft text-pending" },
@@ -40,7 +40,7 @@ const PRIORIDADE = {
 
 const STATUS_FUNIL: Record<string, string> = { novo: "No funil", contatado: "Contatado", negociando: "Negociando", fechado: "Fechado", perdido: "Perdido" };
 
-export function ProspeccaoView({ googleEnabled, buscas }: { googleEnabled: boolean; buscas: BuscaSalva[] }) {
+export function ProspeccaoView({ buscas }: { buscas: BuscaSalva[] }) {
   const router = useRouter();
   const mapa = React.useRef<MapaHandle>(null);
   const [segmento, setSegmento] = React.useState("");
@@ -163,27 +163,6 @@ export function ProspeccaoView({ googleEnabled, buscas }: { googleEnabled: boole
   };
   const potencial = stats && stats.total ? Math.round(resultados!.reduce((a, l) => a + l.score, 0) / stats.total) : null;
   const marcaveis = lista.filter((l) => !l.noFunil && !l.jaCliente);
-
-  if (!googleEnabled) {
-    return (
-      <section className="surface relative flex flex-col items-center gap-6 overflow-hidden p-8 md:flex-row md:items-center">
-        <GridGlow />
-        <Orb size={180} energia={0.15} className="relative" label="Radar de prospecção aguardando a chave do Google" />
-        <div className="relative max-w-xl">
-          <p className="eyebrow text-primary">Falta uma chave</p>
-          <p className="mt-2 text-20 font-medium tracking-[-0.015em]">A prospecção busca empresas reais no Google, então precisa da Places API.</p>
-          <ol className="mt-4 grid list-decimal gap-1.5 pl-5 text-13 text-subtle-foreground">
-            <li>Em console.cloud.google.com, crie um projeto e ative o faturamento (o Google dá crédito mensal grátis).</li>
-            <li>Em APIs e serviços → Biblioteca, ative a “Places API (New)”. Tem que ser a “(New)”.</li>
-            <li>Em Credenciais → Criar credenciais → Chave de API. Em “Restrições de aplicativo”, deixe “Nenhuma”.</li>
-            <li>Na Vercel, em Settings → Environment Variables, crie GOOGLE_PLACES_API_KEY com a chave, marque Production e Preview, e publique de novo.</li>
-            <li>Abra Configurações: o painel testa a chave e diz o que o Google recusou, se recusar.</li>
-          </ol>
-          <p className="mt-4 text-12 text-muted-foreground">Cada página de até 20 empresas é uma chamada à API. Uma busca completa usa até 3.</p>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <div className="grid gap-5">
