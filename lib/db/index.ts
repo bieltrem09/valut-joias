@@ -48,13 +48,23 @@ function conectar(): Estado {
   return { db: drizzlePglite(client, { schema }) as unknown as DB, ddl: () => client.exec(DDL) };
 }
 
-const estado = g.__ecloura ?? conectar();
-g.__ecloura = estado;
+/** Conecta no primeiro uso (nunca durante o build, que só importa o módulo). */
+function estadoAtual(): Estado {
+  g.__ecloura ??= conectar();
+  return g.__ecloura;
+}
 
-export const db = estado.db;
+export const db: DB = new Proxy({} as DB, {
+  get(_, prop) {
+    const real = estadoAtual().db;
+    const v = Reflect.get(real, prop, real);
+    return typeof v === "function" ? v.bind(real) : v;
+  },
+});
 
 /** Garante as tabelas uma vez por processo. Toda leitura/escrita passa por aqui. */
 export function ready(): Promise<void> {
+  const estado = estadoAtual();
   estado.ready ??= estado
     .ddl()
     .then(() => undefined)
