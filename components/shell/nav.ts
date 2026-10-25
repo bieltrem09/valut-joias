@@ -1,4 +1,4 @@
-import { ChartNoAxesColumn, Nfc, Package, Radar, Receipt, Store, type LucideIcon } from "lucide-react";
+import { ChartNoAxesColumn, GraduationCap, Nfc, Package, Radar, Receipt, Store, type LucideIcon } from "lucide-react";
 
 export type NavItem = { href: string; label: string; short: string; icon: LucideIcon; period: boolean };
 
@@ -9,6 +9,7 @@ export const NAV: NavItem[] = [
   { href: "/estoque", label: "Estoque", short: "Estoque", icon: Package, period: false },
   { href: "/despesas", label: "Despesas", short: "Despesas", icon: Receipt, period: true },
   { href: "/prospeccao", label: "Prospecção", short: "Leads", icon: Radar, period: false },
+  { href: "/mentora", label: "Mentora", short: "Mentora", icon: GraduationCap, period: false },
 ];
 
 export const EXTRA_TITLES: Record<string, string> = { "/configuracoes": "Configurações" };

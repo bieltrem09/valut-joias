@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 import { activeNav, EXTRA_TITLES } from "./nav";
@@ -11,13 +12,19 @@ import { ThemeToggle } from "./theme-toggle";
 export function Topbar() {
   const pathname = usePathname();
   const nav = activeNav(pathname);
-  const title = nav?.label ?? EXTRA_TITLES[pathname] ?? "Ecloura";
+  const title = nav?.label ?? EXTRA_TITLES[pathname] ?? "Basik7";
   const { collapsed, toggle } = useSidebar();
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/75 backdrop-blur-md">
       <div className="mx-auto flex min-h-16 w-full max-w-[1280px] flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 md:flex-nowrap md:px-8">
-        <LogoMark className="size-8 md:hidden" />
+        <Link
+          href="/"
+          aria-label="Basik7: ir para o início"
+          className="shrink-0 rounded-control outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:scale-95 md:hidden"
+        >
+          <LogoMark className="size-8" />
+        </Link>
         <button
           type="button"
           onClick={toggle}

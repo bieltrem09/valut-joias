@@ -31,13 +31,18 @@ export function Sidebar({ email }: { email: string }) {
       )}
       aria-label="Navegação principal"
     >
-      <div className="flex h-16 items-center gap-3 px-[18px]">
-        <LogoMark className="size-9 shrink-0" />
-        <div className="hidden min-w-0 leading-tight group-data-[wide=true]/sb:xl:block">
-          <p className="truncate text-14 font-semibold tracking-[-0.01em] text-sidebar-strong">Ecloura</p>
-          <p className="truncate text-12 text-sidebar-muted">Painel do dono</p>
-        </div>
-      </div>
+      {/* Logo e nome levam à página inicial. */}
+      <Link
+        href="/"
+        aria-label="Basik7: ir para o início"
+        className="group/logo mx-2 mt-1 flex h-14 items-center gap-3 rounded-card px-2.5 outline-hidden transition-colors duration-150 hover-fine:bg-sidebar-active focus-visible:ring-2 focus-visible:ring-sidebar-accent"
+      >
+        <LogoMark className="size-9 shrink-0 transition-transform duration-300 ease-out-strong group-hover/logo:scale-105 group-active/logo:scale-95 motion-reduce:transition-none" />
+        <span className="hidden min-w-0 leading-tight group-data-[wide=true]/sb:xl:block">
+          <span className="block truncate text-14 font-semibold tracking-[-0.01em] text-sidebar-strong">Basik7</span>
+          <span className="block truncate text-12 text-sidebar-muted">Painel do dono</span>
+        </span>
+      </Link>
 
       <nav className="mt-4 flex flex-col gap-1 px-3">
         <Suspense fallback={null}>

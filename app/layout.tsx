@@ -26,8 +26,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Ecloura — Painel", template: "%s · Ecloura" },
-  description: "Vendas, placas NFC e clientes da Ecloura.",
+  title: { default: "Basik7 — Painel", template: "%s · Basik7" },
+  description: "Vendas, placas NFC e clientes da Basik7.",
   robots: { index: false, follow: false },
 };
 

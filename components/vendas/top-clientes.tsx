@@ -10,7 +10,7 @@ export function TopClientes({ clientes }: { clientes: TopCliente[] }) {
   const reduce = useReducedMotion();
   const max = clientes[0]?.faturamento ?? 0;
   return (
-    <section aria-labelledby="top-clientes" className="surface flex flex-col p-6">
+    <section aria-labelledby="top-clientes" className="surface toque flex flex-col p-6">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="top-clientes" className="text-16 font-semibold tracking-[-0.01em]">
           Melhores clientes do período

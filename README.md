@@ -1,6 +1,6 @@
-# Ecloura — Painel
+# Basik7 — Painel
 
-Painel privado do dono da Ecloura: vendas, placas NFC, clientes e despesas. Abre direto no painel, sem tela de login.
+Painel privado do dono da Basik7: vendas, placas NFC, clientes e despesas. Abre direto no painel, sem tela de login.
 
 ## Rodar
 
@@ -79,6 +79,10 @@ A aba **Estoque** guarda o que você tem para vender: até 8 fotos por produto (
 - As fotos são reduzidas no navegador (lado maior de 1400 px, WEBP) antes de subir e ficam no banco (`produto_fotos`), servidas por `/api/estoque/foto/[id]`.
 - A quantidade só muda por **entrada**, **saída** ou **contagem** (ou pelos botões −/+ do cartão), e cada mudança fica no histórico (`movimentos_estoque`). A saída não deixa o saldo ficar negativo.
 - No topo: valor para vender, custo do estoque (dinheiro parado) e quantos produtos precisam de reposição (no mínimo ou esgotados). As regras estão em `lib/estoque.ts`, com testes.
+
+## Mentora
+
+A aba **Mentora** é o guia de venda presencial: regras de ouro, roteiros por etapa (abertura, perguntas, mostrar, objeções, fechar, depois), o que evitar e um modo de treino que lê em voz alta. O conteúdo fica em `lib/mentora.ts` (com testes). As falas têm marcadores (`{estabelecimento}`, `{nota}`, `{avaliacoes}`, `{seuNome}`, `{momento}`…) preenchidos pelo painel "Para quem você vai falar?", que também puxa um lead do funil. Favoritos, seu nome e cidade ficam no navegador.
 
 ## Dados do Google
 

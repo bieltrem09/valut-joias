@@ -722,3 +722,37 @@ html:not(.dark) .aurora-grain {
   background: radial-gradient(circle at 30% 30%, color-mix(in oklch, var(--pin) 70%, white), var(--pin) 65%);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--pin) 22%, transparent);
 }
+
+/* ---------------- Toque de gradiente (cartões da página inicial) ----------------
+ * O mesmo degradê da linha do gráfico, em pequeno: um traço no topo e um brilho
+ * leve no canto. Fica atrás do conteúdo (isolation + z-index negativo). */
+.toque {
+  position: relative;
+  isolation: isolate;
+}
+.toque::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20px;
+  width: 64px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--hero-line) 35%, transparent),
+    oklch(0.85 0.12 300),
+    color-mix(in oklch, var(--hero-line) 55%, transparent)
+  );
+  box-shadow: 0 0 10px 1px color-mix(in oklch, oklch(0.8 0.15 300) 55%, transparent);
+  pointer-events: none;
+}
+.toque::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(180px 90px at 0% 0%, color-mix(in oklch, var(--hero-line) 16%, transparent), transparent 70%);
+  pointer-events: none;
+}

@@ -81,7 +81,7 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
   const v = variacao(kpi.value, kpi.prev);
   const good = v === null || v === 0 ? null : kpi.inverse ? v < 0 : v > 0;
   return (
-    <li className="surface flex w-[78%] shrink-0 snap-start flex-col justify-between gap-3 p-5 sm:w-[46%] md:w-auto">
+    <li className="surface toque flex w-[78%] shrink-0 snap-start flex-col justify-between gap-3 p-5 sm:w-[46%] md:w-auto">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-13 text-muted-foreground">{kpi.label}</h3>
         {v !== null && v !== 0 && kpi.key !== "receber" && (

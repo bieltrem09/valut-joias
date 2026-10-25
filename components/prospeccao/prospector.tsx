@@ -267,7 +267,7 @@ export function Prospector({
           <div className="relative flex items-center gap-3">
             <Orb size={52} energia={carregando ? 1 : resultados ? 0.45 : 0.2} label={carregando ? "Buscando no Google" : "Prospecção"} />
             <div>
-              <p className="font-mono text-11 tracking-[0.14em] text-primary uppercase">Ecloura / Google Maps</p>
+              <p className="font-mono text-11 tracking-[0.14em] text-primary uppercase">Basik7 / Google Maps</p>
               <h1 className="text-28 leading-none font-semibold tracking-[-0.03em]">Prospecção.</h1>
             </div>
           </div>

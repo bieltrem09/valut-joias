@@ -41,7 +41,7 @@ export function CadaReal({ resumo }: { resumo: Resumo }) {
   ];
 
   return (
-    <section aria-labelledby="cada-real" className="surface p-6">
+    <section aria-labelledby="cada-real" className="surface toque p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h2 id="cada-real" className="text-16 font-semibold tracking-[-0.01em]">

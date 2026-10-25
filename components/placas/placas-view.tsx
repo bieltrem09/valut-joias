@@ -207,7 +207,7 @@ function exportarCSV(rows: PlacaRow[]) {
   const blob = new Blob(["﻿" + [head.join(";"), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `placas-ecloura-${todaySP()}.csv`;
+  a.download = `placas-basik7-${todaySP()}.csv`;
   a.click();
   URL.revokeObjectURL(a.href);
   toast.success(rows.length === 1 ? "1 placa exportada" : `${rows.length} placas exportadas`);

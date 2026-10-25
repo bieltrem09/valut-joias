@@ -60,6 +60,7 @@ export function VendasRecentes({ vendas }: { vendas: VendaRow[] }) {
       </div>
       <DataTable
         caption="Vendas recentes"
+        className="toque"
         data={vendas}
         columns={columns}
         pageSize={6}
