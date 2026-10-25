@@ -439,6 +439,22 @@ export async function resolverLinkMaps(texto: string): Promise<LinkMaps> {
   };
 }
 
+/** Guarda a busca feita no Maps para virar atalho em "Recentes". */
+export async function registrarBusca(b: { segmento: string; local: string; modo: "cidade" | "perto"; raioKm?: number | null }): Promise<Result> {
+  const segmento = b.segmento.trim().slice(0, 80);
+  if (!segmento) return { ok: false, error: "Busca vazia." };
+  await ready();
+  await db.insert(s.buscas).values({
+    segmento,
+    local: b.local.trim().slice(0, 80) || "Limeira, SP",
+    modo: b.modo === "perto" ? "perto" : "cidade",
+    raioKm: b.modo === "perto" ? (b.raioKm ?? null) : null,
+    total: 0,
+    criadaEm: new Date().toISOString(),
+  });
+  return { ok: true };
+}
+
 export type LeadManualInput = {
   nome: string;
   segmento: string;

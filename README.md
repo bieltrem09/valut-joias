@@ -62,7 +62,7 @@ O Google não entrega histórico de avaliações, só o total de hoje. Por isso 
 
 ## Prospecção
 
-**Sem chave do Google (grátis): prospecção guiada.** O painel abre o Google Maps comum com a busca pronta ("hamburgueria em Limeira, SP" ou perto de você). No Maps, toque na empresa → Compartilhar → Copiar e cole no passo 2. O painel lê nome, endereço, localização e a chave do lugar do link (`lib/maps-link.ts`, com testes). Link curto `maps.app.goo.gl` é aberto no servidor só para ler o redirecionamento. Você digita a nota e o número de avaliações que vê na ficha, e a pontuação de 0 a 100 aparece na hora, com o mesmo cálculo da busca automática.
+**Sem chave do Google (grátis): prospecção guiada.** O mapa é o Google Maps de verdade, embutido pelo embed público (`maps.google.com/maps?…&output=embed`, sem chave e sem custo) e tingido com as cores do painel por CSS (`.mapa-roxo` em `globals.css`; o botão "Cores originais" tira o filtro). A barra de busca tem nichos prontos, cidade/bairro ou "perto de mim" com raio, buscas recentes (tabela `buscas`) e atalho `/`. Tocando num pino, a ficha do Google mostra nota e avaliações; você anota ao lado. Para guardar o link, no Maps: Compartilhar → Copiar → botão "Colar". O painel lê nome, endereço, localização e a chave do lugar do link (`lib/maps-link.ts`, com testes). Link curto `maps.app.goo.gl` é aberto no servidor só para ler o redirecionamento. Você digita a nota e o número de avaliações que vê na ficha, e a pontuação de 0 a 100 aparece na hora, com o mesmo cálculo da busca automática.
 
 **Com `GOOGLE_PLACES_API_KEY`: busca automática.** A aba **Prospecção** busca empresas reais no Google pela Places API (New), sem nenhum dado inventado:
 

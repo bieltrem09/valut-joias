@@ -33,7 +33,11 @@ export default async function ProspeccaoPage() {
         )}
       </PageIntro>
 
-      {automatica ? <ProspeccaoView buscas={buscas} /> : <ProspeccaoGuiada />}
+      {automatica ? (
+        <ProspeccaoView buscas={buscas} />
+      ) : (
+        <ProspeccaoGuiada buscas={buscas} noFunil={leads.map((l) => ({ placeId: l.placeId, nome: l.nome }))} />
+      )}
 
       <section aria-labelledby="funil" className="grid gap-4">
         <div className="flex items-baseline justify-between">
