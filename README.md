@@ -1,6 +1,6 @@
 # Basik7 — Painel
 
-Painel privado do dono da Basik7: vendas, placas NFC, clientes e despesas. Abre direto no painel, sem tela de login.
+Painel privado do dono da Basik7 (https://basik7.vercel.app): vendas, placas NFC, clientes e despesas. Abre direto no painel, sem tela de login.
 
 ## Rodar
 
@@ -33,7 +33,7 @@ O painel começa **vazio**: sem nenhum dado de exemplo. Na primeira requisição
 
 ### Banco no Supabase (grátis)
 
-Pela Vercel (mais simples): **Storage → Create Database → Supabase → conectar ao projeto `ecloura-painel`**. A integração cria `POSTGRES_URL` sozinha, e o app usa essa variável. Depois, publique de novo. As tabelas são criadas sozinhas na primeira requisição.
+Pela Vercel (mais simples): **Storage → Create Database → Supabase → conectar ao projeto `basik7`**. A integração cria `POSTGRES_URL` sozinha, e o app usa essa variável. Depois, publique de novo. As tabelas são criadas sozinhas na primeira requisição.
 
 Ou por fora: crie o projeto em supabase.com e copie a connection string do **Transaction pooler** (porta 6543), em Project Settings → Database. Coloque essa string em `DATABASE_URL`.
 
