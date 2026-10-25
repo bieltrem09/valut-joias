@@ -13,10 +13,9 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 
 export default async function DespesasPage({ searchParams }: Props) {
   const period = parsePeriod(await searchParams);
-  const despesas = listDespesas(period);
-  const resumo = getResumo(period);
+  const [despesas, resumo, anterior] = await Promise.all([listDespesas(period), getResumo(period), totalDespesasAnterior(period)]);
   const total = despesas.reduce((a, d) => a + d.valor, 0);
-  const v = variacao(total, totalDespesasAnterior(period));
+  const v = variacao(total, anterior);
 
   return (
     <div className="grid gap-6 md:gap-8">

@@ -101,7 +101,11 @@ export function ClientesView({ empresas, today, googleEnabled }: { empresas: Emp
           <div className="relative">
             <p className="text-16 font-medium">{empresas.length === 0 ? "Seu primeiro cliente mora aqui" : `Ninguém com “${q}”`}</p>
             <p className="mt-1 text-13 text-muted-foreground">
-              {empresas.length === 0 ? "Adicione uma empresa e o Google preenche o resto." : "Confira a grafia ou busque pela cidade."}
+              {empresas.length === 0
+                ? googleEnabled
+                  ? "Busque pelo nome e o Google preenche foto, nota e endereço."
+                  : "Cadastre com nome e cidade. Dá para ligar ao Google depois."
+                : "Confira a grafia ou busque pela cidade."}
             </p>
             {empresas.length === 0 && (
               <Button variant="primary" className="mt-5" onClick={() => setAdding(true)}>

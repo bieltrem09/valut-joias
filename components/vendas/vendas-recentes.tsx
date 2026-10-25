@@ -1,6 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Ban, CircleCheck, Clock, Trash2 } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { definirStatusVenda, excluirVendas } from "@/app/actions";
 import { shortDate } from "@/lib/dates";
 import { formatBRL } from "@/lib/format";
 import type { VendaRow } from "@/lib/data/vendas";
@@ -23,7 +27,27 @@ const columns: DataTableColumn<VendaRow>[] = [
   },
 ];
 
+const ico = (C: React.ComponentType<{ className?: string; strokeWidth?: number }>) => <C className="size-4" strokeWidth={1.5} />;
+
 export function VendasRecentes({ vendas }: { vendas: VendaRow[] }) {
+  const router = useRouter();
+  const mudar = async (v: VendaRow, status: VendaRow["status"], msg: string) => {
+    const r = await definirStatusVenda(v.id, status);
+    if (!r.ok) return toast.error(r.error);
+    toast.success(msg);
+    router.refresh();
+  };
+  const excluir = async (ids: number[], remove: (ids: Array<string | number>) => void) => {
+    remove(ids);
+    const r = await excluirVendas(ids);
+    if (!r.ok) {
+      toast.error(r.error);
+      router.refresh();
+      return;
+    }
+    toast.success(ids.length === 1 ? "Venda excluída" : `${ids.length} vendas excluídas`, { description: "As placas dessas vendas também saíram." });
+    router.refresh();
+  };
   return (
     <section aria-labelledby="vendas-recentes" className="grid gap-4">
       <div className="flex items-baseline justify-between">
@@ -50,7 +74,28 @@ export function VendasRecentes({ vendas }: { vendas: VendaRow[] }) {
         }}
         totals={["valor", "lucro"]}
         formatTotal={(_k, v) => formatBRL(v)}
-        emptyState={<p className="text-13 text-muted-foreground">Nenhuma venda neste período.</p>}
+        selectable
+        rowActions={(v) => [
+          ...(v.status !== "paga" ? [{ label: "Marcar como paga", icon: ico(CircleCheck), onSelect: () => mudar(v, "paga", "Venda marcada como paga") }] : []),
+          ...(v.status === "paga"
+            ? [{ label: "Voltar para a receber", icon: ico(Clock), onSelect: () => mudar(v, "pendente", "Venda voltou para a receber") }]
+            : []),
+          ...(v.status !== "cancelada" ? [{ label: "Cancelar venda", icon: ico(Ban), onSelect: () => mudar(v, "cancelada", "Venda cancelada") }] : []),
+          { label: "Excluir", icon: ico(Trash2), destructive: true, separatorBefore: true, onSelect: (_r, h) => excluir([v.id], h.remove) },
+        ]}
+        bulkActions={[
+          {
+            label: "Excluir",
+            icon: ico(Trash2),
+            destructive: true,
+            onSelect: (sel, h) =>
+              excluir(
+                sel.map((v) => v.id),
+                h.remove,
+              ),
+          },
+        ]}
+        emptyState={<p className="text-13 text-muted-foreground">Nenhuma venda neste período. Use “Registrar venda” no topo.</p>}
       />
     </section>
   );

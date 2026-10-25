@@ -2,18 +2,153 @@
 
 import { revalidatePath } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
-import { db, schema as s } from "@/lib/db";
+import { db, ready, schema as s } from "@/lib/db";
 import { isISODate, todaySP } from "@/lib/dates";
 import { getEmpresaDetalhe, type EmpresaDetalhe } from "@/lib/data/empresas";
-import { googleEnabled, syncEmpresa } from "@/lib/google/places";
-import type { DespesaCategoria } from "@/lib/db/schema";
+import { proximoCodigo } from "@/lib/data/placas";
+import { googleEnabled, registrarMedicao, syncEmpresa } from "@/lib/google/places";
+import type { DespesaCategoria, PlacaTipo } from "@/lib/db/schema";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 const CATEGORIAS: DespesaCategoria[] = ["Anúncios", "Ferramentas", "Frete", "Taxas", "Outros"];
+const TIPOS: PlacaTipo[] = ["Avaliação Google", "Instagram", "WhatsApp", "Pix", "Cardápio"];
+const r2 = (v: number) => Math.round(v * 100) / 100;
 
 function revalidateAll() {
   for (const p of ["/", "/placas", "/clientes", "/despesas"]) revalidatePath(p);
+}
+
+function urlValida(url: string) {
+  try {
+    const u = new URL(url.trim());
+    return /^https?:$/.test(u.protocol);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Quando uma placa "Avaliação Google" é ativada, mede o Google na hora:
+ * essa medição vira a base do "+N desde a placa".
+ */
+async function medirNaAtivacao(placaIds: number[]) {
+  if (!googleEnabled() || !placaIds.length) return;
+  const placas = await db.select().from(s.placas).where(inArray(s.placas.id, placaIds));
+  const empresaIds = [...new Set(placas.filter((p) => p.tipo === "Avaliação Google").map((p) => p.empresaId))];
+  for (const id of empresaIds) {
+    const e = await db.select().from(s.empresas).where(eq(s.empresas.id, id)).get();
+    if (e?.placeId) await syncEmpresa(id, e.placeId).catch((err) => console.error("medição na ativação", err));
+  }
+}
+
+/** Apaga placas e o que depende delas (sem depender de cascade do banco remoto). */
+async function apagarPlacas(ids: number[]) {
+  if (!ids.length) return;
+  await db.batch([
+    db.delete(s.leituras).where(inArray(s.leituras.placaId, ids)),
+    db.delete(s.vendaPlacas).where(inArray(s.vendaPlacas.placaId, ids)),
+    db.delete(s.placas).where(inArray(s.placas.id, ids)),
+  ]);
+}
+
+/* ------------------------------- Vendas ------------------------------- */
+
+export type NovaVenda = {
+  empresaId: number;
+  data: string;
+  status: "paga" | "pendente";
+  metodo: "Pix" | "Cartão" | "Boleto";
+  placas: { tipo: string; destinoUrl: string; preco: number }[];
+  custoPlacas: number;
+  custoGravacao: number;
+  frete: number;
+  taxaPagamento: number;
+  entregue: boolean;
+};
+
+export async function criarVenda(v: NovaVenda): Promise<Result<{ codigos: string[] }>> {
+  await ready();
+  const empresa = await db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.id, v.empresaId)).get();
+  if (!empresa) return { ok: false, error: "Escolha o cliente." };
+  if (!isISODate(v.data) || v.data > todaySP()) return { ok: false, error: "Use a data de hoje ou anterior." };
+  if (!v.placas.length) return { ok: false, error: "Adicione pelo menos uma placa." };
+  for (const [i, p] of v.placas.entries()) {
+    if (!TIPOS.includes(p.tipo as PlacaTipo)) return { ok: false, error: `Placa ${i + 1}: escolha o tipo.` };
+    if (!urlValida(p.destinoUrl)) return { ok: false, error: `Placa ${i + 1}: o link de destino precisa começar com https://` };
+    if (!Number.isFinite(p.preco) || p.preco <= 0) return { ok: false, error: `Placa ${i + 1}: informe o preço.` };
+  }
+  for (const [k, n] of [
+    ["custo das placas", v.custoPlacas],
+    ["gravação", v.custoGravacao],
+    ["frete", v.frete],
+    ["taxa", v.taxaPagamento],
+  ] as const) {
+    if (!Number.isFinite(n) || n < 0) return { ok: false, error: `Confira o valor de ${k}.` };
+  }
+
+  const venda = await db
+    .insert(s.vendas)
+    .values({
+      empresaId: v.empresaId,
+      data: v.data,
+      valorVenda: r2(v.placas.reduce((a, p) => a + p.preco, 0)),
+      custoPlaca: r2(v.custoPlacas),
+      custoGravacao: r2(v.custoGravacao),
+      frete: r2(v.frete),
+      taxaPagamento: r2(v.taxaPagamento),
+      status: v.status,
+      metodo: v.metodo,
+    })
+    .returning({ id: s.vendas.id })
+    .get();
+
+  let n = await proximoCodigo();
+  const codigos: string[] = [];
+  const ids: number[] = [];
+  for (const p of v.placas) {
+    const codigo = `NFC-${String(n++).padStart(4, "0")}`;
+    const placa = await db
+      .insert(s.placas)
+      .values({
+        codigo,
+        tipo: p.tipo as PlacaTipo,
+        destinoUrl: p.destinoUrl.trim(),
+        status: v.entregue ? "Ativa" : "Pendente de envio",
+        leituras: 0,
+        empresaId: v.empresaId,
+        ativadaEm: v.entregue ? v.data : null,
+      })
+      .returning({ id: s.placas.id })
+      .get();
+    await db.insert(s.vendaPlacas).values({ vendaId: venda.id, placaId: placa.id });
+    codigos.push(codigo);
+    ids.push(placa.id);
+  }
+  if (v.entregue) await medirNaAtivacao(ids);
+  revalidateAll();
+  return { ok: true, data: { codigos } };
+}
+
+export async function definirStatusVenda(id: number, status: "paga" | "pendente" | "cancelada"): Promise<Result> {
+  await ready();
+  await db.update(s.vendas).set({ status }).where(eq(s.vendas.id, id));
+  if (status === "cancelada") {
+    const ids = (await db.select({ id: s.vendaPlacas.placaId }).from(s.vendaPlacas).where(eq(s.vendaPlacas.vendaId, id))).map((r) => r.id);
+    if (ids.length) await db.update(s.placas).set({ status: "Cancelada" }).where(inArray(s.placas.id, ids));
+  }
+  revalidateAll();
+  return { ok: true };
+}
+
+export async function excluirVendas(ids: number[]): Promise<Result> {
+  if (!ids.length) return { ok: true };
+  await ready();
+  const placaIds = (await db.select({ id: s.vendaPlacas.placaId }).from(s.vendaPlacas).where(inArray(s.vendaPlacas.vendaId, ids))).map((r) => r.id);
+  await apagarPlacas(placaIds);
+  await db.delete(s.vendas).where(inArray(s.vendas.id, ids));
+  revalidateAll();
+  return { ok: true };
 }
 
 /* ------------------------------ Despesas ------------------------------ */
@@ -24,10 +159,10 @@ export async function criarDespesa(input: { descricao: string; categoria: string
   if (!CATEGORIAS.includes(input.categoria as DespesaCategoria)) return { ok: false, error: "Escolha uma categoria." };
   if (!Number.isFinite(input.valor) || input.valor <= 0) return { ok: false, error: "O valor precisa ser maior que zero." };
   if (!isISODate(input.data) || input.data > todaySP()) return { ok: false, error: "Use uma data de hoje ou anterior." };
-
-  const row = db
+  await ready();
+  const row = await db
     .insert(s.despesas)
-    .values({ descricao, categoria: input.categoria as DespesaCategoria, valor: Math.round(input.valor * 100) / 100, data: input.data })
+    .values({ descricao, categoria: input.categoria as DespesaCategoria, valor: r2(input.valor), data: input.data })
     .returning({ id: s.despesas.id })
     .get();
   revalidateAll();
@@ -36,7 +171,8 @@ export async function criarDespesa(input: { descricao: string; categoria: string
 
 export async function excluirDespesas(ids: number[]): Promise<Result> {
   if (!ids.length) return { ok: true };
-  db.delete(s.despesas).where(inArray(s.despesas.id, ids)).run();
+  await ready();
+  await db.delete(s.despesas).where(inArray(s.despesas.id, ids));
   revalidateAll();
   return { ok: true };
 }
@@ -44,44 +180,46 @@ export async function excluirDespesas(ids: number[]): Promise<Result> {
 /* ------------------------------- Placas ------------------------------- */
 
 export async function atualizarDestino(id: number, url: string): Promise<Result> {
-  try {
-    const u = new URL(url.trim());
-    if (!/^https?:$/.test(u.protocol)) throw new Error();
-  } catch {
-    return { ok: false, error: "Esse link não parece válido. Comece com https://" };
-  }
-  db.update(s.placas).set({ destinoUrl: url.trim() }).where(eq(s.placas.id, id)).run();
+  if (!urlValida(url)) return { ok: false, error: "Esse link não parece válido. Comece com https://" };
+  await ready();
+  await db.update(s.placas).set({ destinoUrl: url.trim() }).where(eq(s.placas.id, id));
   revalidatePath("/placas");
   return { ok: true };
 }
 
 export async function definirStatusPlacas(ids: number[], status: "Ativa" | "Inativa"): Promise<Result> {
   if (!ids.length) return { ok: true };
-  db.update(s.placas)
-    .set(status === "Ativa" ? { status, ativadaEm: todaySP() } : { status })
-    .where(inArray(s.placas.id, ids))
-    .run();
+  await ready();
+  const atuais = await db.select().from(s.placas).where(inArray(s.placas.id, ids));
+  for (const p of atuais) {
+    // Reativar não muda a data da primeira ativação (a base do crescimento fica onde estava).
+    await db
+      .update(s.placas)
+      .set(status === "Ativa" ? { status, ativadaEm: p.ativadaEm ?? todaySP() } : { status })
+      .where(eq(s.placas.id, p.id));
+  }
+  if (status === "Ativa") await medirNaAtivacao(atuais.filter((p) => !p.ativadaEm).map((p) => p.id));
   revalidateAll();
   return { ok: true };
 }
 
-/** "Marcar como enviadas": a placa sai de "Pendente de envio" e passa a contar como ativa. */
+/** "Marcar como enviadas": a placa sai de "Pendente de envio" e fica ativa a partir de hoje. */
 export async function marcarEnviadas(ids: number[]): Promise<Result<{ alteradas: number }>> {
-  const alvo = db
-    .select({ id: s.placas.id, status: s.placas.status })
-    .from(s.placas)
-    .where(inArray(s.placas.id, ids))
-    .all()
+  await ready();
+  const alvo = (await db.select({ id: s.placas.id, status: s.placas.status }).from(s.placas).where(inArray(s.placas.id, ids)))
     .filter((p) => p.status === "Pendente de envio")
     .map((p) => p.id);
-  if (alvo.length) db.update(s.placas).set({ status: "Ativa", ativadaEm: todaySP() }).where(inArray(s.placas.id, alvo)).run();
+  if (alvo.length) {
+    await db.update(s.placas).set({ status: "Ativa", ativadaEm: todaySP() }).where(inArray(s.placas.id, alvo));
+    await medirNaAtivacao(alvo);
+  }
   revalidateAll();
   return { ok: true, data: { alteradas: alvo.length } };
 }
 
 export async function excluirPlacas(ids: number[]): Promise<Result> {
-  if (!ids.length) return { ok: true };
-  db.delete(s.placas).where(inArray(s.placas.id, ids)).run();
+  await ready();
+  await apagarPlacas(ids);
   revalidateAll();
   return { ok: true };
 }
@@ -97,17 +235,22 @@ export async function criarEmpresa(
 ): Promise<Result<{ id: number }>> {
   const nome = input.nome.trim();
   if (!nome) return { ok: false, error: "Qual o nome da empresa?" };
+  await ready();
 
   if ("placeId" in input) {
     if (!googleEnabled()) return { ok: false, error: "Configure a chave do Google para importar." };
-    const existente = db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.placeId, input.placeId)).get();
+    const existente = await db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.placeId, input.placeId)).get();
     if (existente) return { ok: false, error: "Essa empresa já está na sua lista." };
-    const row = db.insert(s.empresas).values({ nome, categoria: "Comércio local", cidade: "", criadaEm: todaySP() }).returning({ id: s.empresas.id }).get();
+    const row = await db
+      .insert(s.empresas)
+      .values({ nome, categoria: "Comércio local", cidade: "", criadaEm: todaySP() })
+      .returning({ id: s.empresas.id })
+      .get();
     try {
-      await syncEmpresa(row.id, input.placeId);
+      await syncEmpresa(row.id, input.placeId, { foto: true });
     } catch (e) {
       console.error(e);
-      db.delete(s.empresas).where(eq(s.empresas.id, row.id)).run();
+      await apagarEmpresa(row.id);
       return { ok: false, error: "Não deu para puxar os dados do Google agora. Tente de novo." };
     }
     revalidatePath("/clientes");
@@ -115,7 +258,7 @@ export async function criarEmpresa(
   }
 
   if (!input.cidade.trim()) return { ok: false, error: "Em que cidade fica?" };
-  const row = db
+  const row = await db
     .insert(s.empresas)
     .values({
       nome,
@@ -129,4 +272,70 @@ export async function criarEmpresa(
     .get();
   revalidatePath("/clientes");
   return { ok: true, data: { id: row.id } };
+}
+
+export async function editarEmpresa(
+  id: number,
+  input: { nome: string; categoria: string; cidade: string; contatoNome: string; contatoCargo: string; telefone: string },
+): Promise<Result> {
+  if (!input.nome.trim()) return { ok: false, error: "O nome não pode ficar vazio." };
+  if (!input.cidade.trim()) return { ok: false, error: "Informe a cidade." };
+  await ready();
+  await db
+    .update(s.empresas)
+    .set({
+      nome: input.nome.trim(),
+      categoria: input.categoria.trim() || "Comércio local",
+      cidade: input.cidade.trim(),
+      contatoNome: input.contatoNome.trim() || null,
+      contatoCargo: input.contatoCargo.trim() || null,
+      telefone: input.telefone.trim() || null,
+    })
+    .where(eq(s.empresas.id, id));
+  revalidateAll();
+  return { ok: true };
+}
+
+async function apagarEmpresa(id: number) {
+  const vendaIds = (await db.select({ id: s.vendas.id }).from(s.vendas).where(eq(s.vendas.empresaId, id))).map((v) => v.id);
+  const placaIds = (await db.select({ id: s.placas.id }).from(s.placas).where(eq(s.placas.empresaId, id))).map((p) => p.id);
+  await apagarPlacas(placaIds);
+  await db.batch([
+    db.delete(s.vendas).where(inArray(s.vendas.id, vendaIds.length ? vendaIds : [-1])),
+    db.delete(s.avaliacoesHistorico).where(eq(s.avaliacoesHistorico.empresaId, id)),
+    db.delete(s.reviews).where(eq(s.reviews.empresaId, id)),
+    db.delete(s.fotos).where(eq(s.fotos.empresaId, id)),
+    db.delete(s.empresas).where(eq(s.empresas.id, id)),
+  ]);
+}
+
+export async function excluirEmpresa(id: number): Promise<Result> {
+  await ready();
+  await apagarEmpresa(id);
+  revalidateAll();
+  return { ok: true };
+}
+
+/** O dono digita o que está vendo no Google hoje (quando não há chave da API). */
+export async function registrarContagem(empresaId: number, total: number, rating: number | null, data?: string): Promise<Result> {
+  if (!Number.isInteger(total) || total < 0) return { ok: false, error: "Use o número inteiro de avaliações." };
+  if (rating != null && (!Number.isFinite(rating) || rating < 1 || rating > 5)) return { ok: false, error: "A nota vai de 1,0 a 5,0." };
+  const dia = data ?? todaySP();
+  if (!isISODate(dia) || dia > todaySP()) return { ok: false, error: "Use hoje ou uma data anterior." };
+  await registrarMedicao(empresaId, total, rating, "manual", dia);
+  // A ficha mostra sempre a medição mais recente.
+  const ultima = await db.select().from(s.avaliacoesHistorico).where(eq(s.avaliacoesHistorico.empresaId, empresaId));
+  const recente = ultima.sort((a, b) => (a.data < b.data ? 1 : -1))[0];
+  await db.update(s.empresas).set({ totalAvaliacoes: recente.total, rating: recente.rating }).where(eq(s.empresas.id, empresaId));
+  revalidatePath("/clientes");
+  return { ok: true };
+}
+
+/** Quantas avaliações a empresa tinha no dia em que a placa foi instalada (se você anotou). */
+export async function definirBaseInstalacao(empresaId: number, total: number | null): Promise<Result> {
+  if (total != null && (!Number.isInteger(total) || total < 0)) return { ok: false, error: "Use um número inteiro." };
+  await ready();
+  await db.update(s.empresas).set({ avaliacoesNaInstalacao: total }).where(eq(s.empresas.id, empresaId));
+  revalidatePath("/clientes");
+  return { ok: true };
 }

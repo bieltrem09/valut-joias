@@ -39,15 +39,9 @@ export function CompanyCard({ empresa: e, today, index, onOpen }: { empresa: Emp
         <div className="flex flex-1 flex-col gap-4 p-5">
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
             <Rating rating={e.rating} total={e.totalAvaliacoes} />
-            {e.deltaAvaliacoes != null && e.deltaAvaliacoes > 0 && (
-              <span
-                className="inline-flex items-center rounded-full bg-profit-soft px-2 py-0.5 text-12 font-medium text-profit"
-                title="Avaliações novas no Google desde que a placa foi ativada"
-              >
-                <span className="font-mono tabular">+{e.deltaAvaliacoes}</span>&nbsp;desde a placa
-              </span>
-            )}
+            <GanhoChip empresa={e} />
           </div>
+          {e.crescimento.medicoes.length >= 2 && <MiniLinha empresa={e} />}
 
           <div className="border-t border-border pt-4">
             <p className="text-12 text-muted-foreground">Você faturou com eles</p>
@@ -61,7 +55,7 @@ export function CompanyCard({ empresa: e, today, index, onOpen }: { empresa: Emp
 
           {e.contatoNome && (
             <div className="flex items-center gap-2.5">
-              <PersonAvatar nome={e.contatoNome} src={e.contatoFotoUrl} className="size-7" />
+              <PersonAvatar nome={e.contatoNome} src={null} className="size-7" />
               <p className="min-w-0 truncate text-13">
                 <span className="font-medium">{e.contatoNome}</span>
                 {e.contatoCargo && <span className="text-muted-foreground"> · {e.contatoCargo}</span>}
@@ -130,5 +124,45 @@ function Cover({ empresa: e }: { empresa: EmpresaCardData }) {
         </p>
       </div>
     </div>
+  );
+}
+
+function GanhoChip({ empresa: e }: { empresa: EmpresaCardData }) {
+  const c = e.crescimento;
+  if (c.ganho != null && c.ganho > 0) {
+    return (
+      <span
+        className="inline-flex items-center rounded-full bg-profit-soft px-2 py-0.5 text-12 font-medium text-profit"
+        title={c.baseDepoisDaPlaca ? "Avaliações novas desde a primeira medição com a placa" : "Avaliações novas no Google desde que a placa foi ativada"}
+      >
+        <span className="font-mono tabular">+{c.ganho}</span>&nbsp;desde a placa
+      </span>
+    );
+  }
+  if (c.instalacao) return <span className="rounded-full bg-muted px-2 py-0.5 text-12 text-subtle-foreground">medindo</span>;
+  return null;
+}
+
+/** Linha das medições reais; o trecho com placa fica na cor de lucro. */
+function MiniLinha({ empresa: e }: { empresa: EmpresaCardData }) {
+  const ms = e.crescimento.medicoes;
+  const t = (d: string) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10));
+  const x0 = t(ms[0].data);
+  const x1 = t(ms.at(-1)!.data) || x0 + 1;
+  const lo = Math.min(...ms.map((m) => m.total));
+  const hi = Math.max(...ms.map((m) => m.total));
+  const w = 240;
+  const h = 28;
+  const px = (d: string) => ((t(d) - x0) / (x1 - x0 || 1)) * w;
+  const py = (v: number) => h - 2 - ((v - lo) / (hi - lo || 1)) * (h - 4);
+  const d = ms.map((m, i) => `${i ? "L" : "M"}${px(m.data).toFixed(1)} ${py(m.total).toFixed(1)}`).join(" ");
+  const inst = e.crescimento.instalacao;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-7 w-full text-chart-2" aria-hidden>
+      {inst && inst >= ms[0].data && (
+        <line x1={px(inst)} x2={px(inst)} y1={0} y2={h} stroke="var(--border-strong)" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
+      )}
+      <path d={d} fill="none" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+    </svg>
   );
 }

@@ -1,16 +1,17 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { PHOTO_DIR } from "@/lib/google/places";
+import { eq } from "drizzle-orm";
+import { db, ready, schema as s } from "@/lib/db";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^\d+$/.test(id)) return new Response("Not found", { status: 404 });
-  try {
-    const buf = await fs.readFile(path.join(PHOTO_DIR, `${id}.jpg`));
-    return new Response(new Uint8Array(buf), {
-      headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=86400" },
-    });
-  } catch {
-    return new Response("Not found", { status: 404 });
-  }
+  await ready();
+  const foto = await db
+    .select()
+    .from(s.fotos)
+    .where(eq(s.fotos.empresaId, Number(id)))
+    .get();
+  if (!foto) return new Response("Not found", { status: 404 });
+  return new Response(new Uint8Array(foto.bytes), {
+    headers: { "Content-Type": foto.mime, "Cache-Control": "private, max-age=86400" },
+  });
 }

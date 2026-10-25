@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, primaryKey, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, primaryKey, index, uniqueIndex, blob } from "drizzle-orm/sqlite-core";
 
 export const empresas = sqliteTable("empresas", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -81,7 +81,7 @@ export const despesas = sqliteTable(
   (t) => [index("despesas_data_idx").on(t.data)],
 );
 
-/** Leituras por dia de cada placa (alimenta o gráfico do detalhe). */
+/** Toques reais por dia em cada placa, contados pelo redirecionador /r/[codigo]. */
 export const leituras = sqliteTable(
   "leituras",
   {
@@ -94,7 +94,7 @@ export const leituras = sqliteTable(
   (t) => [primaryKey({ columns: [t.placaId, t.data] })],
 );
 
-/** Histórico de userRatingCount, para o "+N desde a placa". */
+/** Uma medição por empresa por dia: total de avaliações e nota. Alimenta o gráfico de crescimento. */
 export const avaliacoesHistorico = sqliteTable(
   "avaliacoes_historico",
   {
@@ -105,8 +105,12 @@ export const avaliacoesHistorico = sqliteTable(
     data: text("data").notNull(),
     rating: real("rating"),
     total: integer("total").notNull(),
+    /** "google" (Places API) ou "manual" (o dono digitou o que viu no Google). */
+    fonte: text("fonte", { enum: ["google", "manual"] })
+      .notNull()
+      .default("google"),
   },
-  (t) => [index("aval_hist_empresa_idx").on(t.empresaId)],
+  (t) => [uniqueIndex("aval_hist_empresa_dia").on(t.empresaId, t.data)],
 );
 
 export const reviews = sqliteTable(
@@ -123,6 +127,16 @@ export const reviews = sqliteTable(
   },
   (t) => [index("reviews_empresa_idx").on(t.empresaId)],
 );
+
+/** Foto da empresa vinda do Google, guardada no banco (o disco da Vercel é temporário). */
+export const fotos = sqliteTable("fotos", {
+  empresaId: integer("empresa_id")
+    .primaryKey()
+    .references(() => empresas.id, { onDelete: "cascade" }),
+  mime: text("mime").notNull(),
+  bytes: blob("bytes", { mode: "buffer" }).notNull(),
+  atualizadaEm: text("atualizada_em").notNull(),
+});
 
 export type Empresa = typeof empresas.$inferSelect;
 export type Placa = typeof placas.$inferSelect;

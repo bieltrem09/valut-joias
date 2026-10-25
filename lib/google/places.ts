@@ -1,8 +1,6 @@
 import "server-only";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { eq } from "drizzle-orm";
-import { db, schema as s } from "@/lib/db";
+import { eq, sql } from "drizzle-orm";
+import { db, ready, schema as s } from "@/lib/db";
 import { todaySP } from "@/lib/dates";
 
 /**
@@ -14,8 +12,7 @@ const BASE = "https://places.googleapis.com/v1";
 const DETAIL_FIELDS =
   "id,displayName,rating,userRatingCount,photos,formattedAddress,googleMapsUri,primaryTypeDisplayName,nationalPhoneNumber,reviews,addressComponents";
 const SEARCH_FIELDS = "places.id,places.displayName,places.formattedAddress,places.primaryTypeDisplayName,places.rating,places.userRatingCount";
-const REFRESH_TTL_MS = 24 * 60 * 60 * 1000;
-export const PHOTO_DIR = process.env.VERCEL ? "/tmp/photos" : path.join(process.cwd(), "data", "photos");
+const REFRESH_TTL_MS = 20 * 60 * 60 * 1000; // 20h: o cron diário sempre encontra o cache vencido
 
 export const googleKey = () => process.env.GOOGLE_PLACES_API_KEY?.trim() || null;
 export const googleEnabled = () => !!googleKey();
@@ -80,14 +77,19 @@ export async function placeDetails(placeId: string): Promise<PlaceDetails> {
   return call<PlaceDetails>(`${BASE}/places/${encodeURIComponent(placeId)}`, { method: "GET", fieldMask: DETAIL_FIELDS });
 }
 
-/** Baixa a foto e guarda em disco; o app serve por /api/google/photo/[id]. */
+/** Baixa a foto e guarda no banco (o disco da Vercel é temporário). Servida por /api/google/photo/[id]. */
 async function savePhoto(photoName: string, empresaId: number): Promise<string | null> {
   const key = googleKey();
   if (!key) return null;
   const res = await fetch(`${BASE}/${photoName}/media?maxWidthPx=800`, { headers: { "X-Goog-Api-Key": key }, cache: "no-store" });
   if (!res.ok) return null;
-  await fs.mkdir(PHOTO_DIR, { recursive: true });
-  await fs.writeFile(path.join(PHOTO_DIR, `${empresaId}.jpg`), Buffer.from(await res.arrayBuffer()));
+  const bytes = Buffer.from(await res.arrayBuffer());
+  const mime = res.headers.get("content-type") ?? "image/jpeg";
+  const now = new Date().toISOString();
+  await db
+    .insert(s.fotos)
+    .values({ empresaId, mime, bytes, atualizadaEm: now })
+    .onConflictDoUpdate({ target: s.fotos.empresaId, set: { mime, bytes, atualizadaEm: now } });
   return `/api/google/photo/${empresaId}?v=${Date.now().toString(36)}`;
 }
 
@@ -95,14 +97,26 @@ function cidadeDe(d: PlaceDetails): string | null {
   return d.addressComponents?.find((c) => c.types.includes("administrative_area_level_2"))?.longText ?? null;
 }
 
-/** Aplica os dados do Google numa empresa (cria histórico e reviews). */
-export async function syncEmpresa(empresaId: number, placeId: string) {
-  const d = await placeDetails(placeId);
-  const fotoUrl = d.photos?.[0] ? await savePhoto(d.photos[0].name, empresaId) : null;
-  const atual = db.select().from(s.empresas).where(eq(s.empresas.id, empresaId)).get();
-  const now = new Date().toISOString();
+/** Uma medição por empresa por dia: a mais recente do dia vence. */
+export async function registrarMedicao(empresaId: number, total: number, rating: number | null, fonte: "google" | "manual", data = todaySP()) {
+  await ready();
+  await db
+    .insert(s.avaliacoesHistorico)
+    .values({ empresaId, data, total, rating, fonte })
+    .onConflictDoUpdate({ target: [s.avaliacoesHistorico.empresaId, s.avaliacoesHistorico.data], set: { total, rating, fonte } });
+}
 
-  db.update(s.empresas)
+/** Aplica os dados do Google numa empresa e registra a medição do dia. */
+export async function syncEmpresa(empresaId: number, placeId: string, opts: { foto?: boolean } = {}) {
+  await ready();
+  const d = await placeDetails(placeId);
+  const atual = await db.select().from(s.empresas).where(eq(s.empresas.id, empresaId)).get();
+  // Foto: na criação e quando ainda não há; o cron diário não baixa de novo.
+  const precisaFoto = opts.foto ?? !atual?.fotoUrl;
+  const fotoUrl = precisaFoto && d.photos?.[0] ? await savePhoto(d.photos[0].name, empresaId) : null;
+
+  await db
+    .update(s.empresas)
     .set({
       placeId: d.id,
       nome: d.displayName?.text ?? atual?.nome,
@@ -114,44 +128,43 @@ export async function syncEmpresa(empresaId: number, placeId: string) {
       rating: d.rating ?? atual?.rating,
       totalAvaliacoes: d.userRatingCount ?? atual?.totalAvaliacoes,
       ...(fotoUrl ? { fotoUrl } : {}),
-      refreshedAt: now,
+      refreshedAt: new Date().toISOString(),
     })
-    .where(eq(s.empresas.id, empresaId))
-    .run();
+    .where(eq(s.empresas.id, empresaId));
 
-  if (d.userRatingCount != null) {
-    db.insert(s.avaliacoesHistorico)
-      .values({ empresaId, data: todaySP(), rating: d.rating ?? null, total: d.userRatingCount })
-      .run();
-  }
+  if (d.userRatingCount != null) await registrarMedicao(empresaId, d.userRatingCount, d.rating ?? null, "google");
+
   if (d.reviews?.length) {
-    db.delete(s.reviews).where(eq(s.reviews.empresaId, empresaId)).run();
-    for (const r of d.reviews.slice(0, 5)) {
-      db.insert(s.reviews)
-        .values({
-          empresaId,
-          autor: r.authorAttribution?.displayName ?? "Cliente Google",
-          nota: Math.round(r.rating),
-          texto: (r.text ?? r.originalText)?.text ?? "",
-          data: (r.publishTime ?? now).slice(0, 10),
-        })
-        .run();
-    }
+    await db.delete(s.reviews).where(eq(s.reviews.empresaId, empresaId));
+    await db.insert(s.reviews).values(
+      d.reviews.slice(0, 5).map((r) => ({
+        empresaId,
+        autor: r.authorAttribution?.displayName ?? "Cliente Google",
+        nota: Math.round(r.rating),
+        texto: (r.text ?? r.originalText)?.text ?? "",
+        data: (r.publishTime ?? new Date().toISOString()).slice(0, 10),
+      })),
+    );
   }
+  return { total: d.userRatingCount ?? null, rating: d.rating ?? null };
 }
 
 export function isStale(refreshedAt: string | null) {
   return !refreshedAt || Date.now() - new Date(refreshedAt).getTime() > REFRESH_TTL_MS;
 }
 
-/** Atualiza em segundo plano as empresas vinculadas com cache vencido (no máx. `limit`). */
-export async function refreshStale(limit = 4) {
-  if (!googleEnabled()) return;
-  const stale = db
-    .select({ id: s.empresas.id, placeId: s.empresas.placeId, refreshedAt: s.empresas.refreshedAt })
-    .from(s.empresas)
-    .all()
-    .filter((e) => e.placeId && isStale(e.refreshedAt))
+/** Atualiza as empresas vinculadas com cache vencido. Usado pelo cron diário e ao abrir Clientes. */
+export async function refreshStale(limit = 50) {
+  if (!googleEnabled()) return { atualizadas: 0, falhas: 0 };
+  await ready();
+  const stale = (
+    await db
+      .select({ id: s.empresas.id, placeId: s.empresas.placeId, refreshedAt: s.empresas.refreshedAt })
+      .from(s.empresas)
+      .where(sql`${s.empresas.placeId} is not null`)
+  )
+    .filter((e) => isStale(e.refreshedAt))
     .slice(0, limit);
-  await Promise.allSettled(stale.map((e) => syncEmpresa(e.id, e.placeId!)));
+  const r = await Promise.allSettled(stale.map((e) => syncEmpresa(e.id, e.placeId!)));
+  return { atualizadas: r.filter((x) => x.status === "fulfilled").length, falhas: r.filter((x) => x.status === "rejected").length };
 }

@@ -1,6 +1,6 @@
 import "server-only";
-import { and, between, desc, eq, sql } from "drizzle-orm";
-import { db, schema as s } from "@/lib/db";
+import { between, desc, eq, sql } from "drizzle-orm";
+import { db, ready, schema as s } from "@/lib/db";
 import { cmvDaVenda, resumir, serieDiaria, cents, type PontoDiario, type Resumo } from "@/lib/finance";
 import type { Period } from "@/lib/period";
 import type { ISODate } from "@/lib/dates";
@@ -21,7 +21,8 @@ export type VendaRow = {
   placas: number;
 };
 
-function vendasEntre(de: ISODate, ate: ISODate) {
+async function vendasEntre(de: ISODate, ate: ISODate, empresaId?: number) {
+  await ready();
   return db
     .select({
       id: s.vendas.id,
@@ -42,20 +43,21 @@ function vendasEntre(de: ISODate, ate: ISODate) {
     })
     .from(s.vendas)
     .innerJoin(s.empresas, eq(s.empresas.id, s.vendas.empresaId))
-    .where(between(s.vendas.data, de, ate))
-    .orderBy(desc(s.vendas.data), desc(s.vendas.id))
-    .all();
+    .where(empresaId ? sql`${s.vendas.empresaId} = ${empresaId} and ${s.vendas.data} between ${de} and ${ate}` : between(s.vendas.data, de, ate))
+    .orderBy(desc(s.vendas.data), desc(s.vendas.id));
 }
 
-function despesasEntre(de: ISODate, ate: ISODate) {
+async function despesasEntre(de: ISODate, ate: ISODate) {
+  await ready();
   return db
     .select({ data: s.despesas.data, valor: s.despesas.valor })
     .from(s.despesas)
-    .where(between(s.despesas.data, de, ate))
-    .all();
+    .where(between(s.despesas.data, de, ate));
 }
 
-export function toVendaRow(v: ReturnType<typeof vendasEntre>[number]): VendaRow {
+type VendaBruta = Awaited<ReturnType<typeof vendasEntre>>[number];
+
+function toVendaRow(v: VendaBruta): VendaRow {
   const custo = cmvDaVenda(v);
   return {
     id: v.id,
@@ -70,7 +72,7 @@ export function toVendaRow(v: ReturnType<typeof vendasEntre>[number]): VendaRow 
     lucro: cents(v.valorVenda - custo - v.taxaPagamento),
     status: v.status,
     metodo: v.metodo,
-    placas: v.placas,
+    placas: Number(v.placas),
   };
 }
 
@@ -86,11 +88,13 @@ export type Dashboard = {
   vendas: VendaRow[];
 };
 
-export function getDashboard(p: Period): Dashboard {
-  const vendas = vendasEntre(p.de, p.ate);
-  const despesas = despesasEntre(p.de, p.ate);
-  const vendasAnt = vendasEntre(p.anterior.de, p.anterior.ate);
-  const despesasAnt = despesasEntre(p.anterior.de, p.anterior.ate);
+export async function getDashboard(p: Period): Promise<Dashboard> {
+  const [vendas, despesas, vendasAnt, despesasAnt] = await Promise.all([
+    vendasEntre(p.de, p.ate),
+    despesasEntre(p.de, p.ate),
+    vendasEntre(p.anterior.de, p.anterior.ate),
+    despesasEntre(p.anterior.de, p.anterior.ate),
+  ]);
 
   const pagas = vendas.filter((v) => v.status === "paga");
   const porEmpresa = new Map<number, TopCliente>();
@@ -113,29 +117,25 @@ export function getDashboard(p: Period): Dashboard {
     resumo: resumir(vendas, despesas),
     anterior: resumir(vendasAnt, despesasAnt),
     serie: serieDiaria(vendas, despesas, p.de, p.ate),
-    placasVendidas: pagas.reduce((a, v) => a + v.placas, 0),
-    placasVendidasAnterior: vendasAnt.filter((v) => v.status === "paga").reduce((a, v) => a + v.placas, 0),
+    placasVendidas: pagas.reduce((a, v) => a + Number(v.placas), 0),
+    placasVendidasAnterior: vendasAnt.filter((v) => v.status === "paga").reduce((a, v) => a + Number(v.placas), 0),
     topClientes: [...porEmpresa.values()].sort((a, b) => b.faturamento - a.faturamento).slice(0, 5),
     vendas: vendas.map(toVendaRow),
   };
 }
 
 /** Resumo enxuto (usado na tela de Despesas para o lucro "ao vivo"). */
-export function getResumo(p: Period): Resumo {
-  return resumir(vendasEntre(p.de, p.ate), despesasEntre(p.de, p.ate));
+export async function getResumo(p: Period): Promise<Resumo> {
+  const [v, d] = await Promise.all([vendasEntre(p.de, p.ate), despesasEntre(p.de, p.ate)]);
+  return resumir(v, d);
 }
 
-export function getVendasDaEmpresa(empresaId: number): VendaRow[] {
-  return vendasEntre("0000-01-01", "9999-12-31")
-    .filter((v) => v.empresaId === empresaId)
-    .map(toVendaRow);
+export async function getVendasDaEmpresa(empresaId: number): Promise<VendaRow[]> {
+  return (await vendasEntre("0000-01-01", "9999-12-31", empresaId)).map(toVendaRow);
 }
 
-export function hasAnySale(): boolean {
-  return !!db
-    .select({ id: s.vendas.id })
-    .from(s.vendas)
-    .where(and(eq(s.vendas.status, "paga")))
-    .limit(1)
-    .get();
+/** Para o formulário de venda: clientes em ordem alfabética. */
+export async function listEmpresasParaSelect() {
+  await ready();
+  return db.select({ id: s.empresas.id, nome: s.empresas.nome, cidade: s.empresas.cidade }).from(s.empresas).orderBy(s.empresas.nome);
 }

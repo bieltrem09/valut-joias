@@ -6,6 +6,8 @@ import { Providers } from "@/components/shell/providers";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { BottomNav } from "@/components/shell/bottom-nav";
+import { persistente } from "@/lib/db";
+import Link from "next/link";
 import "./globals.css";
 
 const instrument = Instrument_Sans({
@@ -52,6 +54,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="flex min-h-dvh">
             <Sidebar email={email} />
             <div className="flex min-w-0 flex-1 flex-col">
+              {!persistente && (
+                <p role="status" className="bg-pending-soft px-4 py-2 text-center text-12 text-foreground md:px-8">
+                  Banco temporário: o que você cadastrar pode sumir.{" "}
+                  <Link href="/configuracoes" className="font-medium underline underline-offset-4">
+                    Ver como guardar de verdade
+                  </Link>
+                </p>
+              )}
               <Suspense fallback={<div className="h-16" />}>
                 <Topbar />
               </Suspense>

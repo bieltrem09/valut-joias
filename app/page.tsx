@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { parsePeriod } from "@/lib/period";
-import { getDashboard } from "@/lib/data/vendas";
+import { getDashboard, listEmpresasParaSelect } from "@/lib/data/vendas";
+import { NovaVendaButton } from "@/components/vendas/nova-venda";
 import { HeroLucro } from "@/components/vendas/hero-lucro";
 import { KpiColumn } from "@/components/vendas/kpi-column";
 import { CadaReal } from "@/components/vendas/cada-real";
@@ -14,11 +15,13 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 
 export default async function VendasPage({ searchParams }: Props) {
   const period = parsePeriod(await searchParams);
-  const d = getDashboard(period);
+  const [d, empresas] = await Promise.all([getDashboard(period), listEmpresasParaSelect()]);
 
   return (
     <div className="grid gap-6 md:gap-8">
-      <PageIntro eyebrow="Seu negócio">{resumoFrase(d.placasVendidas, d.placasVendidasAnterior, period.frase, period.fraseAnterior)}</PageIntro>
+      <PageIntro eyebrow="Seu negócio" actions={<NovaVendaButton empresas={empresas} />}>
+        {resumoFrase(d.placasVendidas, d.placasVendidasAnterior, period.frase, period.fraseAnterior)}
+      </PageIntro>
 
       <div className="grid gap-4 xl:grid-cols-3 xl:gap-5">
         <div className="xl:col-span-2 xl:row-span-1">
@@ -49,7 +52,7 @@ export default async function VendasPage({ searchParams }: Props) {
 }
 
 function resumoFrase(n: number, prev: number, frase: string, fraseAnterior: string) {
-  if (n === 0) return <>Nenhuma placa vendida {frase}. O painel acorda na primeira venda.</>;
+  if (n === 0) return <>Nenhuma placa vendida {frase}. Registre a primeira venda e o painel ganha vida.</>;
   const placas = `${n} ${n === 1 ? "placa" : "placas"}`;
   const diff = n - prev;
   let comp = "";

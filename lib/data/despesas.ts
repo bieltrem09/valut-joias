@@ -1,6 +1,6 @@
 import "server-only";
 import { between, desc } from "drizzle-orm";
-import { db, schema as s } from "@/lib/db";
+import { db, ready, schema as s } from "@/lib/db";
 import type { Period } from "@/lib/period";
 import type { Despesa, DespesaCategoria } from "@/lib/db/schema";
 
@@ -8,20 +8,20 @@ export type DespesaRow = Despesa;
 
 export const CATEGORIAS_DESPESA: DespesaCategoria[] = ["Anúncios", "Ferramentas", "Frete", "Taxas", "Outros"];
 
-export function listDespesas(p: Period): DespesaRow[] {
+export async function listDespesas(p: Period): Promise<DespesaRow[]> {
+  await ready();
   return db
     .select()
     .from(s.despesas)
     .where(between(s.despesas.data, p.de, p.ate))
-    .orderBy(desc(s.despesas.data), desc(s.despesas.id))
-    .all();
+    .orderBy(desc(s.despesas.data), desc(s.despesas.id));
 }
 
-export function totalDespesasAnterior(p: Period): number {
-  return db
+export async function totalDespesasAnterior(p: Period): Promise<number> {
+  await ready();
+  const rows = await db
     .select({ valor: s.despesas.valor })
     .from(s.despesas)
-    .where(between(s.despesas.data, p.anterior.de, p.anterior.ate))
-    .all()
-    .reduce((a, d) => a + d.valor, 0);
+    .where(between(s.despesas.data, p.anterior.de, p.anterior.ate));
+  return rows.reduce((a, d) => a + d.valor, 0);
 }

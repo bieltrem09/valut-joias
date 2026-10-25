@@ -21,7 +21,8 @@ const STATUS_TONE = { Ativa: "profit", "Pendente de envio": "pending", Inativa: 
 
 const ico = (C: React.ComponentType<{ className?: string; strokeWidth?: number }>) => <C className="size-4" strokeWidth={1.5} />;
 
-export function PlacasView({ placas }: { placas: PlacaRow[] }) {
+export function PlacasView({ placas, baseUrl }: { placas: PlacaRow[]; baseUrl: string }) {
+  const linkDa = (r: PlacaRow) => `${baseUrl}/r/${r.codigo}`;
   const router = useRouter();
   const [rows, setRows] = React.useState(placas);
   React.useEffect(() => setRows(placas), [placas]);
@@ -113,10 +114,10 @@ export function PlacasView({ placas }: { placas: PlacaRow[] }) {
         maxHeight="70vh"
         pageSize={10}
         initialSort={{ key: "data", dir: "desc" }}
-        renderDetail={(r) => <PlacaDetalhe placa={r} onCopy={copiar} />}
+        renderDetail={(r) => <PlacaDetalhe placa={r} link={linkDa(r)} onCopy={copiar} />}
         rowActions={(r) => [
           { label: "Editar destino", icon: ico(Pencil), onSelect: () => setEditing(r) },
-          { label: "Copiar link", icon: ico(Link2), onSelect: () => copiar(r.destinoUrl) },
+          { label: "Copiar link do chip", icon: ico(Link2), onSelect: () => copiar(linkDa(r)) },
           ...(r.status === "Ativa" || r.status === "Inativa"
             ? [
                 {
@@ -158,6 +159,12 @@ export function PlacasView({ placas }: { placas: PlacaRow[] }) {
           { label: "Excluir", icon: ico(Trash2), destructive: true, onSelect: (sel, h) => excluir(sel, h) },
         ]}
         labels={{ noResultsHint: "Tente outro código, cliente ou status." }}
+        emptyState={
+          <div className="grid max-w-sm justify-items-center gap-1">
+            <p className="text-14 font-medium">Nenhuma placa ainda</p>
+            <p className="text-13 text-muted-foreground">Registre uma venda: cada placa ganha um código e um link próprio para gravar no chip.</p>
+          </div>
+        }
       />
 
       <EditarDestino
@@ -206,7 +213,7 @@ function exportarCSV(rows: PlacaRow[]) {
   toast.success(rows.length === 1 ? "1 placa exportada" : `${rows.length} placas exportadas`);
 }
 
-function PlacaDetalhe({ placa, onCopy }: { placa: PlacaRow; onCopy: (url: string) => void }) {
+function PlacaDetalhe({ placa, link, onCopy }: { placa: PlacaRow; link: string; onCopy: (url: string) => void }) {
   const [copied, setCopied] = React.useState(false);
   const today = todaySP();
   const data = placa.leituras30d.map((n, i) => ({ data: addDays(today, i - 29), n }));
@@ -217,29 +224,22 @@ function PlacaDetalhe({ placa, onCopy }: { placa: PlacaRow; onCopy: (url: string
     <div className="grid gap-6 lg:grid-cols-[auto_1fr_1.4fr]">
       <div className="grid justify-items-start gap-2">
         <div className="rounded-control bg-white p-3 ring-1 ring-border">
-          <QRCodeSVG value={placa.destinoUrl} size={112} level="M" marginSize={0} fgColor="#0b1220" bgColor="#ffffff" title={`QR code de ${placa.codigo}`} />
+          <QRCodeSVG value={link} size={112} level="M" marginSize={0} fgColor="#0b1220" bgColor="#ffffff" title={`QR code de ${placa.codigo}`} />
         </div>
-        <p className="font-mono text-11 text-muted-foreground">{placa.codigo}</p>
+        <p className="max-w-[138px] text-11 text-muted-foreground">QR do verso. Aponta para o mesmo link do chip.</p>
       </div>
 
       <dl className="grid content-start gap-4 text-13">
         <div>
-          <dt className="text-12 text-muted-foreground">Destino</dt>
+          <dt className="text-12 text-muted-foreground">Gravar no chip</dt>
           <dd className="mt-1 flex items-center gap-2">
-            <a
-              href={placa.destinoUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="min-w-0 truncate font-mono text-12 text-foreground underline decoration-border-strong underline-offset-4 hover-fine:decoration-foreground"
-            >
-              {placa.destinoUrl.replace(/^https?:\/\//, "")}
-            </a>
+            <code className="min-w-0 truncate rounded-[6px] bg-muted px-2 py-1 font-mono text-12 text-foreground">{link.replace(/^https?:\/\//, "")}</code>
             <button
               type="button"
-              aria-label="Copiar link de destino"
+              aria-label="Copiar link do chip"
               onClick={(e) => {
                 e.stopPropagation();
-                onCopy(placa.destinoUrl);
+                onCopy(link);
                 setCopied(true);
                 window.setTimeout(() => setCopied(false), 1400);
               }}
@@ -247,6 +247,20 @@ function PlacaDetalhe({ placa, onCopy }: { placa: PlacaRow; onCopy: (url: string
             >
               {copied ? <Check className="size-4 text-profit" strokeWidth={1.5} /> : <Copy className="size-4" strokeWidth={1.5} />}
             </button>
+          </dd>
+          <p className="mt-1 text-12 text-muted-foreground">Cada toque passa por aqui, é contado e segue para o destino.</p>
+        </div>
+        <div>
+          <dt className="text-12 text-muted-foreground">Destino atual</dt>
+          <dd className="mt-1">
+            <a
+              href={placa.destinoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="block truncate font-mono text-12 text-foreground underline decoration-border-strong underline-offset-4 hover-fine:decoration-foreground"
+            >
+              {placa.destinoUrl.replace(/^https?:\/\//, "")}
+            </a>
           </dd>
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -271,14 +285,16 @@ function PlacaDetalhe({ placa, onCopy }: { placa: PlacaRow; onCopy: (url: string
 
       <div className="min-w-0">
         <div className="flex items-baseline justify-between">
-          <p className="text-12 text-muted-foreground">Leituras nos últimos 30 dias</p>
+          <p className="text-12 text-muted-foreground">Toques nos últimos 30 dias</p>
           <p className="font-mono text-12 tabular">
             {formatInt(total30)} <span className="text-muted-foreground">· {media.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}/dia</span>
           </p>
         </div>
         {total30 === 0 ? (
           <p className="mt-6 text-13 text-muted-foreground">
-            {placa.status === "Pendente de envio" ? "As leituras começam quando a placa chegar ao cliente." : "Nenhuma leitura nesse intervalo."}
+            {placa.status === "Pendente de envio"
+              ? "Os toques começam a contar quando a placa estiver ativa."
+              : "Nenhum toque ainda. Confira se o chip foi gravado com o link acima."}
           </p>
         ) : (
           <div className="mt-3 h-28" role="img" aria-label={`${total30} leituras em 30 dias`}>
@@ -358,7 +374,7 @@ function EditarDestino({ placa, onClose, onSaved }: { placa: PlacaRow | null; on
         }}
         className="grid gap-5"
       >
-        <Field label="Link de destino" htmlFor="destino" error={error} hint="Vale na hora: a próxima leitura já vai para o link novo.">
+        <Field label="Link de destino" htmlFor="destino" error={error} hint="Vale na hora: o próximo toque já vai para o link novo.">
           <Input
             id="destino"
             type="url"
@@ -370,14 +386,9 @@ function EditarDestino({ placa, onClose, onSaved }: { placa: PlacaRow | null; on
             aria-invalid={!!error}
           />
         </Field>
-        {placa && url && (
-          <div className="flex items-center gap-4 rounded-control bg-muted/60 p-4">
-            <div className="rounded-[8px] bg-white p-2">
-              <QRCodeSVG value={url} size={72} marginSize={0} fgColor="#0b1220" bgColor="#ffffff" />
-            </div>
-            <p className="text-13 text-muted-foreground">Prévia do QR impresso no verso da placa, para quem não tem NFC.</p>
-          </div>
-        )}
+        <p className="rounded-control bg-muted/60 p-4 text-13 text-muted-foreground">
+          O chip e o QR impresso continuam os mesmos: eles apontam para o link da placa, que redireciona para o destino novo.
+        </p>
       </form>
     </Sheet>
   );

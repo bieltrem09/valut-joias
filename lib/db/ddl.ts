@@ -1,6 +1,6 @@
 /**
- * Criação idempotente das tabelas. Espelha `schema.ts`; mantido à mão para
- * o app subir sem passo de migração (é um painel de um usuário só).
+ * Criação idempotente das tabelas. Espelha `schema.ts`; roda uma vez por
+ * processo, então o app sobe sem passo de migração (painel de um usuário só).
  * Para gerar migrações formais: `npx drizzle-kit generate`.
  */
 export const DDL = /* sql */ `
@@ -72,9 +72,10 @@ create table if not exists avaliacoes_historico (
   empresa_id integer not null references empresas(id) on delete cascade,
   data text not null,
   rating real,
-  total integer not null
+  total integer not null,
+  fonte text not null default 'google'
 );
-create index if not exists aval_hist_empresa_idx on avaliacoes_historico(empresa_id);
+create unique index if not exists aval_hist_empresa_dia on avaliacoes_historico(empresa_id, data);
 create table if not exists reviews (
   id integer primary key autoincrement,
   empresa_id integer not null references empresas(id) on delete cascade,
@@ -84,4 +85,10 @@ create table if not exists reviews (
   data text not null
 );
 create index if not exists reviews_empresa_idx on reviews(empresa_id);
+create table if not exists fotos (
+  empresa_id integer primary key references empresas(id) on delete cascade,
+  mime text not null,
+  bytes blob not null,
+  atualizada_em text not null
+);
 `;

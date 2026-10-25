@@ -94,7 +94,7 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
         <p className="font-mono text-20 font-medium tracking-[-0.02em] tabular">
           <RollingNumber value={kpi.value} format={formatBRL} />
         </p>
-        {kpi.series.length > 1 && <Sparkline values={kpi.series} tone={kpi.tone} />}
+        {kpi.series.length > 1 && kpi.series.some((v) => v !== 0) && <Sparkline values={kpi.series} tone={kpi.tone} />}
       </div>
       <p className="truncate text-12 text-muted-foreground" title={kpi.caption}>
         {kpi.caption}

@@ -1,0 +1,339 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Plus, X } from "lucide-react";
+import { Sheet } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Field, Input, Select } from "@/components/ui/input";
+import { criarVenda } from "@/app/actions";
+import { todaySP } from "@/lib/dates";
+import { formatBRL } from "@/lib/format";
+import { cn } from "@/lib/utils";
+
+const TIPOS = ["Avaliação Google", "Instagram", "WhatsApp", "Pix", "Cardápio"] as const;
+const PLACEHOLDER: Record<(typeof TIPOS)[number], string> = {
+  "Avaliação Google": "https://g.page/r/…/review",
+  Instagram: "https://instagram.com/perfil",
+  WhatsApp: "https://wa.me/5519…",
+  Pix: "https://… (link de pagamento)",
+  Cardápio: "https://… (cardápio online)",
+};
+
+type Linha = { key: number; tipo: (typeof TIPOS)[number]; destinoUrl: string; preco: string };
+
+/** "1.234,56" ou "1234.56" → 1234.56; vazio → 0 */
+export function parseValor(s: string) {
+  const t = s.replace(/[^\d,.-]/g, "");
+  if (!t) return 0;
+  return Number(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t);
+}
+
+export function NovaVendaButton({ empresas, label = "Registrar venda" }: { empresas: { id: number; nome: string; cidade: string }[]; label?: string }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        <Plus strokeWidth={1.5} />
+        {label}
+      </Button>
+      <NovaVendaSheet open={open} onOpenChange={setOpen} empresas={empresas} />
+    </>
+  );
+}
+
+function NovaVendaSheet({
+  open,
+  onOpenChange,
+  empresas,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  empresas: { id: number; nome: string; cidade: string }[];
+}) {
+  const router = useRouter();
+  const today = todaySP();
+  const seq = React.useRef(1);
+  const nova = (): Linha => ({ key: seq.current++, tipo: "Avaliação Google", destinoUrl: "", preco: "" });
+
+  const [empresaId, setEmpresaId] = React.useState("");
+  const [data, setData] = React.useState(today);
+  const [metodo, setMetodo] = React.useState<"Pix" | "Cartão" | "Boleto">("Pix");
+  const [status, setStatus] = React.useState<"paga" | "pendente">("paga");
+  const [linhas, setLinhas] = React.useState<Linha[]>(() => [nova()]);
+  const [custoPlacas, setCustoPlacas] = React.useState("");
+  const [gravacao, setGravacao] = React.useState("");
+  const [frete, setFrete] = React.useState("");
+  const [taxa, setTaxa] = React.useState("");
+  const [entregue, setEntregue] = React.useState(false);
+  const [error, setError] = React.useState<string>();
+  const [pending, start] = React.useTransition();
+
+  const total = linhas.reduce((a, l) => a + parseValor(l.preco), 0);
+  const custos = parseValor(custoPlacas) + parseValor(gravacao) + parseValor(frete) + parseValor(taxa);
+  const lucro = total - custos;
+
+  const reset = () => {
+    setEmpresaId("");
+    setData(today);
+    setMetodo("Pix");
+    setStatus("paga");
+    setLinhas([nova()]);
+    setCustoPlacas("");
+    setGravacao("");
+    setFrete("");
+    setTaxa("");
+    setEntregue(false);
+    setError(undefined);
+  };
+
+  const set = (key: number, patch: Partial<Linha>) => setLinhas((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+
+  const submit = () => {
+    setError(undefined);
+    start(async () => {
+      const res = await criarVenda({
+        empresaId: Number(empresaId),
+        data,
+        status,
+        metodo,
+        placas: linhas.map((l) => ({ tipo: l.tipo, destinoUrl: l.destinoUrl, preco: parseValor(l.preco) })),
+        custoPlacas: parseValor(custoPlacas),
+        custoGravacao: parseValor(gravacao),
+        frete: parseValor(frete),
+        taxaPagamento: parseValor(taxa),
+        entregue,
+      });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      const cods = res.data?.codigos ?? [];
+      toast.success("Venda registrada", { description: cods.length ? `${cods.length === 1 ? "Placa" : "Placas"} ${cods.join(", ")}` : undefined });
+      onOpenChange(false);
+      reset();
+      router.refresh();
+    });
+  };
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Registrar venda"
+      description="Cada placa ganha um código e um link próprio para gravar no chip."
+      footer={
+        empresas.length ? (
+          <div className="flex w-full items-center justify-between gap-3">
+            <div className="text-12 leading-tight text-muted-foreground">
+              <p>
+                Total <span className="font-mono text-14 font-medium text-foreground tabular">{formatBRL(total)}</span>
+              </p>
+              <p>
+                Lucro <span className={cn("font-mono tabular", lucro < 0 ? "text-cost" : "text-profit")}>{formatBRL(lucro)}</span>
+              </p>
+            </div>
+            <Button variant="primary" onClick={submit} disabled={pending}>
+              {pending ? "Salvando…" : "Registrar"}
+            </Button>
+          </div>
+        ) : undefined
+      }
+    >
+      {empresas.length === 0 ? (
+        <div className="grid gap-3 py-6 text-center">
+          <p className="text-14 font-medium">Primeiro, cadastre o cliente</p>
+          <p className="text-13 text-muted-foreground">A venda precisa estar ligada a uma empresa.</p>
+          <Button asChild variant="primary" className="justify-self-center">
+            <Link href="/clientes" onClick={() => onOpenChange(false)}>
+              Ir para Clientes
+            </Link>
+          </Button>
+        </div>
+      ) : (
+        <form
+          className="grid gap-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <div className="grid gap-5 sm:grid-cols-[1fr_160px]">
+            <Field label="Cliente" htmlFor="v-empresa">
+              <Select id="v-empresa" value={empresaId} onChange={(e) => setEmpresaId(e.target.value)} required>
+                <option value="" disabled>
+                  Escolha…
+                </option>
+                {empresas.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.nome}
+                    {e.cidade ? ` · ${e.cidade}` : ""}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Data" htmlFor="v-data">
+              <Input id="v-data" type="date" value={data} max={today} onChange={(e) => setData(e.target.value)} className="font-mono text-13" />
+            </Field>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Segmented label="Pagamento" value={metodo} onChange={setMetodo} options={["Pix", "Cartão", "Boleto"]} />
+            <Segmented
+              label="Situação"
+              value={status}
+              onChange={setStatus}
+              options={["paga", "pendente"]}
+              format={(v) => (v === "paga" ? "Já recebi" : "A receber")}
+            />
+          </div>
+
+          <fieldset className="grid gap-3">
+            <legend className="mb-2 text-13 font-medium text-subtle-foreground">Placas</legend>
+            {linhas.map((l, i) => (
+              <div key={l.key} className="grid gap-2 rounded-control p-3 ring-1 ring-border">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-11 text-muted-foreground">#{i + 1}</span>
+                  <Select
+                    aria-label={`Tipo da placa ${i + 1}`}
+                    value={l.tipo}
+                    onChange={(e) => set(l.key, { tipo: e.target.value as Linha["tipo"] })}
+                    className="h-9 flex-1 text-13"
+                  >
+                    {TIPOS.map((t) => (
+                      <option key={t}>{t}</option>
+                    ))}
+                  </Select>
+                  <div className="relative w-28 shrink-0">
+                    <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 font-mono text-12 text-muted-foreground">R$</span>
+                    <Input
+                      aria-label={`Preço da placa ${i + 1}`}
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={l.preco}
+                      onChange={(e) => set(l.key, { preco: e.target.value })}
+                      className="h-9 pl-8 font-mono text-13 tabular"
+                    />
+                  </div>
+                  {linhas.length > 1 && (
+                    <button
+                      type="button"
+                      aria-label={`Remover placa ${i + 1}`}
+                      onClick={() => setLinhas((ls) => ls.filter((x) => x.key !== l.key))}
+                      className="grid size-9 shrink-0 place-items-center rounded-[8px] text-muted-foreground transition-[transform,background-color] duration-150 hover-fine:bg-muted active:scale-[0.96] coarse:size-11"
+                    >
+                      <X className="size-4" strokeWidth={1.5} />
+                    </button>
+                  )}
+                </div>
+                <Input
+                  aria-label={`Link de destino da placa ${i + 1}`}
+                  type="url"
+                  inputMode="url"
+                  autoComplete="off"
+                  placeholder={PLACEHOLDER[l.tipo]}
+                  value={l.destinoUrl}
+                  onChange={(e) => set(l.key, { destinoUrl: e.target.value })}
+                  className="h-9 font-mono text-12"
+                />
+              </div>
+            ))}
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="justify-self-start"
+              onClick={() => setLinhas((ls) => [...ls, { ...nova(), tipo: ls.at(-1)?.tipo ?? "Avaliação Google" }])}
+            >
+              <Plus strokeWidth={1.5} /> Adicionar placa
+            </Button>
+          </fieldset>
+
+          <fieldset className="grid gap-3">
+            <legend className="mb-2 text-13 font-medium text-subtle-foreground">O que você gastou nessa venda</legend>
+            <div className="grid grid-cols-2 gap-3">
+              <Money id="v-custo" label="Placas (material)" value={custoPlacas} onChange={setCustoPlacas} />
+              <Money id="v-grav" label="Gravação" value={gravacao} onChange={setGravacao} />
+              <Money id="v-frete" label="Frete" value={frete} onChange={setFrete} />
+              <Money
+                id="v-taxa"
+                label="Taxa do pagamento"
+                value={taxa}
+                onChange={setTaxa}
+                hint={metodo === "Pix" ? "Pix costuma ser zero." : "Veja o valor no extrato."}
+              />
+            </div>
+          </fieldset>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-control p-3 ring-1 ring-border has-[:checked]:bg-accent has-[:checked]:ring-transparent">
+            <input type="checkbox" checked={entregue} onChange={(e) => setEntregue(e.target.checked)} className="mt-0.5 size-4 accent-[var(--primary)]" />
+            <span className="grid gap-0.5">
+              <span className="text-13 font-medium">As placas já foram entregues e instaladas</span>
+              <span className="text-12 text-muted-foreground">Ficam ativas a partir da data da venda. Senão, entram como pendentes de envio.</span>
+            </span>
+          </label>
+
+          {error && (
+            <p role="alert" className="text-13 text-destructive">
+              {error}
+            </p>
+          )}
+        </form>
+      )}
+    </Sheet>
+  );
+}
+
+function Money({ id, label, value, onChange, hint }: { id: string; label: string; value: string; onChange: (v: string) => void; hint?: string }) {
+  return (
+    <Field label={label} htmlFor={id} hint={hint}>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-12 text-muted-foreground">R$</span>
+        <Input
+          id={id}
+          inputMode="decimal"
+          placeholder="0,00"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="pl-9 font-mono text-13 tabular"
+        />
+      </div>
+    </Field>
+  );
+}
+
+function Segmented<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+  format = (v) => v,
+}: {
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: T[];
+  format?: (v: T) => string;
+}) {
+  return (
+    <fieldset className="grid gap-1.5">
+      <legend className="mb-1.5 text-13 font-medium text-subtle-foreground">{label}</legend>
+      <div className="flex gap-1 rounded-control bg-muted p-1">
+        {options.map((o) => (
+          <label
+            key={o}
+            className={cn(
+              "flex h-8 flex-1 cursor-pointer items-center justify-center rounded-[8px] text-13 transition-[background-color,color,transform] duration-150 ease-out-strong active:scale-[0.96] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring coarse:h-10",
+              value === o ? "bg-card font-medium text-foreground shadow-hairline" : "text-muted-foreground hover-fine:text-foreground",
+            )}
+          >
+            <input type="radio" className="sr-only" checked={value === o} onChange={() => onChange(o)} />
+            {format(o)}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
