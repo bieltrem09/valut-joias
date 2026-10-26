@@ -291,7 +291,7 @@ export function Prospector({
               <Orb size={52} energia={carregando ? 1 : resultados ? 0.45 : 0.2} label={carregando ? "Buscando no Google" : "Prospecção"} />
               <div>
                 <p className="font-mono text-11 tracking-[0.14em] text-primary uppercase">Basik7 / Google Maps</p>
-                <h1 className="text-28 leading-none font-semibold tracking-[-0.03em]">Prospecção.</h1>
+                <h2 className="text-28 leading-none font-semibold tracking-[-0.03em]">Prospecção.</h2>
               </div>
             </div>
           </header>

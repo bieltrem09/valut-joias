@@ -31,7 +31,7 @@ export function Label({ className, ...props }: React.ComponentProps<"label">) {
 
 export function Field({ label, hint, error, children, htmlFor }: { label: string; hint?: string; error?: string; children: React.ReactNode; htmlFor: string }) {
   return (
-    <div className="grid gap-1.5">
+    <div className="grid content-start gap-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
       {error ? (

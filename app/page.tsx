@@ -9,7 +9,7 @@ import { TopClientes } from "@/components/vendas/top-clientes";
 import { VendasRecentes } from "@/components/vendas/vendas-recentes";
 import { PageIntro } from "@/components/shell/page-intro";
 
-export const metadata: Metadata = { title: "Minhas vendas" };
+export const metadata: Metadata = { title: { absolute: "Minhas vendas · Basik7" } };
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 

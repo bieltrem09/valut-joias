@@ -123,7 +123,7 @@ function LucroChart({ serie }: { serie: PontoDiario[] }) {
       aria-label={`Lucro acumulado: começa em ${formatBRL(values[0])} e termina em ${formatBRL(values.at(-1)!)}.`}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={serie} margin={{ top: 18, right: 10, bottom: 0, left: 10 }}>
+        <AreaChart data={serie} margin={{ top: 24, right: 30, bottom: 0, left: 10 }}>
           <defs>
             <linearGradient id="hero-fill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" style={{ stopColor: "var(--hero-line)", stopOpacity: 0.28 }} />

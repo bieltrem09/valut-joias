@@ -5,7 +5,7 @@ const brlCompact = new Intl.NumberFormat("pt-BR", {
   notation: "compact",
   maximumFractionDigits: 1,
 });
-const int = new Intl.NumberFormat("pt-BR");
+const int = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const pct = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
 const one = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
