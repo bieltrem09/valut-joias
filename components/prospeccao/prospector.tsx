@@ -29,6 +29,7 @@ import { Stars } from "@/components/clientes/stars";
 import { enviarAoFunil, registrarBusca } from "@/app/actions";
 import { Qualificador } from "./qualificador";
 import { buscarNoNavegador } from "@/lib/osm-cliente";
+import { juntarFontes, type LugarAberto } from "@/lib/osm";
 import type { LeadGoogle } from "@/app/api/prospeccao/buscar/route";
 import { distanciaKm, ordenar, qualificarAberto, whatsappUrl } from "@/lib/prospeccao";
 import { urlBuscaMaps, urlEmbedMaps } from "@/lib/maps-link";
@@ -36,6 +37,26 @@ import { formatInt, formatRating } from "@/lib/format";
 import type { BuscaSalva } from "@/lib/data/leads";
 import { cn } from "@/lib/utils";
 import { Medidor, Motivos, PRIORIDADE, STATUS_FUNIL } from "./radar-ui";
+
+type Onde = { nome: string; centro: { lat: number; lng: number } } | null;
+
+/** Lista do TomTom (pelo servidor). Erro não derruba a busca: volta { erro } e o mapa aberto assume. */
+async function buscarTomTom(corpo: {
+  segmento: string;
+  local: string;
+  modo: "cidade" | "perto";
+  centro?: { lat: number; lng: number };
+  raioKm: number;
+}): Promise<{ lugares: LugarAberto[]; onde: Onde } | { erro: string }> {
+  try {
+    const res = await fetch("/api/prospeccao/tomtom", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) });
+    const b = (await res.json().catch(() => null)) as { ok: boolean; error?: string; lugares?: LugarAberto[]; onde?: Onde } | null;
+    if (!b?.ok || !b.lugares) return { erro: b?.error ?? "O TomTom não respondeu." };
+    return { lugares: b.lugares, onde: b.onde ?? null };
+  } catch {
+    return { erro: "Sem conexão com o TomTom." };
+  }
+}
 
 type Modo = "cidade" | "perto";
 type Ordem = "score" | "distancia" | "avaliacoes" | "nota";
@@ -60,11 +81,14 @@ const foto = (f: string, w = 480) => (f.startsWith("places/") ? `/api/google/fot
 export function Prospector({
   buscas,
   temGoogle,
+  temTomTom,
   uso,
   funil,
 }: {
   buscas: BuscaSalva[];
   temGoogle: boolean;
+  /** Com a chave do TomTom, a lista vem de lá (bem mais completa) e o mapa aberto completa. */
+  temTomTom: boolean;
   uso: Uso | null;
   /** placeId → etapa do funil, para marcar quem já está lá. */
   funil: Record<string, string>;
@@ -92,6 +116,8 @@ export function Prospector({
   const [cores, setCores] = React.useState<"painel" | "original">("painel");
   const [carregandoMapa, setCarregandoMapa] = React.useState(true);
   const [montado, setMontado] = React.useState(false);
+  /** A última lista veio do TomTom (ou só do mapa aberto)? */
+  const [viaTomTom, setViaTomTom] = React.useState(false);
   React.useEffect(() => setMontado(true), []);
   React.useEffect(() => {
     if (!carregandoMapa) return;
@@ -174,8 +200,22 @@ export function Prospector({
       setCarregandoMapa(true);
       setContexto({ segmento: seg, onde: m === "perto" ? `até ${raio} km de você` : loc });
       if (!temGoogle) {
-        // Sem a chave: o próprio navegador busca no mapa aberto (o servidor é bloqueado lá).
-        const { lugares, onde } = await buscarNoNavegador({ segmento: seg, modo: m, local: loc, centro, raioKm: raio });
+        // Sem a chave do Google: TomTom pelo servidor (quando há chave) + mapa aberto pelo navegador
+        // (o servidor é bloqueado lá). O mapa aberto só completa: não segura a lista mais de 6 s.
+        const aberto = buscarNoNavegador({ segmento: seg, modo: m, local: loc, centro, raioKm: raio });
+        const tt = temTomTom ? await buscarTomTom({ segmento: seg, local: loc, modo: m, centro, raioKm: raio }) : null;
+        let lugares: LugarAberto[];
+        let onde: Onde;
+        if (tt && "lugares" in tt) {
+          const extra = await Promise.race([aberto.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 6000))]);
+          lugares = extra ? juntarFontes(tt.lugares, extra.lugares) : tt.lugares;
+          setViaTomTom(true);
+          onde = tt.onde ?? extra?.onde ?? null;
+        } else {
+          if (tt) toast.message("TomTom fora do ar agora", { description: `${tt.erro} Usando só o mapa aberto.` });
+          ({ lugares, onde } = await aberto);
+          setViaTomTom(false);
+        }
         const ref = centro ?? onde?.centro ?? null;
         const leads: LeadGoogle[] = lugares
           .map((l) => ({
@@ -502,7 +542,7 @@ export function Prospector({
                 </div>
                 <p className="text-11 text-muted-foreground">
                   <span className="font-mono text-foreground tabular">{lista.length}</span> de {total} estabelecimentos ·{" "}
-                  {temGoogle ? "dados do Google" : "OpenStreetMap; toque num deles para ver nota e fotos no Google"}
+                  {temGoogle ? "dados do Google" : `${viaTomTom ? "TomTom + mapa aberto" : "mapa aberto"}; toque num deles para ver nota e fotos no Google`}
                 </p>
                 {lista.length === 0 ? (
                   <div className="rounded-card bg-background/50 p-5 text-center ring-1 ring-border">

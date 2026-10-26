@@ -97,7 +97,7 @@ export function chaveLead(l: { chave: string | null; nome: string; endereco?: st
 }
 
 /** Lead que não veio da Places API (anotado à mão ou do mapa aberto): não sincroniza com o Google. */
-export const leadManual = (placeId: string) => /^(manual|maps|osm):/.test(placeId);
+export const leadManual = (placeId: string) => /^(manual|maps|osm|tomtom):/.test(placeId);
 
 /** Raio da busca "perto de mim" → zoom do mapa (quanto menor o raio, mais perto). */
 export const zoomDoRaio = (km: number) => (km <= 1 ? 16 : km <= 3 ? 15 : km <= 5 ? 14 : km <= 10 ? 13 : 12);

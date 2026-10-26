@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { googleEnabled, testarChave } from "@/lib/google/places";
 import { usoDoMes } from "@/lib/google/uso";
+import { tomtomEnabled } from "@/lib/tomtom";
 import { bancoRemoto, persistente } from "@/lib/db";
 import { PageIntro } from "@/components/shell/page-intro";
 import { StatusDot } from "@/components/ui/chip";
@@ -15,6 +16,7 @@ export default async function ConfiguracoesPage() {
   const uso = googleEnabled() ? await usoDoMes() : null;
   const auth = !!(process.env.PANEL_USER && process.env.PANEL_PASS);
   const remoto = bancoRemoto;
+  const tomtom = tomtomEnabled();
 
   return (
     <div className="grid max-w-2xl gap-6 md:gap-8">
@@ -47,6 +49,17 @@ export default async function ConfiguracoesPage() {
           }
         />
         <Item
+          title="TomTom (lista de estabelecimentos)"
+          ok={tomtom}
+          okText="Ligado"
+          offText="Desligado"
+          body={
+            tomtom
+              ? "A Prospecção busca no TomTom (base grande, de graça até 2.500 buscas por dia) e completa com o mapa aberto."
+              : "Sem a chave, a lista vem só do mapa aberto (OpenStreetMap), que tem bem menos estabelecimentos que o Google. Veja abaixo como ligar, grátis e sem cartão."
+          }
+        />
+        <Item
           title="Senha do painel"
           ok={auth}
           okText="Ativa"
@@ -58,6 +71,24 @@ export default async function ConfiguracoesPage() {
           }
         />
       </ul>
+
+      {!tomtom && !google && (
+        <section aria-labelledby="tomtom" className="surface grid gap-4 p-5">
+          <h2 id="tomtom" className="text-16 font-semibold tracking-[-0.01em]">
+            Ligar o TomTom: mais estabelecimentos na lista, grátis e sem cartão
+          </h2>
+          <p className="text-13 text-muted-foreground">
+            São 2.500 buscas por dia de graça (cada busca no painel gasta de 2 a 3). Passando disso o TomTom só recusa até o dia seguinte: não existe cobrança,
+            porque não há cartão cadastrado.
+          </p>
+          <ol className="grid list-decimal gap-2 pl-5 text-13 text-subtle-foreground">
+            <li>Em developer.tomtom.com, clique em “Register” e crie a conta (e-mail e senha; confirme o e-mail).</li>
+            <li>No painel do TomTom (Dashboard → Keys), copie a chave que já vem criada (“My first API key”).</li>
+            <li>Na Vercel, em Settings → Environment Variables, crie TOMTOM_API_KEY com a chave (Production e Preview).</li>
+            <li>Publique de novo. Aqui em cima o TomTom passa a aparecer como “Ligado”.</li>
+          </ol>
+        </section>
+      )}
 
       {!google && (
         <section aria-labelledby="chave" className="surface grid gap-4 p-5">

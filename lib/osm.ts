@@ -17,7 +17,11 @@ const REGRAS: [RegExp, Regra][] = [
   [/hamburg|burger|smash/, { rotulo: "Hamburgueria", tags: ['["cuisine"~"burger",i]'], nome: "burg|smash" }],
   [/pizz/, { rotulo: "Pizzaria", tags: ['["cuisine"~"pizza",i]'], nome: "pizz" }],
   [/barb/, { rotulo: "Barbearia", tags: ['["shop"="hairdresser"]["hairdresser"~"barber",i]', '["shop"="barber"]'], nome: "barb" }],
-  [/salao|cabeleir|cabelo|hair/, { rotulo: "Salão de beleza", tags: ['["shop"="hairdresser"]'], nome: "sal[aã]o|hair|cabel" }],
+  [
+    /salao|cabeleir|cabelo|hair/,
+    // "Salão de beleza" no Google junta cabeleireiro e estética; no OSM são etiquetas diferentes.
+    { rotulo: "Salão de beleza", tags: ['["shop"="hairdresser"]', '["shop"="beauty"]'], nome: "sal[aã]o|hair|cabel|beauty|beleza" },
+  ],
   [
     /estetic|beleza|sobrancelha|unha|manicure|nail|cilios/,
     { rotulo: "Estética", tags: ['["shop"="beauty"]'], nome: "est[eé]tica|beauty|unha|nail|sobrancelha|c[ií]lios" },
@@ -265,4 +269,12 @@ export function semRepetidos(ls: LugarAberto[]): LugarAberto[] {
     if (!atual || nota(l) > nota(atual)) porNome.set(k, l);
   }
   return [...porNome.values()];
+}
+
+/** Mesma empresa nas duas fontes: nome igual e a menos de ~300 m. */
+export function juntarFontes(principal: LugarAberto[], extra: LugarAberto[]): LugarAberto[] {
+  const perto = (a: LugarAberto, b: LugarAberto) => a.lat != null && b.lat != null && Math.abs(a.lat - b.lat) < 0.003 && Math.abs(a.lng! - b.lng!) < 0.003;
+  const nome = (l: LugarAberto) => semAcento(l.nome).replace(/[^a-z0-9]/g, "");
+  const novos = extra.filter((e) => !principal.some((p) => nome(p) === nome(e) && perto(p, e)));
+  return [...principal, ...novos];
 }

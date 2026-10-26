@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { googleEnabled } from "@/lib/google/places";
+import { tomtomEnabled } from "@/lib/tomtom";
 import { listBuscas, listLeads } from "@/lib/data/leads";
 import { Prospector } from "@/components/prospeccao/prospector";
 import { usoDoMes } from "@/lib/google/uso";
@@ -16,7 +17,13 @@ export default async function ProspeccaoPage() {
 
   return (
     <div data-largo className="grid grid-cols-[minmax(0,1fr)] gap-6 md:gap-8">
-      <Prospector buscas={buscas} temGoogle={temGoogle} uso={uso} funil={Object.fromEntries(leads.map((l) => [l.placeId, l.status]))} />
+      <Prospector
+        buscas={buscas}
+        temGoogle={temGoogle}
+        temTomTom={tomtomEnabled()}
+        uso={uso}
+        funil={Object.fromEntries(leads.map((l) => [l.placeId, l.status]))}
+      />
 
       <details className="surface group p-0 [&[open]_.seta]:rotate-180">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
