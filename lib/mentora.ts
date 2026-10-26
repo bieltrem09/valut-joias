@@ -4,7 +4,7 @@
  * mostrar na mão e sempre deixar uma saída para o cliente.
  *
  * As falas aceitam marcadores, trocados pelo que a pessoa preencher na tela:
- * {estabelecimento} {segmento} {nota} {avaliacoes} {seuNome} {momento} {cidade}
+ * {estabelecimento} {segmento} {nota} {avaliacoes} {seuNome} {momento} {cidade} {vizinho} {preco}
  */
 
 export type Tom = "leve" | "curioso" | "direto";
@@ -381,7 +381,16 @@ export const ETAPAS: Etapa[] = [
   },
 ];
 
-export type Valores = { estabelecimento: string; segmento: string; nota: string; avaliacoes: string; seuNome: string; cidade: string; vizinho: string };
+export type Valores = {
+  estabelecimento: string;
+  segmento: string;
+  nota: string;
+  avaliacoes: string;
+  seuNome: string;
+  cidade: string;
+  vizinho: string;
+  preco: string;
+};
 
 export const ROTULOS: Record<keyof Valores | "momento", string> = {
   estabelecimento: "nome do lugar",
@@ -391,6 +400,7 @@ export const ROTULOS: Record<keyof Valores | "momento", string> = {
   seuNome: "seu nome",
   cidade: "cidade",
   vizinho: "cliente vizinho",
+  preco: "preço",
   momento: "momento feliz do cliente",
 };
 

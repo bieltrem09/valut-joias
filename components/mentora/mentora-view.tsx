@@ -3,11 +3,12 @@
 import * as React from "react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
-import { ChevronDown, Copy, Dumbbell, Lightbulb, Shuffle, Star, Volume2, X } from "lucide-react";
+import { ChevronDown, Copy, Dumbbell, Lightbulb, Shuffle, Star, UserRound, Volume2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { ETAPAS, EVITAR, MOMENTOS, REGRAS_DE_OURO, SEGMENTOS, falaPronta, montarFala, type Roteiro, type Tom, type Valores } from "@/lib/mentora";
+import { ESTILOS } from "@/lib/mentora-estilos";
 import { formatRating } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +20,7 @@ const TOM: Record<Tom, { label: string; cls: string }> = {
   direto: { label: "Direto", cls: "bg-pending-soft text-pending" },
 };
 
-const VAZIO: Valores = { estabelecimento: "", segmento: "", nota: "", avaliacoes: "", seuNome: "", cidade: "Limeira", vizinho: "" };
+const VAZIO: Valores = { estabelecimento: "", segmento: "", nota: "", avaliacoes: "", seuNome: "", cidade: "Limeira", vizinho: "", preco: "" };
 
 /** Lê/grava no navegador sem quebrar quando o armazenamento está bloqueado. */
 const ler = <T,>(k: string, padrao: T): T => {
@@ -46,14 +47,14 @@ export function MentoraView({ leads }: { leads: LeadMentora[] }) {
   // Seu nome, cidade e favoritos ficam neste aparelho.
   React.useEffect(() => {
     const salvo = ler<Partial<Valores>>("mentora-voce", {});
-    setValores((v) => ({ ...v, seuNome: salvo.seuNome ?? "", cidade: salvo.cidade || "Limeira" }));
+    setValores((v) => ({ ...v, seuNome: salvo.seuNome ?? "", cidade: salvo.cidade || "Limeira", preco: salvo.preco ?? "" }));
     setFavoritos(ler<string[]>("mentora-favoritos", []));
   }, []);
 
   const set = (k: keyof Valores, valor: string) =>
     setValores((v) => {
       const n = { ...v, [k]: valor };
-      if (k === "seuNome" || k === "cidade") gravar("mentora-voce", { seuNome: n.seuNome, cidade: n.cidade });
+      if (k === "seuNome" || k === "cidade" || k === "preco") gravar("mentora-voce", { seuNome: n.seuNome, cidade: n.cidade, preco: n.preco });
       return n;
     });
 
@@ -77,7 +78,7 @@ export function MentoraView({ leads }: { leads: LeadMentora[] }) {
       return n;
     });
 
-  const todos = ETAPAS.flatMap((e) => e.roteiros);
+  const todos = [...ETAPAS.flatMap((e) => e.roteiros), ...ESTILOS.flatMap((e) => e.roteiros)];
   const atual = etapa === "favoritos" ? null : ETAPAS.find((e) => e.id === etapa)!;
   const lista = atual ? atual.roteiros : todos.filter((r) => favoritos.includes(r.id));
 
@@ -99,6 +100,8 @@ export function MentoraView({ leads }: { leads: LeadMentora[] }) {
             ))}
           </ol>
         </section>
+
+        <EstilosVendedor valores={valores} favoritos={favoritos} onFavorito={alternarFavorito} onTreinar={setTreino} />
 
         {/* Etapas */}
         <section aria-label="Roteiros" className="grid grid-cols-[minmax(0,1fr)] gap-4">
@@ -255,6 +258,16 @@ export function MentoraView({ leads }: { leads: LeadMentora[] }) {
             <Input id="m-cid" value={valores.cidade} onChange={(e) => set("cidade", e.target.value)} placeholder="Limeira" />
           </Field>
         </div>
+        <Field label="Preço da placa (R$)" htmlFor="m-preco" hint="Entra nos roteiros dos estilos de vendedor.">
+          <Input
+            id="m-preco"
+            value={valores.preco}
+            onChange={(e) => set("preco", e.target.value.replace(/[^\d,]/g, ""))}
+            inputMode="decimal"
+            placeholder="80"
+            className="font-mono"
+          />
+        </Field>
         <Field label="Cliente seu ali perto" htmlFor="m-viz" hint="Opcional, para a “prova do vizinho”.">
           <Input id="m-viz" value={valores.vizinho} onChange={(e) => set("vizinho", e.target.value)} placeholder="Ex.: Padaria Pão Nosso" autoComplete="off" />
         </Field>
@@ -266,6 +279,112 @@ export function MentoraView({ leads }: { leads: LeadMentora[] }) {
 
       <Treino roteiros={treino} valores={valores} onFechar={() => setTreino(null)} />
     </div>
+  );
+}
+
+/** Estilos de vendedor: escolha um jeito de abordar e veja comportamento + roteiros em ordem. */
+function EstilosVendedor({
+  valores,
+  favoritos,
+  onFavorito,
+  onTreinar,
+}: {
+  valores: Valores;
+  favoritos: string[];
+  onFavorito: (id: string) => void;
+  onTreinar: (rs: Roteiro[]) => void;
+}) {
+  const reduce = useReducedMotion();
+  const [id, setId] = React.useState(ESTILOS[0].id);
+  const e = ESTILOS.find((x) => x.id === id)!;
+  return (
+    <section aria-labelledby="estilos" className="grid grid-cols-[minmax(0,1fr)] gap-4">
+      <div>
+        <h2 id="estilos" className="flex items-center gap-2 text-16 font-semibold tracking-[-0.01em]">
+          <UserRound className="size-4 text-primary" strokeWidth={1.75} /> Estilos de vendedor
+        </h2>
+        <p className="mt-1 max-w-xl text-13 text-muted-foreground">
+          {ESTILOS.length} jeitos de abordar, tirados de vendedores reais de placa. Escolha o que combina com o lugar e com você.
+        </p>
+      </div>
+
+      <div
+        role="tablist"
+        aria-label="Estilos de vendedor"
+        className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 no-scrollbar sm:mx-0 sm:flex-wrap sm:px-0"
+      >
+        {ESTILOS.map((x, i) => (
+          <button
+            key={x.id}
+            type="button"
+            role="tab"
+            aria-selected={id === x.id}
+            onClick={() => setId(x.id)}
+            className={cn(
+              "flex h-10 shrink-0 snap-start items-center gap-2 rounded-full px-4 text-13 font-medium whitespace-nowrap ring-1 transition-colors duration-150 outline-hidden focus-visible:ring-2 focus-visible:ring-ring coarse:h-11",
+              id === x.id
+                ? "bg-primary text-primary-foreground ring-primary"
+                : "text-muted-foreground ring-border hover-fine:bg-muted hover-fine:text-foreground",
+            )}
+          >
+            <span className="font-mono text-11 opacity-70">{String(i + 1).padStart(2, "0")}</span>
+            {x.nome}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={e.id}
+          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="grid grid-cols-[minmax(0,1fr)] gap-3"
+        >
+          <div className="surface toque grid gap-4 p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="grid content-start gap-2">
+              <p className="text-20 leading-tight font-semibold tracking-[-0.015em]">{e.nome}</p>
+              <p className="text-14 text-subtle-foreground">{e.lema}</p>
+              <p className="text-12 text-muted-foreground">
+                <span className="font-medium text-foreground">De onde vem: </span>
+                {e.origem}
+              </p>
+              <p className="text-12 text-muted-foreground">
+                <span className="font-medium text-foreground">Combina com: </span>
+                {e.combina}
+              </p>
+            </div>
+            <div className="grid content-start gap-2">
+              <p className="font-mono text-11 tracking-[0.12em] text-primary uppercase">Como se comportar</p>
+              <ul className="grid gap-1.5">
+                {e.comportamento.map((c) => (
+                  <li key={c} className="flex gap-2 text-13">
+                    <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-13 text-muted-foreground">{e.roteiros.length} falas em ordem, da chegada à despedida.</p>
+            <Button variant="secondary" onClick={() => onTreinar(e.roteiros)}>
+              <Dumbbell strokeWidth={1.5} /> Treinar este estilo
+            </Button>
+          </div>
+
+          <ol className="grid gap-3">
+            {e.roteiros.map((r) => (
+              <li key={r.id}>
+                <CartaoRoteiro r={r} valores={valores} favorito={favoritos.includes(r.id)} onFavorito={() => onFavorito(r.id)} />
+              </li>
+            ))}
+          </ol>
+        </motion.div>
+      </AnimatePresence>
+    </section>
   );
 }
 
