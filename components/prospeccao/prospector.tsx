@@ -714,7 +714,9 @@ export function Prospector({
         onFocar={(id) => {
           selecionar(id);
           setAba("lista");
-          mapaBox.current?.closest("section")?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+          // No celular o mapa fica abaixo do painel: rola direto para ele.
+          const alvo = window.matchMedia("(min-width: 1024px)").matches ? mapaBox.current?.closest("section") : mapaBox.current;
+          alvo?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
         }}
         onEnviar={enviarVarios}
         onMelhoresPrimeiro={() => {
