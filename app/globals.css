@@ -383,6 +383,127 @@
   --pin: oklch(0.42 0.04 280);
 }
 
+/* Mapa da prospecção (Leaflet). Pins por prioridade, no tom do tema. */
+.lead-map.leaflet-container {
+  background: var(--muted);
+  font-family: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  border-radius: inherit;
+}
+.lead-map.leaflet-container .leaflet-control-attribution {
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+.lead-map.leaflet-container .leaflet-control-attribution a {
+  color: var(--subtle-foreground);
+}
+.lead-map.leaflet-container .leaflet-bar a {
+  background: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+/* Pinos numerados (estilo radar): gota com o número, cor pela prioridade. */
+.pin-num-wrap {
+  background: none;
+  border: 0;
+}
+.pin-num {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50% 50% 50% 4px;
+  transform: rotate(-45deg);
+  background: radial-gradient(circle at 30% 30%, color-mix(in oklch, var(--pin) 70%, white), var(--pin) 60%);
+  border: 2px solid color-mix(in oklch, white 80%, var(--pin));
+  box-shadow:
+    0 0 0 4px color-mix(in oklch, var(--pin) 22%, transparent),
+    0 6px 18px -4px color-mix(in oklch, var(--pin) 80%, transparent);
+  cursor: pointer;
+  transition:
+    transform 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out);
+}
+.pin-num span {
+  transform: rotate(45deg);
+  font:
+    600 11px/1 var(--font-jetbrains),
+    ui-monospace,
+    monospace;
+  color: white;
+  letter-spacing: 0.02em;
+}
+@media (hover: hover) {
+  .pin-num:hover {
+    transform: rotate(-45deg) scale(1.1);
+  }
+}
+.pin-num.is-selected {
+  transform: rotate(-45deg) scale(1.22);
+  box-shadow:
+    0 0 0 5px color-mix(in oklch, var(--pin) 35%, transparent),
+    0 0 28px 4px color-mix(in oklch, var(--pin) 75%, transparent);
+}
+.pin-num.is-selected::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  border: 2px solid var(--pin);
+  animation: pin-pulso 1.6s var(--ease-out) infinite;
+}
+@keyframes pin-pulso {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pin-num,
+  .pin-num.is-selected::after {
+    transition: none;
+    animation: none;
+  }
+}
+/* Tinta roxa nas ruas: o mapa base é cinza; sépia + giro de matiz vira violeta. */
+.dark .lead-map .leaflet-tile-pane {
+  filter: sepia(1) hue-rotate(215deg) saturate(2.6) brightness(0.85) contrast(1.05);
+}
+.lead-map .leaflet-tile-pane {
+  filter: sepia(0.35) hue-rotate(215deg) saturate(1.4);
+}
+.dark .lead-map.leaflet-container {
+  background: oklch(0.13 0.04 288);
+}
+.lead-voce {
+  fill: var(--primary);
+  stroke: var(--card);
+  stroke-width: 3px;
+}
+.leaflet-tooltip.lead-tip {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 0;
+  border-radius: 8px;
+  box-shadow: var(--shadow-pop);
+  font-size: 12px;
+  padding: 4px 8px;
+}
+.leaflet-tooltip.lead-tip::before {
+  display: none;
+}
+
+/* ---------------- Fundo aurora (todas as abas) ---------------- */
+.lead-map .leaflet-control-zoom {
+  border: 0;
+  box-shadow: var(--shadow-pop);
+}
+
 /* ---------------- Fundo aurora (todas as abas) ---------------- */
 .aurora {
   background: radial-gradient(120% 90% at 100% 0%, oklch(0.16 0.06 285 / 0.9), transparent 60%), var(--background);

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
@@ -28,6 +29,7 @@ import { Orb } from "@/components/ui/orb";
 import { Stars } from "@/components/clientes/stars";
 import { enviarAoFunil, registrarBusca } from "@/app/actions";
 import { Qualificador } from "./qualificador";
+import type { Pino } from "./mapa-pinos";
 import { buscarNoNavegador } from "@/lib/osm-cliente";
 import type { LeadGoogle } from "@/app/api/prospeccao/buscar/route";
 import { distanciaKm, ordenar, qualificarAberto, whatsappUrl } from "@/lib/prospeccao";
@@ -36,6 +38,9 @@ import { formatInt, formatRating } from "@/lib/format";
 import type { BuscaSalva } from "@/lib/data/leads";
 import { cn } from "@/lib/utils";
 import { Medidor, Motivos, PRIORIDADE, STATUS_FUNIL } from "./radar-ui";
+
+// Leaflet mexe em window: carrega só no navegador.
+const MapaPinos = dynamic(() => import("./mapa-pinos").then((m) => m.MapaPinos), { ssr: false });
 
 type Modo = "cidade" | "perto";
 type Ordem = "score" | "distancia" | "avaliacoes" | "nota";
@@ -92,6 +97,8 @@ export function Prospector({
   const [cores, setCores] = React.useState<"painel" | "original">("painel");
   const [carregandoMapa, setCarregandoMapa] = React.useState(true);
   const [montado, setMontado] = React.useState(false);
+  /** Com resultados, o padrão é o mapa com os pinos numerados; o Google fica a um toque. */
+  const [vista, setVista] = React.useState<"pinos" | "google">("pinos");
   React.useEffect(() => setMontado(true), []);
   React.useEffect(() => {
     if (!carregandoMapa) return;
@@ -109,6 +116,16 @@ export function Prospector({
     if (ordem === "nota") return [...ls].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || (b.totalAvaliacoes ?? 0) - (a.totalAvaliacoes ?? 0));
     return ordenar(ls, ordem) as LeadGoogle[];
   }, [resultados, filtros, ordem]);
+  const pinos = React.useMemo<Pino[]>(
+    () =>
+      lista.flatMap((l) =>
+        l.lat != null && l.lng != null
+          ? [{ id: l.placeId, lat: l.lat, lng: l.lng, nome: l.nome, numero: numeros.get(l.placeId) ?? 0, prioridade: l.prioridade }]
+          : [],
+      ),
+    [lista, numeros],
+  );
+  const comPinos = vista === "pinos" && pinos.length > 0;
   const atual = (resultados ?? []).find((l) => l.placeId === selecionado) ?? null;
 
   const embed = atual
@@ -561,9 +578,37 @@ export function Prospector({
         {/* ------------------------------- Mapa ------------------------------- */}
         <div ref={mapaBox} className="flex h-[72vh] min-h-[520px] scroll-mt-20 flex-col lg:h-full">
           <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-            <span className="flex h-8 items-center gap-1.5 rounded-full bg-muted px-3 text-12 font-medium">
-              <span className={cn("size-1.5 rounded-full bg-primary", carregandoMapa && "animate-pulse motion-reduce:animate-none")} /> Google Maps
-            </span>
+            {pinos.length > 0 ? (
+              <div role="radiogroup" aria-label="Tipo de mapa" className="flex h-8 items-center rounded-full bg-muted p-0.5 text-12 font-medium coarse:h-10">
+                {(
+                  [
+                    ["pinos", `Pinos · ${pinos.length}`],
+                    ["google", "Google Maps"],
+                  ] as const
+                ).map(([k, rotulo]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="radio"
+                    aria-checked={vista === k}
+                    onClick={() => setVista(k)}
+                    className={cn(
+                      "flex h-full items-center gap-1.5 rounded-full px-3 transition-colors duration-150",
+                      vista === k ? "bg-card text-foreground shadow-hairline" : "text-muted-foreground hover-fine:text-foreground",
+                    )}
+                  >
+                    {k === "google" && (
+                      <span className={cn("size-1.5 rounded-full bg-primary", carregandoMapa && "animate-pulse motion-reduce:animate-none")} />
+                    )}
+                    {rotulo}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span className="flex h-8 items-center gap-1.5 rounded-full bg-muted px-3 text-12 font-medium">
+                <span className={cn("size-1.5 rounded-full bg-primary", carregandoMapa && "animate-pulse motion-reduce:animate-none")} /> Google Maps
+              </span>
+            )}
             <p className="min-w-0 flex-1 truncate text-12 text-muted-foreground">
               {atual ? (
                 <span className="text-foreground">{atual.nome}</span>
@@ -581,15 +626,17 @@ export function Prospector({
                   Ver todos
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setCores((c) => (c === "painel" ? "original" : "painel"))}
-                aria-pressed={cores === "original"}
-                title={cores === "painel" ? "Cores originais do Google (melhor para fotos)" : "Cores do painel"}
-                className={botaoBarra}
-              >
-                {cores === "painel" ? "Cores originais" : "Cores do painel"}
-              </button>
+              {!comPinos && (
+                <button
+                  type="button"
+                  onClick={() => setCores((c) => (c === "painel" ? "original" : "painel"))}
+                  aria-pressed={cores === "original"}
+                  title={cores === "painel" ? "Cores originais do Google (melhor para fotos)" : "Cores do painel"}
+                  className={botaoBarra}
+                >
+                  {cores === "painel" ? "Cores originais" : "Cores do painel"}
+                </button>
+              )}
               <a
                 href={noApp}
                 target="_blank"
@@ -602,7 +649,18 @@ export function Prospector({
           </div>
 
           <div className="relative isolate min-h-0 flex-1 bg-muted">
-            {montado && (
+            {comPinos && (
+              <div className="absolute inset-0 z-[1]">
+                <MapaPinos
+                  pinos={pinos}
+                  selecionado={selecionado}
+                  onSelecionar={(id) => selecionar(id)}
+                  chave={`${contexto?.segmento}|${contexto?.onde}|${total}`}
+                  voce={alvoMaps?.perto ?? null}
+                />
+              </div>
+            )}
+            {montado && !comPinos && (
               <iframe
                 key={embed}
                 src={embed}
@@ -614,7 +672,7 @@ export function Prospector({
             )}
             {cores === "painel" && <div aria-hidden className="mapa-roxo-tinta pointer-events-none absolute inset-0" />}
             <AnimatePresence>
-              {carregandoMapa && (
+              {carregandoMapa && !comPinos && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
