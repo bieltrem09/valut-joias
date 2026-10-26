@@ -10,6 +10,7 @@ import { Aurora } from "@/components/shell/aurora";
 import { persistente } from "@/lib/db";
 import Link from "next/link";
 import "./globals.css";
+import { dono } from "@/lib/dono";
 
 const instrument = Instrument_Sans({
   variable: "--font-instrument",
@@ -40,7 +41,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const collapsed = (await cookies()).get("sidebar")?.value === "collapsed";
-  const email = process.env.OWNER_EMAIL || "bielj009s@gmail.com";
+  const { nome, email } = dono();
 
   return (
     <html lang="pt-BR" suppressHydrationWarning className={`${instrument.variable} ${jetbrains.variable}`}>
@@ -54,7 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             Pular para o conteúdo
           </a>
           <div className="flex min-h-dvh">
-            <Sidebar email={email} />
+            <Sidebar nome={nome} email={email} />
             <div className="flex min-w-0 flex-1 flex-col">
               {!persistente && (
                 <p role="status" className="bg-pending-soft px-4 py-2 text-center text-12 text-foreground md:px-8">

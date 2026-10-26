@@ -16,7 +16,7 @@ import { useSidebar } from "./providers";
  * ≥1280: expandida (ou recolhida, se o dono escolheu). 768–1279: sempre ícones.
  * <768: some, e o BottomNav assume.
  */
-export function Sidebar({ email }: { email: string }) {
+export function Sidebar({ nome, email }: { nome: string | null; email: string | null }) {
   const { collapsed } = useSidebar();
   // "wide" = rótulos visíveis. Abaixo de xl, CSS força ícones.
   const wide = !collapsed;
@@ -51,9 +51,12 @@ export function Sidebar({ email }: { email: string }) {
       </nav>
 
       <div className="mt-auto border-t border-sidebar-border px-3 py-3">
-        <p className="hidden truncate px-2 pb-2 text-12 text-sidebar-muted group-data-[wide=true]/sb:xl:block" title={email}>
-          {email}
-        </p>
+        {(nome || email) && (
+          <p className="hidden min-w-0 px-2 pb-2 leading-tight group-data-[wide=true]/sb:xl:block" title={[nome, email].filter(Boolean).join(" · ")}>
+            {nome && <span className="block truncate text-13 font-semibold text-sidebar-strong">{nome}</span>}
+            {email && <span className="block truncate text-12 text-sidebar-muted">{email}</span>}
+          </p>
+        )}
         <div className="flex flex-col items-center gap-1 group-data-[wide=true]/sb:xl:flex-row">
           <ThemeToggle />
           <Link

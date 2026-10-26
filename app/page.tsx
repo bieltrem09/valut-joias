@@ -8,6 +8,7 @@ import { CadaReal } from "@/components/vendas/cada-real";
 import { TopClientes } from "@/components/vendas/top-clientes";
 import { VendasRecentes } from "@/components/vendas/vendas-recentes";
 import { PageIntro } from "@/components/shell/page-intro";
+import { dono } from "@/lib/dono";
 
 export const metadata: Metadata = { title: { absolute: "Minhas vendas · Basik7" } };
 
@@ -16,10 +17,11 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 export default async function VendasPage({ searchParams }: Props) {
   const period = parsePeriod(await searchParams);
   const [d, empresas] = await Promise.all([getDashboard(period), listEmpresasParaSelect()]);
+  const { nome } = dono();
 
   return (
     <div className="grid gap-6 md:gap-8">
-      <PageIntro eyebrow="Seu negócio" actions={<NovaVendaButton empresas={empresas} />}>
+      <PageIntro eyebrow={nome ? `Olá, ${nome}` : "Seu negócio"} actions={<NovaVendaButton empresas={empresas} />}>
         {resumoFrase(d.placasVendidas, d.placasVendidasAnterior, period.frase, period.fraseAnterior)}
       </PageIntro>
 
