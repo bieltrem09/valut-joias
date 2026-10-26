@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { googleEnabled, testarChave } from "@/lib/google/places";
 import { usoDoMes } from "@/lib/google/uso";
 import { tomtomEnabled } from "@/lib/tomtom";
+import { usoVozDoMes, vozIaEnabled } from "@/lib/elevenlabs";
 import { bancoRemoto, persistente } from "@/lib/db";
 import { PageIntro } from "@/components/shell/page-intro";
 import { StatusDot } from "@/components/ui/chip";
@@ -17,6 +18,8 @@ export default async function ConfiguracoesPage() {
   const auth = !!(process.env.PANEL_USER && process.env.PANEL_PASS);
   const remoto = bancoRemoto;
   const tomtom = tomtomEnabled();
+  const vozIa = vozIaEnabled();
+  const usoVoz = vozIa ? await usoVozDoMes() : null;
 
   return (
     <div className="grid max-w-2xl gap-6 md:gap-8">
@@ -60,6 +63,17 @@ export default async function ConfiguracoesPage() {
           }
         />
         <Item
+          title="Voz de IA da Mentora (ElevenLabs)"
+          ok={vozIa}
+          okText="Ligada"
+          offText="Voz do aparelho"
+          body={
+            vozIa
+              ? `O Ouvir da Mentora usa uma voz de IA com emoção. Este mês: ${usoVoz!.caracteres.toLocaleString("pt-BR")} de ${usoVoz!.limite.toLocaleString("pt-BR")} caracteres. Cada fala é guardada: ouvir de novo não gasta. No limite, volta para a voz do aparelho até o dia 1º.`
+              : "Sem a chave, o Ouvir usa a voz do aparelho (já com ritmo e emoção). Com a ElevenLabs, grátis e sem cartão, a voz fica bem mais humana. Veja abaixo como ligar."
+          }
+        />
+        <Item
           title="Senha do painel"
           ok={auth}
           okText="Ativa"
@@ -71,6 +85,28 @@ export default async function ConfiguracoesPage() {
           }
         />
       </ul>
+
+      {!vozIa && (
+        <section aria-labelledby="voz" className="surface grid gap-4 p-5">
+          <h2 id="voz" className="text-16 font-semibold tracking-[-0.01em]">
+            Ligar a voz de IA da Mentora: grátis e sem cartão
+          </h2>
+          <p className="text-13 text-muted-foreground">
+            O plano grátis da ElevenLabs dá 10.000 caracteres por mês (umas 50 falas diferentes). O painel guarda cada fala gerada e para antes do limite: não
+            existe cobrança, porque não há cartão cadastrado.
+          </p>
+          <ol className="grid list-decimal gap-2 pl-5 text-13 text-subtle-foreground">
+            <li>Em elevenlabs.io, clique em “Sign up” e crie a conta grátis (e-mail ou Google).</li>
+            <li>No canto de baixo, abra o seu perfil → “API Keys” → “Create API Key”, dê um nome (ex.: Basik7) e copie a chave.</li>
+            <li>Na Vercel, em Settings → Environment Variables, crie ELEVENLABS_API_KEY com a chave (Production e Preview).</li>
+            <li>
+              Opcional: na “Voice Library” da ElevenLabs, escolha uma voz brasileira de que goste, copie o “Voice ID” e crie ELEVENLABS_VOICE_ID com ele. Sem
+              isso, o painel usa uma voz padrão que fala português com emoção.
+            </li>
+            <li>Publique de novo. Aqui em cima a voz passa a aparecer como “Ligada”.</li>
+          </ol>
+        </section>
+      )}
 
       {!tomtom && !google && (
         <section aria-labelledby="tomtom" className="surface grid gap-4 p-5">

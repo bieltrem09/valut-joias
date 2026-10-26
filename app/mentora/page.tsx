@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { listLeads } from "@/lib/data/leads";
 import { listGravacoes } from "@/lib/data/mentora";
+import { vozIaEnabled } from "@/lib/elevenlabs";
 import { PageIntro } from "@/components/shell/page-intro";
 import { MentoraView } from "@/components/mentora/mentora-view";
 
@@ -15,6 +16,7 @@ export default async function MentoraPage() {
       </PageIntro>
       <MentoraView
         gravacoes={gravacoes}
+        vozIa={vozIaEnabled()}
         leads={leads
           .filter((l) => l.status !== "fechado" && l.status !== "perdido")
           .map((l) => ({ placeId: l.placeId, nome: l.nome, segmento: l.segmento ?? l.categoria, rating: l.rating, totalAvaliacoes: l.totalAvaliacoes }))}

@@ -255,6 +255,22 @@ export const gravacoes = pgTable("gravacoes", {
   criadaEm: text("criada_em").notNull(),
 });
 
+/** Falas geradas pela voz de IA, guardadas para não gastar a cota de novo. */
+export const falasIa = pgTable("falas_ia", {
+  id: serial("id").primaryKey(),
+  chave: text("chave").notNull().unique(),
+  mime: text("mime").notNull(),
+  bytes: bytea("bytes").notNull(),
+  caracteres: integer("caracteres").notNull(),
+  criadaEm: text("criada_em").notNull(),
+});
+
+/** Caracteres gastos na voz de IA por mês (a cota grátis é por caractere). */
+export const usoVoz = pgTable("uso_voz", {
+  mes: text("mes").primaryKey(),
+  caracteres: integer("caracteres").notNull().default(0),
+});
+
 export type LeadStatus = (typeof leads.$inferSelect)["status"];
 
 export type Empresa = typeof empresas.$inferSelect;

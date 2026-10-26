@@ -2,20 +2,26 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Check, Mic, Pause, RotateCcw, Square, Trash2, Volume2 } from "lucide-react";
+import { Check, Loader2, Mic, Pause, RotateCcw, Square, Trash2, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { excluirGravacao, salvarGravacao } from "@/app/mentora/actions";
 import type { GravacaoInfo } from "@/lib/data/mentora";
+import { notaVoz, prosodia } from "@/lib/fala-expressiva";
+import type { Tom } from "@/lib/mentora";
 import { cn } from "@/lib/utils";
 
 /**
- * A sua voz na Mentora: cada roteiro pode ter uma gravação sua. Quando tem,
- * "Ouvir" toca a gravação; quando não tem, cai na voz do aparelho.
+ * Quem fala no "Ouvir", nesta ordem:
+ * 1. a sua gravação, se você gravou aquele roteiro;
+ * 2. a voz de IA com emoção (ElevenLabs), se a chave estiver ligada;
+ * 3. a voz do aparelho, frase por frase, com ritmo, altura e pausas de quem fala de verdade.
  */
 type Voz = {
   gravacoes: Record<string, GravacaoInfo>;
   tocando: string | null;
-  tocar: (roteiroId: string, texto: string) => void;
+  gerando: string | null;
+  vozIa: boolean;
+  tocar: (roteiroId: string, texto: string, tom: Tom) => void;
   parar: () => void;
   guardar: (roteiroId: string, g: GravacaoInfo | null) => void;
 };
@@ -23,40 +29,106 @@ type Voz = {
 const Ctx = React.createContext<Voz | null>(null);
 const LIMITE_S = 180;
 
-export function VozProvider({ inicial, children }: { inicial: Record<string, GravacaoInfo>; children: React.ReactNode }) {
+/** A voz mais natural em português que o aparelho tiver (as "Natural"/"Google" soam humanas). */
+function melhorVoz(): SpeechSynthesisVoice | null {
+  const vozes = window.speechSynthesis.getVoices();
+  return [...vozes].filter((v) => notaVoz(v) > 0).sort((a, b) => notaVoz(b) - notaVoz(a))[0] ?? null;
+}
+
+export function VozProvider({ inicial, vozIa, children }: { inicial: Record<string, GravacaoInfo>; vozIa: boolean; children: React.ReactNode }) {
   const [gravacoes, setGravacoes] = React.useState(inicial);
   const [tocando, setTocando] = React.useState<string | null>(null);
+  const [gerando, setGerando] = React.useState<string | null>(null);
+  const [iaLigada, setIaLigada] = React.useState(vozIa);
   const audio = React.useRef<HTMLAudioElement | null>(null);
+  const falasIa = React.useRef(new Map<string, number>());
+  /** Cada "Ouvir" ganha um número; quem for interrompido não continua falando. */
+  const vez = React.useRef(0);
+
+  // As vozes do aparelho carregam depois da página.
+  React.useEffect(() => {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }, []);
 
   const parar = React.useCallback(() => {
+    vez.current++;
     audio.current?.pause();
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     setTocando(null);
+    setGerando(null);
+  }, []);
+
+  const tocarArquivo = React.useCallback((roteiroId: string, url: string, minha: boolean) => {
+    audio.current ??= new Audio();
+    const a = audio.current;
+    a.src = url;
+    a.onended = () => setTocando(null);
+    a.play().then(
+      () => setTocando(roteiroId),
+      () => toast.error(minha ? "Não deu para tocar a gravação." : "Não deu para tocar a voz."),
+    );
+  }, []);
+
+  const falarNoAparelho = React.useCallback((roteiroId: string, texto: string, tom: Tom) => {
+    if (!("speechSynthesis" in window)) return void toast("Seu navegador não lê em voz alta. Grave a sua voz neste roteiro.");
+    const minhaVez = vez.current;
+    const trechos = prosodia(texto, tom);
+    const voz = melhorVoz();
+    setTocando(roteiroId);
+    const falar = (i: number) => {
+      if (vez.current !== minhaVez) return;
+      if (i >= trechos.length) return setTocando(null);
+      const t = trechos[i];
+      const u = new SpeechSynthesisUtterance(t.texto);
+      u.lang = voz?.lang ?? "pt-BR";
+      try {
+        if (voz) u.voice = voz;
+      } catch {
+        // Voz que o navegador não aceita: fala com a padrão em pt-BR.
+      }
+      u.rate = t.rate;
+      u.pitch = t.pitch;
+      u.onend = () => setTimeout(() => falar(i + 1), t.pausaMs);
+      u.onerror = () => vez.current === minhaVez && setTocando(null);
+      window.speechSynthesis.speak(u);
+    };
+    falar(0);
   }, []);
 
   const tocar = React.useCallback(
-    (roteiroId: string, texto: string) => {
+    (roteiroId: string, texto: string, tom: Tom) => {
       parar();
       const g = gravacoes[roteiroId];
-      if (g) {
-        audio.current ??= new Audio();
-        const a = audio.current;
-        a.src = `/api/mentora/audio/${g.id}`;
-        a.onended = () => setTocando(null);
-        a.play().then(
-          () => setTocando(roteiroId),
-          () => toast.error("Não deu para tocar a gravação."),
-        );
-        return;
-      }
-      if (!("speechSynthesis" in window)) return void toast("Seu navegador não lê em voz alta. Grave a sua voz neste roteiro.");
-      const u = new SpeechSynthesisUtterance(texto.replace(/\[[^\]]+\]/g, ""));
-      u.lang = "pt-BR";
-      u.onend = () => setTocando(null);
-      setTocando(roteiroId);
-      window.speechSynthesis.speak(u);
+      if (g) return tocarArquivo(roteiroId, `/api/mentora/audio/${g.id}`, true);
+      if (!iaLigada) return falarNoAparelho(roteiroId, texto, tom);
+
+      const chave = `${tom}|${texto}`;
+      const pronto = falasIa.current.get(chave);
+      if (pronto) return tocarArquivo(roteiroId, `/api/mentora/fala/${pronto}`, false);
+      const minhaVez = vez.current;
+      setGerando(roteiroId);
+      fetch("/api/mentora/falar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texto, tom }) })
+        .then((r) => r.json() as Promise<{ ok: boolean; id?: number; error?: string }>)
+        .then((r) => {
+          if (vez.current !== minhaVez) return;
+          setGerando(null);
+          if (!r.ok || !r.id) throw new Error(r.error ?? "A voz de IA não respondeu.");
+          falasIa.current.set(chave, r.id);
+          tocarArquivo(roteiroId, `/api/mentora/fala/${r.id}`, false);
+        })
+        .catch((e: unknown) => {
+          if (vez.current !== minhaVez) return;
+          setGerando(null);
+          const msg = e instanceof Error ? e.message : "A voz de IA não respondeu.";
+          // Cota do mês acabou ou chave recusada: até resolver, usa a voz do aparelho sem perguntar de novo.
+          if (/cota|chave/i.test(msg)) setIaLigada(false);
+          toast(msg, { description: "Tocando com a voz do aparelho." });
+          falarNoAparelho(roteiroId, texto, tom);
+        });
     },
-    [gravacoes, parar],
+    [gravacoes, iaLigada, parar, tocarArquivo, falarNoAparelho],
   );
 
   const guardar = React.useCallback((roteiroId: string, g: GravacaoInfo | null) => {
@@ -70,7 +142,7 @@ export function VozProvider({ inicial, children }: { inicial: Record<string, Gra
 
   React.useEffect(() => parar, [parar]);
 
-  return <Ctx.Provider value={{ gravacoes, tocando, tocar, parar, guardar }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ gravacoes, tocando, gerando, vozIa: iaLigada, tocar, parar, guardar }}>{children}</Ctx.Provider>;
 }
 
 const useVoz = () => {
@@ -80,26 +152,35 @@ const useVoz = () => {
 };
 
 export const useTotalGravacoes = () => Object.keys(useVoz().gravacoes).length;
+export const useVozIa = () => useVoz().vozIa;
 
-/** "Ouvir": a sua gravação se existir; senão, a voz do aparelho. */
+/** "Ouvir": a sua gravação, a voz de IA ou a voz do aparelho com emoção. */
 export function BotaoOuvir({
   roteiroId,
   texto,
+  tom,
   size = "sm",
   variant = "ghost",
 }: {
   roteiroId: string;
   texto: string;
+  tom: Tom;
   size?: "sm" | "md";
   variant?: "ghost" | "secondary";
 }) {
-  const { gravacoes, tocando, tocar, parar } = useVoz();
+  const { gravacoes, tocando, gerando, tocar, parar } = useVoz();
   const minha = !!gravacoes[roteiroId];
-  const ativo = tocando === roteiroId;
+  const ativo = tocando === roteiroId || gerando === roteiroId;
   return (
-    <Button size={size} variant={variant} onClick={() => (ativo ? parar() : tocar(roteiroId, texto))} aria-pressed={ativo}>
-      {ativo ? <Pause strokeWidth={1.5} /> : <Volume2 strokeWidth={1.5} />}
-      {ativo ? "Parar" : minha ? "Ouvir minha voz" : "Ouvir"}
+    <Button size={size} variant={variant} onClick={() => (ativo ? parar() : tocar(roteiroId, texto, tom))} aria-pressed={ativo}>
+      {gerando === roteiroId ? (
+        <Loader2 className="animate-spin motion-reduce:animate-none" strokeWidth={1.5} />
+      ) : ativo ? (
+        <Pause strokeWidth={1.5} />
+      ) : (
+        <Volume2 strokeWidth={1.5} />
+      )}
+      {gerando === roteiroId ? "Preparando a voz…" : ativo ? "Parar" : minha ? "Ouvir minha voz" : "Ouvir"}
     </Button>
   );
 }

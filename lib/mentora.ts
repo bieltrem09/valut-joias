@@ -428,3 +428,22 @@ export const falaPronta = (fala: string, v: Partial<Valores>) =>
   montarFala(fala, v)
     .map((p) => p.texto)
     .join("");
+
+/** Para ouvir: campo vazio vira uma expressão natural em vez de sumir da frase. */
+const FALADO_PADRAO: Record<keyof typeof ROTULOS, string> = {
+  estabelecimento: "seu negócio",
+  segmento: "comércio",
+  nota: "boa",
+  avaliacoes: "poucas",
+  seuNome: "seu parceiro aqui",
+  cidade: "nossa cidade",
+  vizinho: "vizinho aqui do lado",
+  preco: "tantos",
+  momento: "na hora em que o cliente sai satisfeito",
+};
+
+export const falaParaOuvir = (fala: string, v: Partial<Valores>) =>
+  montarFala(fala, v)
+    .map((p) => (p.marcador && !p.preenchido ? FALADO_PADRAO[p.marcador] : p.texto))
+    .join("")
+    .replace(/R\$ tantos/g, "tantos reais");

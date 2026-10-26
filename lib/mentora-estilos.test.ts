@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ESTILOS } from "./mentora-estilos";
-import { ETAPAS, ROTULOS, falaPronta } from "./mentora";
+import { ETAPAS, ROTULOS, falaParaOuvir, falaPronta } from "./mentora";
 
 describe("estilos de vendedor", () => {
   const todos = [...ETAPAS.flatMap((e) => e.roteiros), ...ESTILOS.flatMap((e) => e.roteiros)];
@@ -28,5 +28,12 @@ describe("estilos de vendedor", () => {
   it("preenche o preço", () => {
     const r = ESTILOS.find((e) => e.id === "balcao")!.roteiros.find((x) => x.id === "balcao-preco")!;
     expect(falaPronta(r.fala, { preco: "80" })).toContain("R$ 80 a unidade");
+  });
+
+  it("para ouvir, campo vazio vira expressão natural", () => {
+    expect(falaParaOuvir("O valor dela é R$ {preco} a unidade, aqui no {estabelecimento}.", {})).toBe(
+      "O valor dela é tantos reais a unidade, aqui no seu negócio.",
+    );
+    expect(falaParaOuvir("Fica R$ {preco}.", { preco: "80" })).toBe("Fica R$ 80.");
   });
 });

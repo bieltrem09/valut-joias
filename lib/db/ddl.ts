@@ -164,6 +164,18 @@ create table if not exists uso_google (
   detalhes integer not null default 0,
   fotos integer not null default 0
 );
+create table if not exists falas_ia (
+  id serial primary key,
+  chave text not null unique,
+  mime text not null,
+  bytes bytea not null,
+  caracteres integer not null,
+  criada_em text not null
+);
+create table if not exists uso_voz (
+  mes text primary key,
+  caracteres integer not null default 0
+);
 create table if not exists gravacoes (
   id serial primary key,
   roteiro_id text not null unique,
