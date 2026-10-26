@@ -20,7 +20,7 @@ export function middleware(req: NextRequest) {
   }
   return new NextResponse("Acesso restrito.", {
     status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Ecloura", charset="UTF-8"' },
+    headers: { "WWW-Authenticate": 'Basic realm="Basik7", charset="UTF-8"' },
   });
 }
 
@@ -33,5 +33,5 @@ function safeEqual(a: string, b: string) {
 
 export const config = {
   // /r/* é o link público das placas; /api/cron/* tem segredo próprio (CRON_SECRET).
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|r/|api/cron/).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon\\.svg|icon\\.png|apple-icon\\.png|r/|api/cron/).*)"],
 };
