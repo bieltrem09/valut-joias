@@ -21,7 +21,7 @@ export default async function VendasPage({ searchParams }: Props) {
 
   return (
     <div className="grid gap-6 md:gap-8">
-      <PageIntro eyebrow={nome ? `Olá, ${nome}` : "Seu negócio"} actions={<NovaVendaButton empresas={empresas} />}>
+      <PageIntro eyebrow="Seu negócio" saudacao={nome ? `Olá, ${nome}` : undefined} actions={<NovaVendaButton empresas={empresas} />}>
         {resumoFrase(d.placasVendidas, d.placasVendidasAnterior, period.frase, period.fraseAnterior)}
       </PageIntro>
 

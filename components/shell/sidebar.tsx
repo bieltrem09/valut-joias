@@ -53,7 +53,7 @@ export function Sidebar({ nome, email }: { nome: string | null; email: string | 
       <div className="mt-auto border-t border-sidebar-border px-3 py-3">
         {(nome || email) && (
           <p className="hidden min-w-0 px-2 pb-2 leading-tight group-data-[wide=true]/sb:xl:block" title={[nome, email].filter(Boolean).join(" · ")}>
-            {nome && <span className="block truncate text-13 font-semibold text-sidebar-strong">{nome}</span>}
+            {nome && <span className="block truncate text-16 font-semibold tracking-[-0.01em] text-sidebar-strong">{nome}</span>}
             {email && <span className="block truncate text-12 text-sidebar-muted">{email}</span>}
           </p>
         )}
