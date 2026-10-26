@@ -3,12 +3,14 @@
 import * as React from "react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
-import { ChevronDown, Copy, Dumbbell, Lightbulb, Shuffle, Star, UserRound, Volume2, X } from "lucide-react";
+import { ChevronDown, Copy, Dumbbell, Lightbulb, Mic, Shuffle, Star, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { ETAPAS, EVITAR, MOMENTOS, REGRAS_DE_OURO, SEGMENTOS, falaPronta, montarFala, type Roteiro, type Tom, type Valores } from "@/lib/mentora";
 import { ESTILOS } from "@/lib/mentora-estilos";
+import type { GravacaoInfo } from "@/lib/data/mentora";
+import { BotaoOuvir, Gravador, VozProvider, useTotalGravacoes } from "./voz";
 import { formatRating } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +39,15 @@ const gravar = (k: string, v: unknown) => {
   } catch {}
 };
 
-export function MentoraView({ leads }: { leads: LeadMentora[] }) {
+export function MentoraView({ leads, gravacoes }: { leads: LeadMentora[]; gravacoes: Record<string, GravacaoInfo> }) {
+  return (
+    <VozProvider inicial={gravacoes}>
+      <Mentora leads={leads} />
+    </VozProvider>
+  );
+}
+
+function Mentora({ leads }: { leads: LeadMentora[] }) {
   const reduce = useReducedMotion();
   const [valores, setValores] = React.useState<Valores>(VAZIO);
   const [etapa, setEtapa] = React.useState<string>(ETAPAS[0].id);
@@ -85,6 +95,8 @@ export function MentoraView({ leads }: { leads: LeadMentora[] }) {
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
+        <SuaVoz total={todos.length} />
+
         {/* Regras de ouro */}
         <section aria-labelledby="regras" className="grid grid-cols-[minmax(0,1fr)] gap-3">
           <h2 id="regras" className="flex items-center gap-2 text-16 font-semibold tracking-[-0.01em]">
@@ -282,6 +294,52 @@ export function MentoraView({ leads }: { leads: LeadMentora[] }) {
   );
 }
 
+const DICAS_VOZ = [
+  "Grave em pé e sorrindo: sorriso se ouve na voz.",
+  "Imagine o dono na sua frente, no balcão. Fale com ele, não leia.",
+  "Faça uma pausa curta antes da pergunta e suba o tom no final dela.",
+  "Troque palavras se quiser: o roteiro é um guia, a voz é sua.",
+  "Grave duas ou três vezes, ouça a prévia e salve a que soar mais natural.",
+];
+
+/** A sua voz: o que é, quantos roteiros já têm gravação e dicas para gravar com sentimento. */
+function SuaVoz({ total }: { total: number }) {
+  const feitas = useTotalGravacoes();
+  return (
+    <section aria-labelledby="sua-voz" className="surface toque grid gap-4 p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+      <div className="grid content-start gap-2">
+        <h2 id="sua-voz" className="flex items-center gap-2 text-16 font-semibold tracking-[-0.01em]">
+          <Mic className="size-4 text-primary" strokeWidth={1.75} /> Sua voz nos roteiros
+        </h2>
+        <p className="text-13 text-muted-foreground">
+          Em cada roteiro, toque em <span className="font-medium text-foreground">Gravar minha voz</span> e fale do seu jeito. Depois o{" "}
+          <span className="font-medium text-foreground">Ouvir</span> toca você, com o seu sentimento, para treinar antes de sair.
+        </p>
+        <div className="mt-1 grid gap-1.5">
+          <p className="font-mono text-12 tabular">
+            <span className="text-20 font-semibold text-foreground">{feitas}</span>{" "}
+            <span className="text-muted-foreground">de {total} roteiros com a sua voz</span>
+          </p>
+          <span className="h-1.5 overflow-hidden rounded-full bg-muted">
+            <span
+              className="block h-full rounded-full bg-primary transition-[width] duration-500"
+              style={{ width: `${Math.min(100, (feitas / total) * 100)}%` }}
+            />
+          </span>
+        </div>
+      </div>
+      <ul className="grid content-start gap-1.5">
+        {DICAS_VOZ.map((d) => (
+          <li key={d} className="flex gap-2 text-13">
+            <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+            {d}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** Estilos de vendedor: escolha um jeito de abordar e veja comportamento + roteiros em ordem. */
 function EstilosVendedor({
   valores,
@@ -410,15 +468,6 @@ function Fala({ r, valores, grande }: { r: Roteiro; valores: Valores; grande?: b
   );
 }
 
-function ouvir(texto: string) {
-  if (!("speechSynthesis" in window)) return toast("Seu navegador não lê em voz alta.");
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(texto.replace(/\[[^\]]+\]/g, ""));
-  u.lang = "pt-BR";
-  u.rate = 1;
-  window.speechSynthesis.speak(u);
-}
-
 function CartaoRoteiro({ r, valores, favorito, onFavorito }: { r: Roteiro; valores: Valores; favorito: boolean; onFavorito: () => void }) {
   const [aberto, setAberto] = React.useState(false);
   const texto = falaPronta(r.fala, valores);
@@ -461,9 +510,8 @@ function CartaoRoteiro({ r, valores, favorito, onFavorito }: { r: Roteiro; valor
         >
           <Copy strokeWidth={1.5} /> Copiar
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => ouvir(texto)}>
-          <Volume2 strokeWidth={1.5} /> Ouvir
-        </Button>
+        <BotaoOuvir roteiroId={r.id} texto={texto} />
+        <Gravador roteiroId={r.id} />
         <button
           type="button"
           onClick={() => setAberto((v) => !v)}
@@ -533,9 +581,8 @@ function Treino({ roteiros, valores, onFechar }: { roteiros: Roteiro[] | null; v
           </div>
           <Fala r={r} valores={valores} grande />
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => ouvir(falaPronta(r.fala, valores))}>
-              <Volume2 strokeWidth={1.5} /> Ouvir
-            </Button>
+            <BotaoOuvir roteiroId={r.id} texto={falaPronta(r.fala, valores)} size="md" variant="secondary" />
+            <Gravador roteiroId={r.id} />
             {!mostrar && (
               <Button variant="ghost" onClick={() => setMostrar(true)}>
                 <Lightbulb strokeWidth={1.5} /> Por que funciona

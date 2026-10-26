@@ -245,6 +245,16 @@ export const usoGoogle = pgTable("uso_google", {
   fotos: integer("fotos").notNull().default(0),
 });
 
+/** Sua voz falando cada roteiro da Mentora (uma gravação por roteiro; regravar troca). */
+export const gravacoes = pgTable("gravacoes", {
+  id: serial("id").primaryKey(),
+  roteiroId: text("roteiro_id").notNull().unique(),
+  mime: text("mime").notNull(),
+  bytes: bytea("bytes").notNull(),
+  segundos: doublePrecision("segundos"),
+  criadaEm: text("criada_em").notNull(),
+});
+
 export type LeadStatus = (typeof leads.$inferSelect)["status"];
 
 export type Empresa = typeof empresas.$inferSelect;

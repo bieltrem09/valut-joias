@@ -164,4 +164,12 @@ create table if not exists uso_google (
   detalhes integer not null default 0,
   fotos integer not null default 0
 );
+create table if not exists gravacoes (
+  id serial primary key,
+  roteiro_id text not null unique,
+  mime text not null,
+  bytes bytea not null,
+  segundos double precision,
+  criada_em text not null
+);
 `;
