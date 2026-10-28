@@ -31,6 +31,7 @@ import { enviarAoFunil, registrarBusca } from "@/app/actions";
 import { Qualificador } from "./qualificador";
 import { buscarNoNavegador } from "@/lib/osm-cliente";
 import { TODOS, ehTodos, juntarFontes, type LugarAberto } from "@/lib/osm";
+import { GRUPOS_NICHOS, NICHOS_DESTAQUE, TOTAL_NICHOS } from "@/lib/nichos";
 import type { LeadGoogle } from "@/app/api/prospeccao/buscar/route";
 import { distanciaKm, ordenar, qualificarAberto, whatsappUrl } from "@/lib/prospeccao";
 import { urlBuscaMaps, urlEmbedMaps } from "@/lib/maps-link";
@@ -64,7 +65,6 @@ type Ordem = "score" | "distancia" | "avaliacoes" | "nota";
 type Filtro = "whatsapp" | "semSite" | "aberto" | "notaAlta";
 type Uso = { buscas: number; fotos: number; limites: { buscas: number; fotos: number } };
 
-const NICHOS = ["restaurante", "hamburgueria", "pizzaria", "barbearia", "salão de beleza", "clínica odontológica", "pet shop", "academia", "açaí", "estética"];
 const FILTROS: [Filtro, string][] = [
   ["whatsapp", "WhatsApp"],
   ["semSite", "Sem site"],
@@ -127,15 +127,26 @@ export function Prospector({
   }, [carregandoMapa]);
 
   const numeros = React.useMemo(() => new Map((resultados ?? []).map((l, i) => [l.placeId, i + 1])), [resultados]);
+  /** Ramo escolhido no filtro (útil quando a busca traz todos os nichos). */
+  const [ramo, setRamo] = React.useState("");
+  /** Quantos itens a lista do painel mostra (o resto vem no "Ver mais"). */
+  const [mostrar, setMostrar] = React.useState(80);
+  const ramos = React.useMemo(() => {
+    const cont = new Map<string, number>();
+    for (const l of resultados ?? []) cont.set(l.categoria ?? "Outros", (cont.get(l.categoria ?? "Outros") ?? 0) + 1);
+    return [...cont].sort((a, b) => b[1] - a[1]);
+  }, [resultados]);
   const lista = React.useMemo(() => {
     let ls = resultados ?? [];
+    if (ramo) ls = ls.filter((l) => (l.categoria ?? "Outros") === ramo);
     if (filtros.has("whatsapp")) ls = ls.filter((l) => l.telefone && whatsappUrl(l.telefone));
     if (filtros.has("semSite")) ls = ls.filter((l) => !l.website);
     if (filtros.has("aberto")) ls = ls.filter((l) => l.abertoAgora);
     if (filtros.has("notaAlta")) ls = ls.filter((l) => (l.rating ?? 0) >= 4.5);
     if (ordem === "nota") return [...ls].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || (b.totalAvaliacoes ?? 0) - (a.totalAvaliacoes ?? 0));
     return ordenar(ls, ordem) as LeadGoogle[];
-  }, [resultados, filtros, ordem]);
+  }, [resultados, filtros, ordem, ramo]);
+  React.useEffect(() => setMostrar(80), [resultados, filtros, ordem, ramo]);
   const atual = (resultados ?? []).find((l) => l.placeId === selecionado) ?? null;
 
   const embed = atual
@@ -236,6 +247,7 @@ export function Prospector({
           .filter((l) => m !== "perto" || l.distanciaKm == null || l.distanciaKm <= raio);
         setResultados(ordenar(leads, m === "perto" ? "distancia" : "score") as LeadGoogle[]);
         setFiltros(new Set());
+        setRamo("");
         setOrdem(m === "perto" ? "distancia" : "score");
         setContexto({ segmento: seg, onde: m === "perto" ? `até ${raio} km de você` : (onde?.nome ?? loc) });
         setAba("lista");
@@ -258,6 +270,7 @@ export function Prospector({
       if (!body.ok || !body.leads) throw new Error(body.error ?? "O Google não respondeu. Tente de novo.");
       setResultados(body.leads);
       setFiltros(new Set());
+      setRamo("");
       setOrdem(m === "perto" ? "distancia" : "score");
       setContexto({ segmento: seg, onde: m === "perto" ? `até ${raio} km de você` : (body.onde?.nome ?? loc) });
       setAba("lista");
@@ -408,24 +421,33 @@ export function Prospector({
                         </button>
                       )}
                     </div>
+                    <p className="text-11 text-muted-foreground">Os que mais compram a placa:</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {NICHOS.map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          onClick={() => setSegmento(n)}
-                          aria-pressed={segmento === n}
-                          className={cn(
-                            "h-7 rounded-full px-2.5 text-12 ring-1 transition-[color,background-color,transform] duration-150 ease-out-strong active:scale-[0.96] coarse:h-9",
-                            segmento === n
-                              ? "bg-primary text-primary-foreground ring-primary"
-                              : "bg-card/60 text-subtle-foreground ring-border hover-fine:text-foreground",
-                          )}
-                        >
-                          {n}
-                        </button>
+                      {NICHOS_DESTAQUE.map((n) => (
+                        <ChipNicho key={n} n={n} ativo={segmento === n} onClick={() => setSegmento(n)} />
                       ))}
                     </div>
+                    <details className="group/nichos rounded-card ring-1 ring-border open:bg-card/40">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-12 font-medium text-subtle-foreground hover-fine:text-foreground">
+                        Mais nichos ({TOTAL_NICHOS})
+                        <ChevronDown
+                          className="size-4 transition-transform duration-200 group-open/nichos:rotate-180 motion-reduce:transition-none"
+                          strokeWidth={1.5}
+                        />
+                      </summary>
+                      <div className="grid gap-3 px-3 pt-1 pb-3">
+                        {GRUPOS_NICHOS.map((g) => (
+                          <div key={g.titulo} className="grid gap-1.5">
+                            <p className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">{g.titulo}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {g.nichos.map((n) => (
+                                <ChipNicho key={n} n={n} ativo={segmento === n} onClick={() => setSegmento(n)} />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
                   </div>
                 </Etapa>
 
@@ -479,33 +501,59 @@ export function Prospector({
                   )}
                 </Etapa>
 
-                <Etapa n="+" titulo="Tudo perto de mim">
-                  <div className="rounded-card bg-accent/40 p-3 ring-1 ring-primary/30">
-                    <p className="flex items-center gap-2 text-13 font-semibold">
-                      <LocateFixed className="size-4 text-primary" strokeWidth={1.75} /> Todos os estabelecimentos ao seu redor
-                    </p>
-                    <p className="mt-0.5 text-12 text-muted-foreground">De qualquer ramo, a partir de onde você está agora. Escolha a distância:</p>
-                    <div className="mt-2.5 grid grid-cols-4 gap-1.5" role="group" aria-label="Distância">
-                      {[1, 2, 3, 5].map((km) => (
-                        <button
-                          key={km}
-                          type="button"
-                          disabled={carregando}
-                          onClick={() => {
-                            setModo("perto");
-                            setRaioKm(km);
-                            buscar({ segmento: TODOS, modo: "perto", raioKm: km });
-                          }}
-                          className={cn(
-                            "h-10 rounded-control font-mono text-13 font-semibold ring-1 transition-[background-color,transform] duration-150 active:scale-[0.96] disabled:opacity-60 coarse:h-11",
-                            ehTodos(contexto?.segmento ?? "") && modo === "perto" && raioKm === km
-                              ? "bg-primary text-primary-foreground ring-primary"
-                              : "bg-card ring-border hover-fine:bg-muted",
-                          )}
-                        >
-                          {km} km
-                        </button>
-                      ))}
+                <Etapa n="+" titulo="Todos os nichos de uma vez">
+                  <div className="grid gap-3 rounded-card bg-accent/40 p-3 ring-1 ring-primary/30">
+                    <div>
+                      <p className="flex items-center gap-2 text-13 font-semibold">
+                        <Globe className="size-4 text-primary" strokeWidth={1.75} /> A cidade inteira
+                      </p>
+                      <p className="mt-0.5 text-12 text-muted-foreground">
+                        Todos os estabelecimentos de {local.trim() || "Limeira, SP"}, de qualquer ramo, sem limite de distância.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={carregando}
+                        onClick={() => {
+                          setModo("cidade");
+                          buscar({ segmento: TODOS, modo: "cidade", local: local.trim() || "Limeira, SP" });
+                        }}
+                        className={cn(
+                          "mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-control text-13 font-semibold ring-1 transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-60 coarse:h-11",
+                          ehTodos(contexto?.segmento ?? "") && modo === "cidade"
+                            ? "bg-primary text-primary-foreground ring-primary"
+                            : "bg-card ring-border hover-fine:bg-muted",
+                        )}
+                      >
+                        <Search className="size-4" strokeWidth={1.75} /> Buscar todos em {(local.trim() || "Limeira, SP").split(",")[0]}
+                      </button>
+                    </div>
+                    <div className="border-t border-primary/20 pt-3">
+                      <p className="flex items-center gap-2 text-13 font-semibold">
+                        <LocateFixed className="size-4 text-primary" strokeWidth={1.75} /> Perto de mim
+                      </p>
+                      <p className="mt-0.5 text-12 text-muted-foreground">De qualquer ramo, a partir de onde você está agora. Escolha a distância:</p>
+                      <div className="mt-2.5 grid grid-cols-4 gap-1.5" role="group" aria-label="Distância">
+                        {[1, 2, 3, 5].map((km) => (
+                          <button
+                            key={km}
+                            type="button"
+                            disabled={carregando}
+                            onClick={() => {
+                              setModo("perto");
+                              setRaioKm(km);
+                              buscar({ segmento: TODOS, modo: "perto", raioKm: km });
+                            }}
+                            className={cn(
+                              "h-10 rounded-control font-mono text-13 font-semibold ring-1 transition-[background-color,transform] duration-150 active:scale-[0.96] disabled:opacity-60 coarse:h-11",
+                              ehTodos(contexto?.segmento ?? "") && modo === "perto" && raioKm === km
+                                ? "bg-primary text-primary-foreground ring-primary"
+                                : "bg-card ring-border hover-fine:bg-muted",
+                            )}
+                          >
+                            {km} km
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </Etapa>
@@ -549,6 +597,16 @@ export function Prospector({
                     {temGoogle && <option value="nota">Melhor nota</option>}
                   </Select>
                 </div>
+                {ramos.length > 1 && (
+                  <Select value={ramo} onChange={(e) => setRamo(e.target.value)} className="h-9 text-12" aria-label="Ramo">
+                    <option value="">Todos os ramos ({resultados?.length ?? 0})</option>
+                    {ramos.map(([r, n]) => (
+                      <option key={r} value={r}>
+                        {r} ({n})
+                      </option>
+                    ))}
+                  </Select>
+                )}
                 <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtros">
                   {FILTROS.filter(([k]) => temGoogle || (k !== "aberto" && k !== "notaAlta")).map(([k, l]) => (
                     <button
@@ -592,12 +650,21 @@ export function Prospector({
                   </div>
                 ) : (
                   <ol className="grid gap-2">
-                    {lista.map((l) => (
+                    {lista.slice(0, mostrar).map((l) => (
                       <li key={l.placeId}>
                         <ItemLista l={l} numero={numeros.get(l.placeId)!} ativo={selecionado === l.placeId} onClick={() => selecionar(l.placeId)} />
                       </li>
                     ))}
                   </ol>
+                )}
+                {lista.length > mostrar && (
+                  <button
+                    type="button"
+                    onClick={() => setMostrar((m) => m + 80)}
+                    className="h-10 rounded-card text-13 font-medium text-primary ring-1 ring-border hover-fine:bg-muted coarse:h-11"
+                  >
+                    Ver mais {Math.min(80, lista.length - mostrar)} de {lista.length - mostrar} restantes
+                  </button>
                 )}
               </div>
             )}
@@ -738,6 +805,7 @@ export function Prospector({
         onMelhoresPrimeiro={() => {
           setOrdem("score");
           setFiltros(new Set());
+          setRamo("");
         }}
         onSoWhatsapp={() => setFiltros(new Set<Filtro>(["whatsapp"]))}
       />
@@ -747,6 +815,22 @@ export function Prospector({
 
 const botaoBarra =
   "h-8 rounded-full px-3 text-12 font-medium ring-1 ring-border transition-[background-color,transform] duration-150 hover-fine:bg-muted active:scale-[0.96] coarse:h-10";
+
+function ChipNicho({ n, ativo, onClick }: { n: string; ativo: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={ativo}
+      className={cn(
+        "h-7 rounded-full px-2.5 text-12 ring-1 transition-[color,background-color,transform] duration-150 ease-out-strong active:scale-[0.96] coarse:h-9",
+        ativo ? "bg-primary text-primary-foreground ring-primary" : "bg-card/60 text-subtle-foreground ring-border hover-fine:text-foreground",
+      )}
+    >
+      {n}
+    </button>
+  );
+}
 
 function Etapa({ n, titulo, children }: { n: string; titulo: string; children: React.ReactNode }) {
   return (

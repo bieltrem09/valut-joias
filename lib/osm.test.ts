@@ -10,9 +10,9 @@ describe("regraDoNicho", () => {
     expect(regraDoNicho("pet shop").rotulo).toBe("Pet shop");
   });
   it("sem regra, busca pelo nome tolerando acento", () => {
-    const r = regraDoNicho("Chaveiro");
+    const r = regraDoNicho("Vidraçaria");
     expect(r.tags).toEqual([]);
-    expect(r.nome).toBe("[cç]h[aáàâã]v[eéê][ií]r[oóôõ]");
+    expect(r.nome).toBe("v[ií]dr[aáàâã][cç][aáàâã]r[ií][aáàâã]");
   });
 });
 
@@ -119,7 +119,8 @@ describe("tipoNominatim", () => {
     expect(tipoNominatim("hamburgueria")).toBe("burger");
     expect(tipoNominatim("clínica")).toBe("clinic");
     expect(tipoNominatim("pet shop")).toBe("pet");
-    expect(tipoNominatim("chaveiro")).toBe("chaveiro");
+    expect(tipoNominatim("chaveiro")).toBe("locksmith");
+    expect(tipoNominatim("vidraçaria")).toBe("vidraçaria");
   });
 });
 
@@ -177,5 +178,20 @@ describe("tudo perto de mim", () => {
   it("busca normal continua igual", () => {
     expect(ehTodos("restaurante")).toBe(false);
     expect(montarConsulta("restaurante", raio)).toContain('"name"~"restaurante",i');
+  });
+});
+
+describe("nichos novos", () => {
+  it("cada nicho cai na regra certa", () => {
+    expect(regraDoNicho("estética automotiva").rotulo).toBe("Estética automotiva");
+    expect(regraDoNicho("estética").rotulo).toBe("Estética");
+    expect(regraDoNicho("autopeças").rotulo).toBe("Autopeças");
+    expect(regraDoNicho("sorveteria").rotulo).toBe("Sorveteria");
+    expect(regraDoNicho("salão de festas").rotulo).toBe("Buffet e eventos");
+    expect(regraDoNicho("salão de beleza").rotulo).toBe("Salão de beleza");
+    expect(regraDoNicho("banho e tosa").rotulo).toBe("Banho e tosa");
+    expect(regraDoNicho("pet shop").rotulo).toBe("Pet shop");
+    expect(regraDoNicho("hotel").rotulo).toBe("Hotel e pousada");
+    expect(regraDoNicho("motel").rotulo).toBe("Hotel e pousada");
   });
 });

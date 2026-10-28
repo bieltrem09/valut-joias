@@ -14,6 +14,94 @@ type Regra = { rotulo: string; tags: string[]; nome: string };
 
 /** Nicho em português → etiquetas do OSM + pedaço de nome que costuma aparecer. */
 const REGRAS: [RegExp, Regra][] = [
+  // Mais específicos primeiro: "estética automotiva" não pode cair em "estética", nem "salão de festa" em "salão".
+  [
+    /estetica automotiva|automotiv|polimento|vitrific|martelinho|insulfilm|envelopament|detail/,
+    {
+      rotulo: "Estética automotiva",
+      tags: [
+        '["shop"="car_repair"]["name"~"est[eé]tica|polim|vitrific|detail|insulfilm|envelop|martelinho",i]',
+        '["amenity"="car_wash"]["name"~"est[eé]tica|detail|polim",i]',
+      ],
+      nome: "est[eé]tica automotiva|polimento|vitrific|detailing|insulfilm|martelinho",
+    },
+  ],
+  [/autope|auto pe|pecas/, { rotulo: "Autopeças", tags: ['["shop"="car_parts"]'], nome: "autope[cç]as|auto pe[cç]as|pe[cç]as" }],
+  [/borrachar|pneu/, { rotulo: "Borracharia e pneus", tags: ['["shop"="tyres"]'], nome: "borrachar|pneu" }],
+  [
+    /funilar|lanternag|pintura automotiva/,
+    { rotulo: "Funilaria", tags: ['["shop"="car_repair"]["name"~"funilar|lanterna|pintura",i]'], nome: "funilaria|lanternagem" },
+  ],
+  [/auto ?eletric|eletrica automotiva/, { rotulo: "Auto elétrica", tags: ['["shop"="car_repair"]["name"~"el[eé]tric",i]'], nome: "auto ?el[eé]trica" }],
+  [/\bmoto/, { rotulo: "Moto peças e oficina", tags: ['["shop"="motorcycle"]', '["shop"="motorcycle_repair"]'], nome: "moto" }],
+  [
+    /buffet|salao de festa|eventos|festa/,
+    { rotulo: "Buffet e eventos", tags: ['["amenity"="events_venue"]', '["shop"="party"]'], nome: "buffet|festa|evento" },
+  ],
+  [/banho e tosa|tosa|groom/, { rotulo: "Banho e tosa", tags: ['["shop"="pet_grooming"]'], nome: "tosa|groom|banho" }],
+  [
+    /manicure|unha|nail|esmalteria/,
+    {
+      rotulo: "Esmalteria",
+      tags: ['["shop"="beauty"]["beauty"~"nails",i]', '["shop"="beauty"]["name"~"unha|nail|esmalt",i]'],
+      nome: "unha|nail|esmalt|manicure",
+    },
+  ],
+  [
+    /sobrancelha|cilios|lash|design de sobr/,
+    { rotulo: "Sobrancelha e cílios", tags: ['["shop"="beauty"]["name"~"sobrancel|c[ií]lios|lash|brow",i]'], nome: "sobrancel|c[ií]lios|lash|brow" },
+  ],
+  [/depila/, { rotulo: "Depilação", tags: ['["shop"="beauty"]["name"~"depila|laser",i]'], nome: "depila" }],
+  [/\bspa\b|massag/, { rotulo: "Spa e massagem", tags: ['["shop"="massage"]', '["leisure"="spa"]', '["amenity"="spa"]'], nome: "spa|massag" }],
+  [
+    /doceria|confeitaria|doces|bolo|brigadeir/,
+    { rotulo: "Doceria e confeitaria", tags: ['["shop"="confectionery"]', '["shop"="pastry"]'], nome: "doce|confeitar|bolo|brigadeir" },
+  ],
+  [/churras|espeto|steak/, { rotulo: "Churrascaria", tags: ['["cuisine"~"barbecue|steak_house",i]'], nome: "churrasc|espeto|grill" }],
+  [
+    /marmit|self.?service|por quilo|quilo/,
+    { rotulo: "Restaurante por quilo", tags: ['["amenity"="restaurant"]["name"~"marmit|quilo|kilo|self",i]'], nome: "marmit|quilo|kilo|self" },
+  ],
+  [/pastel/, { rotulo: "Pastelaria", tags: ['["cuisine"~"pastel",i]'], nome: "pastel" }],
+  [/esfiha|esfirra|arabe/, { rotulo: "Comida árabe", tags: ['["cuisine"~"lebanese|arab",i]'], nome: "esf[ih]+a|[aá]rabe|kebab" }],
+  [
+    /adega|distribuidora|bebida|conveniencia/,
+    { rotulo: "Adega e conveniência", tags: ['["shop"~"^(alcohol|beverages)$"]'], nome: "adega|distribuidora|bebidas|conveni" },
+  ],
+  [/cachorro.?quente|hot.?dog|dogueria/, { rotulo: "Hot dog", tags: ['["cuisine"~"hot_dog",i]'], nome: "dog|cachorr" }],
+  [/nutri/, { rotulo: "Nutricionista", tags: ['["healthcare"="dietitian"]'], nome: "nutri" }],
+  [/psicolog/, { rotulo: "Psicologia", tags: ['["healthcare"="psychotherapist"]'], nome: "psic" }],
+  [/laborator|exames/, { rotulo: "Laboratório", tags: ['["healthcare"="laboratory"]'], nome: "laborat" }],
+  [/calcad|sapat|tenis/, { rotulo: "Calçados", tags: ['["shop"="shoes"]'], nome: "cal[cç]ad|sapat" }],
+  [/joia|joalher|relojo|semijoia|bijou/, { rotulo: "Joias e semijoias", tags: ['["shop"~"^(jewelry|watches)$"]'], nome: "j[oó]ia|joalh|relojo|semij|bijou" }],
+  [/presente|variedade|utilidade/, { rotulo: "Presentes e variedades", tags: ['["shop"~"^(gift|variety_store)$"]'], nome: "presente|variedade|utilidade" }],
+  [
+    /celular|assistencia tecnica|eletronic/,
+    {
+      rotulo: "Celulares e assistência",
+      tags: ['["shop"="mobile_phone"]', '["craft"="electronics_repair"]', '["shop"="electronics"]'],
+      nome: "celular|cell|assist[eê]ncia|eletr[oô]nic",
+    },
+  ],
+  [/informatica|computador/, { rotulo: "Informática", tags: ['["shop"="computer"]'], nome: "inform[aá]tica|computa" }],
+  [
+    /material de construcao|construcao|ferragem|ferramenta/,
+    { rotulo: "Material de construção", tags: ['["shop"~"^(hardware|doityourself|building_materials)$"]'], nome: "constru|ferrag|materiai" },
+  ],
+  [
+    /movel|moveis|decorac|colchao/,
+    { rotulo: "Móveis e decoração", tags: ['["shop"~"^(furniture|interior_decoration|bed)$"]'], nome: "m[oó]veis|decora|colch" },
+  ],
+  [/papelaria|livraria/, { rotulo: "Papelaria e livraria", tags: ['["shop"~"^(stationery|books)$"]'], nome: "papelar|livrar" }],
+  [/cosmetic|perfum/, { rotulo: "Cosméticos e perfumaria", tags: ['["shop"~"^(cosmetics|perfumery)$"]'], nome: "cosm[eé]t|perfum" }],
+  [/acougue|casa de carne/, { rotulo: "Açougue", tags: ['["shop"="butcher"]'], nome: "a[cç]ougue|carnes" }],
+  [/brinquedo|infantil|bebe/, { rotulo: "Loja infantil", tags: ['["shop"~"^(toys|baby_goods)$"]'], nome: "brinqued|infantil|beb[eê]|kids" }],
+  [/esporte|suplemento/, { rotulo: "Esportes e suplementos", tags: ['["shop"~"^(sports|nutrition_supplements)$"]'], nome: "esporte|suplement|sport" }],
+  [/lavanderia/, { rotulo: "Lavanderia", tags: ['["shop"~"^(laundry|dry_cleaning)$"]'], nome: "lavander" }],
+  [/chaveiro/, { rotulo: "Chaveiro", tags: ['["shop"="locksmith"]', '["craft"="key_cutter"]'], nome: "chaveir" }],
+  [/grafica|copiadora|impressao/, { rotulo: "Gráfica", tags: ['["shop"="copyshop"]', '["craft"="printer"]'], nome: "gr[aá]fica|copiad|impress" }],
+  [/fotograf|estudio de foto/, { rotulo: "Estúdio de fotografia", tags: ['["shop"="photo"]', '["craft"="photographer"]'], nome: "foto" }],
+  [/hotel|pousada|motel/, { rotulo: "Hotel e pousada", tags: ['["tourism"~"^(hotel|guest_house|motel|hostel)$"]'], nome: "hotel|pousada" }],
   [/hamburg|burger|smash/, { rotulo: "Hamburgueria", tags: ['["cuisine"~"burger",i]'], nome: "burg|smash" }],
   [/pizz/, { rotulo: "Pizzaria", tags: ['["cuisine"~"pizza",i]'], nome: "pizz" }],
   [/barb/, { rotulo: "Barbearia", tags: ['["shop"="hairdresser"]["hairdresser"~"barber",i]', '["shop"="barber"]'], nome: "barb" }],
@@ -124,7 +212,7 @@ export function montarConsulta(segmento: string, escopo: Escopo, limite = 120): 
     "(",
     ...linhas.map((l) => `  ${l}`),
     ");",
-    `out center tags ${todos ? Math.max(limite, 800) : limite};`,
+    `out center tags ${todos ? Math.max(limite, escopo.tipo === "area" ? 1500 : 800) : limite};`,
   ]
     .filter(Boolean)
     .join("\n");

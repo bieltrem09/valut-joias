@@ -47,8 +47,13 @@ export function Qualificador({
   const [salvas, setSalvas] = React.useState(buscas);
   const [marcados, setMarcados] = React.useState<Set<string>>(new Set());
   const [enviando, setEnviando] = React.useState(false);
+  /** Cartões visíveis; busca com centenas de lugares mostra em blocos. */
+  const [limite, setLimite] = React.useState(40);
   React.useEffect(() => setSalvas(buscas), [buscas]);
-  React.useEffect(() => setMarcados(new Set()), [lista]);
+  React.useEffect(() => {
+    setMarcados(new Set());
+    setLimite(40);
+  }, [lista]);
 
   const leads = lista ?? [];
   const marcaveis = leads.filter((l) => !l.noFunil && !l.jaCliente);
@@ -244,7 +249,7 @@ export function Qualificador({
           ) : (
             <ol className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2 lg:gap-4">
               <AnimatePresence initial={false}>
-                {leads.map((l, i) => (
+                {leads.slice(0, limite).map((l, i) => (
                   <motion.li
                     key={l.placeId}
                     layout={!reduce}
@@ -272,6 +277,11 @@ export function Qualificador({
                 ))}
               </AnimatePresence>
             </ol>
+          )}
+          {leads.length > limite && (
+            <button type="button" onClick={() => setLimite((n) => n + 40)} className="surface h-12 text-13 font-medium text-primary hover-fine:bg-muted">
+              Ver mais {Math.min(40, leads.length - limite)} cartões ({leads.length - limite} restantes)
+            </button>
           )}
         </>
       )}

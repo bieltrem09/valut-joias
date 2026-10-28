@@ -109,14 +109,30 @@ export async function buscarTomTom(o: {
     if (!r) throw new TomTomError(`Não achamos “${o.local}”. Tente “Limeira, SP”.`);
     municipio = r.address?.municipality;
     onde = { nome: municipio ?? o.local, centro: { lat: r.position.lat, lng: r.position.lon } };
-    area = r.boundingBox
-      ? {
-          lat: r.position.lat,
-          lon: r.position.lon,
-          topLeft: `${r.boundingBox.topLeftPoint.lat},${r.boundingBox.topLeftPoint.lon}`,
-          btmRight: `${r.boundingBox.btmRightPoint.lat},${r.boundingBox.btmRightPoint.lon}`,
-        }
-      : { lat: r.position.lat, lon: r.position.lon, radius: 8000 };
+    const bb = r.boundingBox;
+    // "Todos" na cidade: o nearbySearch só aceita raio. Usa meia diagonal da cidade (até 15 km);
+    // o filtro de município mais abaixo tira o que for de cidade vizinha.
+    const raioCidade = bb
+      ? Math.min(
+          15000,
+          Math.round(
+            Math.hypot(
+              (bb.topLeftPoint.lat - bb.btmRightPoint.lat) * 111_000,
+              (bb.btmRightPoint.lon - bb.topLeftPoint.lon) * 111_000 * Math.cos((r.position.lat * Math.PI) / 180),
+            ) / 2,
+          ),
+        )
+      : 8000;
+    area = ehTodos(o.segmento)
+      ? { lat: r.position.lat, lon: r.position.lon, radius: raioCidade }
+      : bb
+        ? {
+            lat: r.position.lat,
+            lon: r.position.lon,
+            topLeft: `${bb.topLeftPoint.lat},${bb.topLeftPoint.lon}`,
+            btmRight: `${bb.btmRightPoint.lat},${bb.btmRightPoint.lon}`,
+          }
+        : { lat: r.position.lat, lon: r.position.lon, radius: 8000 };
   }
 
   const resultados: ResultadoTomTom[] = [];
