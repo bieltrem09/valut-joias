@@ -91,3 +91,26 @@ export const GRUPOS_NICHOS: { titulo: string; nichos: string[] }[] = [
 ];
 
 export const TOTAL_NICHOS = new Set(GRUPOS_NICHOS.flatMap((g) => g.nichos)).size;
+
+/** Até quantos nichos uma busca junta (cada um é uma busca a mais). */
+export const MAX_NICHOS_JUNTOS = 6;
+
+/** "sorveteria, autopeças" → ["sorveteria", "autopeças"]. Vírgula, + ou ; separam. */
+export function dividirNichos(texto: string): string[] {
+  const vistos = new Set<string>();
+  const nichos: string[] = [];
+  for (const parte of texto.split(/[,+;]/)) {
+    const n = parte.replace(/\s+/g, " ").trim();
+    if (!n || vistos.has(n.toLowerCase())) continue;
+    vistos.add(n.toLowerCase());
+    nichos.push(n);
+  }
+  return nichos.slice(0, MAX_NICHOS_JUNTOS);
+}
+
+/** Toque no botão do nicho: entra na busca se não estava, sai se já estava. */
+export function alternarNicho(texto: string, nicho: string): string {
+  const atuais = dividirNichos(texto);
+  const sem = atuais.filter((n) => n.toLowerCase() !== nicho.toLowerCase());
+  return (sem.length === atuais.length ? [...atuais, nicho] : sem).join(", ");
+}

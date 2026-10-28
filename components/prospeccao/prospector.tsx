@@ -31,7 +31,7 @@ import { enviarAoFunil, registrarBusca } from "@/app/actions";
 import { Qualificador } from "./qualificador";
 import { buscarNoNavegador } from "@/lib/osm-cliente";
 import { TODOS, ehTodos, juntarFontes, type LugarAberto } from "@/lib/osm";
-import { GRUPOS_NICHOS, NICHOS_DESTAQUE, TOTAL_NICHOS } from "@/lib/nichos";
+import { GRUPOS_NICHOS, MAX_NICHOS_JUNTOS, NICHOS_DESTAQUE, TOTAL_NICHOS, alternarNicho, dividirNichos } from "@/lib/nichos";
 import type { LeadGoogle } from "@/app/api/prospeccao/buscar/route";
 import { distanciaKm, ordenar, qualificarAberto, whatsappUrl } from "@/lib/prospeccao";
 import { urlBuscaMaps, urlEmbedMaps } from "@/lib/maps-link";
@@ -114,6 +114,11 @@ export function Prospector({
 
   // Mapa do Google (embed público, grátis): a busca toda, ou a ficha do estabelecimento escolhido.
   const [alvoMaps, setAlvoMaps] = React.useState<{ segmento: string; local: string; perto: { lat: number; lng: number } | null; raio: number } | null>(null);
+  /** Com vários nichos, o Google Maps mostra um por vez: este é o índice do que está no mapa. */
+  const [nichoMapa, setNichoMapa] = React.useState(0);
+  const nichosNoMapa = alvoMaps ? (ehTodos(alvoMaps.segmento) ? [alvoMaps.segmento] : dividirNichos(alvoMaps.segmento)) : [];
+  const segMapa = nichosNoMapa[Math.min(nichoMapa, nichosNoMapa.length - 1)] ?? "";
+  const escolhidos = dividirNichos(segmento);
   const [cores, setCores] = React.useState<"painel" | "original">("painel");
   const [carregandoMapa, setCarregandoMapa] = React.useState(true);
   const [montado, setMontado] = React.useState(false);
@@ -152,12 +157,12 @@ export function Prospector({
   const embed = atual
     ? urlEmbedMaps({ lugar: [atual.nome, atual.endereco].filter(Boolean).join(", ") })
     : alvoMaps
-      ? urlEmbedMaps({ segmento: alvoMaps.segmento, local: alvoMaps.local, perto: alvoMaps.perto, raioKm: alvoMaps.raio })
+      ? urlEmbedMaps({ segmento: segMapa, local: alvoMaps.local, perto: alvoMaps.perto, raioKm: alvoMaps.raio })
       : urlEmbedMaps({ local });
   const noApp = atual?.mapsUrl
     ? atual.mapsUrl
     : alvoMaps
-      ? urlBuscaMaps({ segmento: alvoMaps.segmento, local: alvoMaps.local, perto: alvoMaps.perto ?? undefined })
+      ? urlBuscaMaps({ segmento: segMapa, local: alvoMaps.local, perto: alvoMaps.perto ?? undefined })
       : urlBuscaMaps({ segmento: "", local });
 
   React.useEffect(() => {
@@ -200,6 +205,8 @@ export function Prospector({
       setErro("Diga o que procurar, como “restaurante”.");
       return requestAnimationFrame(() => segRef.current?.focus());
     }
+    // Vários nichos juntos ("sorveteria, autopeças"): uma busca para cada, numa lista só.
+    const nichos = ehTodos(seg) ? [seg] : dividirNichos(seg);
     setSegmento(seg);
     setErro(undefined);
     setCarregando(true);
@@ -209,6 +216,7 @@ export function Prospector({
       // O mapa do Google já mostra a busca enquanto a lista chega.
       // "Tudo perto de mim" no Google Maps vira uma busca ampla de comércio ao redor.
       setAlvoMaps({ segmento: ehTodos(seg) ? "comércio" : seg, local: loc, perto: centro ?? null, raio });
+      setNichoMapa(0);
       setSelecionado(null);
       setCarregandoMapa(true);
       setContexto({ segmento: seg, onde: m === "perto" ? `até ${raio} km de você` : loc });
@@ -216,20 +224,32 @@ export function Prospector({
       if (!temGoogle || ehTodos(seg)) {
         // Sem a chave do Google: TomTom pelo servidor (quando há chave) + mapa aberto pelo navegador
         // (o servidor é bloqueado lá). O mapa aberto só completa: não segura a lista mais de 6 s.
-        const aberto = buscarNoNavegador({ segmento: seg, modo: m, local: loc, centro, raioKm: raio });
-        const tt = temTomTom ? await buscarTomTom({ segmento: seg, local: loc, modo: m, centro, raioKm: raio }) : null;
-        let lugares: LugarAberto[];
-        let onde: Onde;
-        if (tt && "lugares" in tt) {
-          const extra = await Promise.race([aberto.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 6000))]);
-          lugares = extra ? juntarFontes(tt.lugares, extra.lugares) : tt.lugares;
-          setViaTomTom(true);
-          onde = tt.onde ?? extra?.onde ?? null;
-        } else {
+        const umNicho = async (n: string): Promise<{ lugares: LugarAberto[]; onde: Onde; viaTT: boolean }> => {
+          const aberto = buscarNoNavegador({ segmento: n, modo: m, local: loc, centro, raioKm: raio });
+          const tt = temTomTom ? await buscarTomTom({ segmento: n, local: loc, modo: m, centro, raioKm: raio }) : null;
+          if (tt && "lugares" in tt) {
+            const extra = await Promise.race([aberto.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 6000))]);
+            return { lugares: extra ? juntarFontes(tt.lugares, extra.lugares) : tt.lugares, onde: tt.onde ?? extra?.onde ?? null, viaTT: true };
+          }
           if (tt) toast.message("TomTom fora do ar agora", { description: `${tt.erro} Usando só o mapa aberto.` });
-          ({ lugares, onde } = await aberto);
-          setViaTomTom(false);
+          return { ...(await aberto), viaTT: false };
+        };
+        // Vários nichos: um de cada vez (o mapa aberto não gosta de buscas em paralelo) e junta tudo.
+        let lugares: LugarAberto[] = [];
+        let onde: Onde = null;
+        let viaTT = false;
+        for (const n of nichos) {
+          const r = await umNicho(n).catch((e) => {
+            if (nichos.length === 1) throw e;
+            toast.message(`Não deu para buscar “${n}” agora`, { description: e instanceof Error ? e.message : undefined });
+            return null;
+          });
+          if (!r) continue;
+          lugares = juntarFontes(lugares, r.lugares);
+          onde ??= r.onde;
+          viaTT ||= r.viaTT;
         }
+        setViaTomTom(viaTT);
         const ref = centro ?? onde?.centro ?? null;
         const leads: LeadGoogle[] = lugares
           .map((l) => ({
@@ -261,18 +281,29 @@ export function Prospector({
         }).catch(() => {});
         return;
       }
-      const res = await fetch("/api/prospeccao/buscar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ segmento: seg, local: loc, modo: m, centro, raioKm: raio }),
-      });
-      const body = (await res.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string; leads?: LeadGoogle[]; onde?: { nome: string } | null };
-      if (!body.ok || !body.leads) throw new Error(body.error ?? "O Google não respondeu. Tente de novo.");
-      setResultados(body.leads);
+      const porId = new Map<string, LeadGoogle>();
+      let ondeGoogle: { nome: string } | null = null;
+      for (const n of nichos) {
+        const res = await fetch("/api/prospeccao/buscar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ segmento: n, local: loc, modo: m, centro, raioKm: raio }),
+        });
+        const body = (await res.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string; leads?: LeadGoogle[]; onde?: { nome: string } | null };
+        if (!body.ok || !body.leads) {
+          if (nichos.length === 1 || (porId.size === 0 && n === nichos.at(-1))) throw new Error(body.error ?? "O Google não respondeu. Tente de novo.");
+          toast.message(`Não deu para buscar “${n}” agora`, { description: body.error });
+          continue;
+        }
+        for (const l of body.leads) if (!porId.has(l.placeId)) porId.set(l.placeId, l);
+        ondeGoogle ??= body.onde ?? null;
+      }
+      const leadsGoogle = [...porId.values()];
+      setResultados(nichos.length > 1 ? (ordenar(leadsGoogle, m === "perto" ? "distancia" : "score") as LeadGoogle[]) : leadsGoogle);
       setFiltros(new Set());
       setRamo("");
       setOrdem(m === "perto" ? "distancia" : "score");
-      setContexto({ segmento: seg, onde: m === "perto" ? `até ${raio} km de você` : (body.onde?.nome ?? loc) });
+      setContexto({ segmento: seg, onde: m === "perto" ? `até ${raio} km de você` : (ondeGoogle?.nome ?? loc) });
       setAba("lista");
       irParaMapa();
       router.refresh(); // "Recentes" e o uso do mês
@@ -281,6 +312,14 @@ export function Prospector({
     } finally {
       setCarregando(false);
     }
+  };
+
+  /** Toque no nicho: entra ou sai da busca (dá para juntar vários). */
+  const escolherNicho = (n: string) => {
+    const base = ehTodos(segmento) ? "" : segmento;
+    if (!dividirNichos(base).includes(n) && dividirNichos(base).length >= MAX_NICHOS_JUNTOS)
+      return void toast.message(`Até ${MAX_NICHOS_JUNTOS} nichos por busca`, { description: "Tire algum antes de pôr outro." });
+    setSegmento(alternarNicho(base, n));
   };
 
   const selecionar = (id: string | null) => {
@@ -401,7 +440,7 @@ export function Prospector({
                         ref={segRef}
                         value={segmento}
                         onChange={(e) => setSegmento(e.target.value)}
-                        placeholder="Ex.: restaurante"
+                        placeholder="Ex.: sorveteria, autopeças"
                         aria-label="Segmento"
                         enterKeyHint="search"
                         autoComplete="off"
@@ -421,10 +460,12 @@ export function Prospector({
                         </button>
                       )}
                     </div>
-                    <p className="text-11 text-muted-foreground">Os que mais compram a placa:</p>
+                    <p className="text-11 text-muted-foreground">
+                      Os que mais compram a placa · <span className="text-subtle-foreground">toque em vários para buscar todos juntos</span>
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
                       {NICHOS_DESTAQUE.map((n) => (
-                        <ChipNicho key={n} n={n} ativo={segmento === n} onClick={() => setSegmento(n)} />
+                        <ChipNicho key={n} n={n} ativo={escolhidos.includes(n)} onClick={() => escolherNicho(n)} />
                       ))}
                     </div>
                     <details className="group/nichos rounded-card ring-1 ring-border open:bg-card/40">
@@ -441,7 +482,7 @@ export function Prospector({
                             <p className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">{g.titulo}</p>
                             <div className="flex flex-wrap gap-1.5">
                               {g.nichos.map((n) => (
-                                <ChipNicho key={n} n={n} ativo={segmento === n} onClick={() => setSegmento(n)} />
+                                <ChipNicho key={n} n={n} ativo={escolhidos.includes(n)} onClick={() => escolherNicho(n)} />
                               ))}
                             </div>
                           </div>
@@ -687,7 +728,15 @@ export function Prospector({
               ) : (
                 <Search className="size-5" strokeWidth={1.75} />
               )}
-              <span className="flex-1 text-left">{carregando ? "Buscando estabelecimentos…" : temGoogle ? "Buscar no Google" : "Buscar estabelecimentos"}</span>
+              <span className="flex-1 text-left">
+                {carregando
+                  ? "Buscando estabelecimentos…"
+                  : escolhidos.length > 1 && !ehTodos(segmento)
+                    ? `Buscar os ${escolhidos.length} nichos juntos`
+                    : temGoogle
+                      ? "Buscar no Google"
+                      : "Buscar estabelecimentos"}
+              </span>
               <ArrowRight className="size-5 transition-transform duration-200 ease-out-strong group-hover:translate-x-0.5" strokeWidth={1.75} />
             </button>
             {uso && (
@@ -710,12 +759,36 @@ export function Prospector({
                 <span className="text-foreground">{atual.nome}</span>
               ) : alvoMaps ? (
                 <>
-                  <span className="font-medium text-foreground">{alvoMaps.segmento}</span> · {contexto?.onde}
+                  <span className="font-medium text-foreground">{segMapa}</span> · {contexto?.onde}
                 </>
               ) : (
                 "Escolha o que procurar"
               )}
             </p>
+            {!atual && nichosNoMapa.length > 1 && (
+              <div role="radiogroup" aria-label="Nicho no mapa" className="flex w-full flex-wrap gap-1.5 sm:order-last">
+                {nichosNoMapa.map((n, i) => (
+                  <button
+                    key={n}
+                    type="button"
+                    role="radio"
+                    aria-checked={n === segMapa}
+                    onClick={() => {
+                      setNichoMapa(i);
+                      setCarregandoMapa(true);
+                    }}
+                    className={cn(
+                      "h-7 rounded-full px-2.5 text-12 ring-1 transition-colors duration-150 coarse:h-9",
+                      n === segMapa
+                        ? "bg-primary text-primary-foreground ring-primary"
+                        : "bg-card/60 text-subtle-foreground ring-border hover-fine:text-foreground",
+                    )}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex gap-1.5">
               {atual && (
                 <button type="button" onClick={() => selecionar(null)} className={botaoBarra}>
@@ -747,7 +820,7 @@ export function Prospector({
               <iframe
                 key={embed}
                 src={embed}
-                title={atual ? `Google Maps: ${atual.nome}` : alvoMaps ? `Google Maps: ${alvoMaps.segmento}` : "Google Maps"}
+                title={atual ? `Google Maps: ${atual.nome}` : alvoMaps ? `Google Maps: ${segMapa}` : "Google Maps"}
                 referrerPolicy="no-referrer-when-downgrade"
                 onLoad={() => setCarregandoMapa(false)}
                 className={cn("absolute inset-0 size-full border-0", cores === "painel" && "mapa-roxo")}

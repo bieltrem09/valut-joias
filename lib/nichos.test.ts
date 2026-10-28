@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GRUPOS_NICHOS, NICHOS_DESTAQUE } from "./nichos";
+import { GRUPOS_NICHOS, NICHOS_DESTAQUE, alternarNicho, dividirNichos } from "./nichos";
 import { regraDoNicho } from "./osm";
 
 describe("nichos da prospecção", () => {
@@ -11,5 +11,19 @@ describe("nichos da prospecção", () => {
   it("destaques estão nos grupos", () => {
     const nosGrupos = new Set(GRUPOS_NICHOS.flatMap((g) => g.nichos));
     expect(NICHOS_DESTAQUE.filter((n) => !nosGrupos.has(n))).toEqual([]);
+  });
+});
+
+describe("vários nichos de uma vez", () => {
+  it("divide por vírgula, sem repetir nem quebrar nome com 'e'", () => {
+    expect(dividirNichos(" sorveteria,  autopeças , Sorveteria, buffet e eventos ")).toEqual(["sorveteria", "autopeças", "buffet e eventos"]);
+    expect(dividirNichos("pizzaria + açaí")).toEqual(["pizzaria", "açaí"]);
+    expect(dividirNichos("")).toEqual([]);
+  });
+  it("tocar no botão põe e tira o nicho da busca", () => {
+    let t = alternarNicho("", "sorveteria");
+    t = alternarNicho(t, "autopeças");
+    expect(t).toBe("sorveteria, autopeças");
+    expect(alternarNicho(t, "sorveteria")).toBe("autopeças");
   });
 });
