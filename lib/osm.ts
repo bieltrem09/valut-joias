@@ -71,8 +71,24 @@ function regexDoTermo(t: string): string {
     .join("");
 }
 
+/** Busca "tudo perto de mim": qualquer estabelecimento com nome, de qualquer ramo. */
+export const TODOS = "todos os estabelecimentos";
+export const ehTodos = (segmento: string) => semAcento(segmento) === TODOS;
+
+/** Etiquetas de quem atende público (fica de fora banco de praça, ponto de ônibus, estacionamento…). */
+const TAGS_TODOS = [
+  '["shop"]',
+  '["amenity"~"^(restaurant|fast_food|cafe|bar|pub|ice_cream|food_court|biergarten|dentist|clinic|doctors|pharmacy|veterinary|car_wash|car_rental|driving_school|language_school|school|kindergarten|college|bank|fuel|marketplace|nightclub|cinema|theatre|events_venue|coworking_space)$"]',
+  '["office"]',
+  '["craft"]',
+  '["healthcare"]',
+  '["leisure"~"^(fitness_centre|sports_centre|dance|swimming_pool)$"]',
+  '["tourism"~"^(hotel|motel|guest_house|hostel)$"]',
+];
+
 export function regraDoNicho(segmento: string): Regra {
   const s = semAcento(segmento);
+  if (ehTodos(segmento)) return { rotulo: "Estabelecimento", tags: TAGS_TODOS, nome: "" };
   const achada = REGRAS.find(([re]) => re.test(s))?.[1];
   if (achada) return achada;
   // Sem regra: procura pelo nome, entre comércios e serviços.
@@ -99,14 +115,16 @@ export function montarConsulta(segmento: string, escopo: Escopo, limite = 120): 
       : escopo.tipo === "raio"
         ? `(around:${Math.round(escopo.metros)},${escopo.lat.toFixed(6)},${escopo.lng.toFixed(6)})`
         : `(${[escopo.south, escopo.west, escopo.north, escopo.east].map((n) => n.toFixed(6)).join(",")})`;
-  const linhas = [...r.tags.map((t) => `nwr${t}["name"]${onde};`), ...COMERCIO.map((c) => `nwr["name"~"${r.nome}",i]${c}${onde};`)];
+  const nomes = r.nome ? COMERCIO.map((c) => `nwr["name"~"${r.nome}",i]${c}${onde};`) : [];
+  const linhas = [...r.tags.map((t) => `nwr${t}["name"]${onde};`), ...nomes];
+  const todos = ehTodos(segmento);
   return [
-    "[out:json][timeout:15];",
+    `[out:json][timeout:${todos ? 25 : 15}];`,
     escopo.tipo === "area" ? `area(id:${escopo.areaId})->.alvo;` : "",
     "(",
     ...linhas.map((l) => `  ${l}`),
     ");",
-    `out center tags ${limite};`,
+    `out center tags ${todos ? Math.max(limite, 800) : limite};`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -149,6 +167,45 @@ const ROTULO_TAG: Record<string, string> = {
   supermarket: "Mercado",
   convenience: "Mercado",
   estate_agent: "Imobiliária",
+  hotel: "Hotel",
+  motel: "Motel",
+  guest_house: "Pousada",
+  pharmacy_shop: "Farmácia",
+  hardware: "Loja de materiais",
+  doityourself: "Loja de materiais",
+  mobile_phone: "Loja de celular",
+  electronics: "Eletrônicos",
+  furniture: "Móveis",
+  shoes: "Calçados",
+  jewelry: "Joalheria",
+  cosmetics: "Cosméticos",
+  butcher: "Açougue",
+  greengrocer: "Hortifrúti",
+  kiosk: "Banca",
+  books: "Livraria",
+  stationery: "Papelaria",
+  gift: "Presentes",
+  tyres: "Pneus",
+  car: "Concessionária",
+  car_parts: "Autopeças",
+  laundry: "Lavanderia",
+  dry_cleaning: "Lavanderia",
+  tattoo: "Estúdio de tatuagem",
+  massage: "Massagem",
+  variety_store: "Variedades",
+  department_store: "Loja de departamento",
+  fuel: "Posto de combustível",
+  bank: "Banco",
+  school: "Escola",
+  kindergarten: "Escola infantil",
+  language_school: "Escola de idiomas",
+  driving_school: "Autoescola",
+  physiotherapist: "Fisioterapia",
+  sports_centre: "Centro esportivo",
+  lawyer: "Advocacia",
+  accountant: "Contabilidade",
+  insurance: "Seguros",
+  company: "Empresa",
 };
 
 /** Primeiro telefone da lista, preferindo celular (vira WhatsApp). */
@@ -185,7 +242,7 @@ export function elementoParaLugar(el: ElementoOSM, cidadePadrao?: string): Lugar
   const cidade = t["addr:city"] || cidadePadrao;
   const endereco = [rua, bairro, rua || bairro ? cidade : null].filter(Boolean).join(" - ") || null;
 
-  const tipo = t.amenity || t.shop || t.leisure || t.healthcare || t.craft || t.office;
+  const tipo = t.amenity || t.shop || t.leisure || t.healthcare || t.craft || t.office || t.tourism;
   const cozinha = t.cuisine?.split(";")[0];
   const categoria =
     (cozinha && /burger/i.test(cozinha) && "Hamburgueria") ||

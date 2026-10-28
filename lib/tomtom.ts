@@ -4,12 +4,14 @@
  * recusa, não cobra. Base comercial, bem maior que o mapa aberto no Brasil.
  * Não traz nota nem avaliações do Google: a pontuação usa os mesmos sinais do mapa aberto.
  */
-import { semAcento, type LugarAberto } from "./osm";
+import { ehTodos, semAcento, type LugarAberto } from "./osm";
 
 const BASE = process.env.TOMTOM_BASE_URL ?? "https://api.tomtom.com";
 /** Até 2 páginas de 100: dá conta de uma cidade média sem gastar a cota. */
 const POR_PAGINA = 100;
 const PAGINAS = 2;
+/** "Tudo perto de mim" junta qualquer ramo: até 5 páginas (500 lugares, 5 chamadas da cota). */
+const PAGINAS_TODOS = 5;
 
 export const tomtomEnabled = () => !!process.env.TOMTOM_API_KEY;
 
@@ -118,8 +120,11 @@ export async function buscarTomTom(o: {
   }
 
   const resultados: ResultadoTomTom[] = [];
-  for (let p = 0; p < PAGINAS; p++) {
-    const pagina = await chamar<{ results?: ResultadoTomTom[] }>(`/search/2/poiSearch/${encodeURIComponent(o.segmento)}.json`, {
+  const todos = ehTodos(o.segmento);
+  // nearbySearch devolve tudo ao redor, sem precisar dizer o ramo.
+  const caminho = todos ? "/search/2/nearbySearch/.json" : `/search/2/poiSearch/${encodeURIComponent(o.segmento)}.json`;
+  for (let p = 0; p < (todos ? PAGINAS_TODOS : PAGINAS); p++) {
+    const pagina = await chamar<{ results?: ResultadoTomTom[] }>(caminho, {
       ...comum,
       ...area,
       ofs: p * POR_PAGINA,

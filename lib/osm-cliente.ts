@@ -12,6 +12,7 @@ import {
   semRepetidos,
   tipoNominatim,
   elementoParaLugar,
+  ehTodos,
   type ElementoOSM,
   type Escopo,
   type LugarAberto,
@@ -125,7 +126,11 @@ export async function buscarNoNavegador(o: {
     onde = { nome: lugar.nome, centro: lugar.centro };
   }
   const cidade = onde?.nome;
-  const [op, nm] = await Promise.allSettled([overpass(montarConsulta(o.segmento, escopo)), nominatimPOIs(o.segmento, limites)]);
+  // "Tudo perto de mim" não tem categoria para o Nominatim: só o Overpass responde.
+  const [op, nm] = await Promise.allSettled([
+    overpass(montarConsulta(o.segmento, escopo)),
+    ehTodos(o.segmento) ? Promise.resolve([] as ResultadoNominatim[]) : nominatimPOIs(o.segmento, limites),
+  ]);
   if (op.status === "rejected" && nm.status === "rejected") throw new Error("O mapa aberto não respondeu agora. Tente de novo em alguns segundos.");
   const lugares = [
     ...(op.status === "fulfilled" ? op.value.map((el) => elementoParaLugar(el, cidade)) : []),

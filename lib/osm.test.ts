@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { elementoParaLugar, fotoDe, montarConsulta, nominatimParaLugar, regraDoNicho, semRepetidos, areaDaRelacao, tipoNominatim } from "./osm";
+import { TODOS, ehTodos, elementoParaLugar, fotoDe, montarConsulta, nominatimParaLugar, regraDoNicho, semRepetidos, areaDaRelacao, tipoNominatim } from "./osm";
 import { qualificarAberto } from "./prospeccao";
 
 describe("regraDoNicho", () => {
@@ -155,5 +155,27 @@ describe("nominatimParaLugar", () => {
       endereco: "Rua A, 10 - Centro - Limeira",
       telefone: "+55 19 99876-5432",
     });
+  });
+});
+
+describe("tudo perto de mim", () => {
+  const raio = { tipo: "raio" as const, lat: -22.5647, lng: -47.4017, metros: 2000 };
+  it("pega qualquer ramo com nome, no raio, sem busca por nome", () => {
+    const q = montarConsulta(TODOS, raio);
+    expect(ehTodos("Todos os estabelecimentos")).toBe(true);
+    expect(q).toContain('nwr["shop"]["name"](around:2000,-22.564700,-47.401700);');
+    expect(q).toContain('nwr["office"]["name"]');
+    expect(q).toMatch(/"amenity"~"\^\(restaurant\|/);
+    expect(q).not.toContain('"name"~');
+    expect(q).toContain("out center tags 800;");
+    expect(q).toContain("[timeout:25]");
+  });
+  it("não pega o que não é estabelecimento", () => {
+    const q = montarConsulta(TODOS, raio);
+    expect(q).not.toMatch(/parking|bench|bus_stop/);
+  });
+  it("busca normal continua igual", () => {
+    expect(ehTodos("restaurante")).toBe(false);
+    expect(montarConsulta("restaurante", raio)).toContain('"name"~"restaurante",i');
   });
 });

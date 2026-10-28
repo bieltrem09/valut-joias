@@ -16,6 +16,7 @@ import {
   Globe,
   ImageOff,
   Loader2,
+  LocateFixed,
   MapPin,
   Phone,
   Search,
@@ -29,7 +30,7 @@ import { Stars } from "@/components/clientes/stars";
 import { enviarAoFunil, registrarBusca } from "@/app/actions";
 import { Qualificador } from "./qualificador";
 import { buscarNoNavegador } from "@/lib/osm-cliente";
-import { juntarFontes, type LugarAberto } from "@/lib/osm";
+import { TODOS, ehTodos, juntarFontes, type LugarAberto } from "@/lib/osm";
 import type { LeadGoogle } from "@/app/api/prospeccao/buscar/route";
 import { distanciaKm, ordenar, qualificarAberto, whatsappUrl } from "@/lib/prospeccao";
 import { urlBuscaMaps, urlEmbedMaps } from "@/lib/maps-link";
@@ -195,11 +196,13 @@ export function Prospector({
       let centro: { lat: number; lng: number } | undefined;
       if (m === "perto") centro = await localizar();
       // O mapa do Google já mostra a busca enquanto a lista chega.
-      setAlvoMaps({ segmento: seg, local: loc, perto: centro ?? null, raio });
+      // "Tudo perto de mim" no Google Maps vira uma busca ampla de comércio ao redor.
+      setAlvoMaps({ segmento: ehTodos(seg) ? "comércio" : seg, local: loc, perto: centro ?? null, raio });
       setSelecionado(null);
       setCarregandoMapa(true);
       setContexto({ segmento: seg, onde: m === "perto" ? `até ${raio} km de você` : loc });
-      if (!temGoogle) {
+      // "Tudo perto de mim" vem do mapa aberto (+ TomTom): a busca do Google exige um ramo.
+      if (!temGoogle || ehTodos(seg)) {
         // Sem a chave do Google: TomTom pelo servidor (quando há chave) + mapa aberto pelo navegador
         // (o servidor é bloqueado lá). O mapa aberto só completa: não segura a lista mais de 6 s.
         const aberto = buscarNoNavegador({ segmento: seg, modo: m, local: loc, centro, raioKm: raio });
@@ -476,6 +479,37 @@ export function Prospector({
                   )}
                 </Etapa>
 
+                <Etapa n="+" titulo="Tudo perto de mim">
+                  <div className="rounded-card bg-accent/40 p-3 ring-1 ring-primary/30">
+                    <p className="flex items-center gap-2 text-13 font-semibold">
+                      <LocateFixed className="size-4 text-primary" strokeWidth={1.75} /> Todos os estabelecimentos ao seu redor
+                    </p>
+                    <p className="mt-0.5 text-12 text-muted-foreground">De qualquer ramo, a partir de onde você está agora. Escolha a distância:</p>
+                    <div className="mt-2.5 grid grid-cols-4 gap-1.5" role="group" aria-label="Distância">
+                      {[1, 2, 3, 5].map((km) => (
+                        <button
+                          key={km}
+                          type="button"
+                          disabled={carregando}
+                          onClick={() => {
+                            setModo("perto");
+                            setRaioKm(km);
+                            buscar({ segmento: TODOS, modo: "perto", raioKm: km });
+                          }}
+                          className={cn(
+                            "h-10 rounded-control font-mono text-13 font-semibold ring-1 transition-[background-color,transform] duration-150 active:scale-[0.96] disabled:opacity-60 coarse:h-11",
+                            ehTodos(contexto?.segmento ?? "") && modo === "perto" && raioKm === km
+                              ? "bg-primary text-primary-foreground ring-primary"
+                              : "bg-card ring-border hover-fine:bg-muted",
+                          )}
+                        >
+                          {km} km
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </Etapa>
+
                 {buscas.length > 0 && (
                   <Etapa n="03" titulo="Recentes">
                     <ul className="grid gap-1">
@@ -503,7 +537,7 @@ export function Prospector({
                 Escolha o que procurar e toque em “{temGoogle ? "Buscar no Google" : "Buscar estabelecimentos"}”.
               </p>
             ) : (
-              <div className="grid gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="min-w-0 truncate text-12 text-muted-foreground">
                     <span className="font-medium text-foreground capitalize">{contexto?.segmento}</span> · {contexto?.onde}
