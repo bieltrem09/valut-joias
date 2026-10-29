@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { db, ready, schema as s, one, must, emSerie } from "@/lib/db";
 import { isISODate, todaySP } from "@/lib/dates";
 import { getEmpresaDetalhe, type EmpresaDetalhe } from "@/lib/data/empresas";
@@ -61,7 +61,8 @@ export type NovaVenda = {
   data: string;
   status: "paga" | "pendente";
   metodo: "Pix" | "Cartão" | "Boleto";
-  placas: { tipo: string; destinoUrl: string; preco: number }[];
+  /** produtoId: a placa saiu do Estoque (dá baixa de 1 unidade). */
+  placas: { tipo: string; destinoUrl: string; preco: number; produtoId?: number | null }[];
   custoPlacas: number;
   custoGravacao: number;
   frete: number;
@@ -87,6 +88,21 @@ export async function criarVenda(v: NovaVenda): Promise<Result<{ codigos: string
     ["taxa", v.taxaPagamento],
   ] as const) {
     if (!Number.isFinite(n) || n < 0) return { ok: false, error: `Confira o valor de ${k}.` };
+  }
+
+  // Placas do Estoque: confere o saldo de todas antes de gravar a venda.
+  const doEstoque = new Map<number, number>();
+  for (const p of v.placas) if (p.produtoId) doEstoque.set(p.produtoId, (doEstoque.get(p.produtoId) ?? 0) + 1);
+  const produtos = doEstoque.size
+    ? await db
+        .select({ id: s.produtos.id, nome: s.produtos.nome, quantidade: s.produtos.quantidade })
+        .from(s.produtos)
+        .where(inArray(s.produtos.id, [...doEstoque.keys()]))
+    : [];
+  for (const [id, n] of doEstoque) {
+    const p = produtos.find((x) => x.id === id);
+    if (!p) return { ok: false, error: "Uma das placas escolhidas não está mais no Estoque." };
+    if (p.quantidade < n) return { ok: false, error: `${p.nome}: só tem ${p.quantidade} no estoque e a venda usa ${n}. Ajuste o estoque ou tire uma placa.` };
   }
 
   const venda = await db
@@ -126,6 +142,29 @@ export async function criarVenda(v: NovaVenda): Promise<Result<{ codigos: string
     await db.insert(s.vendaPlacas).values({ vendaId: venda.id, placaId: placa.id });
     codigos.push(codigo);
     ids.push(placa.id);
+  }
+  // Baixa no Estoque. O UPDATE só passa se ainda houver saldo (duas vendas ao mesmo tempo não deixam negativo).
+  if (doEstoque.size) {
+    const agora = new Date().toISOString();
+    const cliente = await db.select({ nome: s.empresas.nome }).from(s.empresas).where(eq(s.empresas.id, v.empresaId)).then(one);
+    for (const [produtoId, n] of doEstoque) {
+      const r = await db
+        .update(s.produtos)
+        .set({ quantidade: sql`${s.produtos.quantidade} - ${n}`, atualizadoEm: agora })
+        .where(and(eq(s.produtos.id, produtoId), gte(s.produtos.quantidade, n)))
+        .returning({ quantidade: s.produtos.quantidade })
+        .then(one);
+      if (!r) continue; // saldo mudou no meio: a venda fica, o estoque você confere na aba Estoque
+      await db.insert(s.movimentos).values({
+        produtoId,
+        tipo: "saida",
+        delta: -n,
+        saldo: r.quantidade,
+        motivo: `Venda ${codigos.join(", ")}${cliente ? ` · ${cliente.nome}` : ""}`.slice(0, 120),
+        criadoEm: agora,
+      });
+    }
+    revalidatePath("/estoque");
   }
   if (v.entregue) await medirNaAtivacao(ids);
   revalidateAll();

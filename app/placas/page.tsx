@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { listPlacas, placasResumo } from "@/lib/data/placas";
 import { listEmpresasParaSelect } from "@/lib/data/vendas";
+import { listProdutosParaVenda } from "@/lib/data/estoque";
 import { linkBase } from "@/lib/link-base";
 import { NovaVendaButton } from "@/components/vendas/nova-venda";
 import { PlacasView } from "@/components/placas/placas-view";
@@ -10,12 +11,12 @@ import { formatInt } from "@/lib/format";
 export const metadata: Metadata = { title: "Placas NFC" };
 
 export default async function PlacasPage() {
-  const [placas, empresas, baseUrl] = await Promise.all([listPlacas(), listEmpresasParaSelect(), linkBase()]);
+  const [placas, empresas, baseUrl, produtos] = await Promise.all([listPlacas(), listEmpresasParaSelect(), linkBase(), listProdutosParaVenda()]);
   const r = placasResumo(placas);
 
   return (
     <div className="grid gap-6 md:gap-8">
-      <PageIntro eyebrow="Placas NFC" actions={<NovaVendaButton empresas={empresas} label="Nova venda de placas" />}>
+      <PageIntro eyebrow="Placas NFC" actions={<NovaVendaButton empresas={empresas} produtos={produtos} label="Nova venda de placas" />}>
         {placas.length === 0 ? (
           <>
             Nenhuma placa ainda. <span className="text-muted-foreground">Elas aparecem aqui quando você registra uma venda.</span>

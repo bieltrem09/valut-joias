@@ -24,3 +24,13 @@ export async function listMovimentos(produtoId: number, limite = 40): Promise<Mo
   await ready();
   return db.select().from(s.movimentos).where(eq(s.movimentos.produtoId, produtoId)).orderBy(desc(s.movimentos.id)).limit(limite);
 }
+
+export type ProdutoParaVenda = { id: number; nome: string; quantidade: number; preco: number; custo: number; foto: number | null };
+
+/** Produtos para escolher no "Registrar venda": quem tem saldo primeiro, com a foto de capa. */
+export async function listProdutosParaVenda(): Promise<ProdutoParaVenda[]> {
+  const ps = await listProdutos();
+  return ps
+    .map((p) => ({ id: p.id, nome: p.nome, quantidade: p.quantidade, preco: p.preco, custo: p.custo, foto: p.fotos[0] ?? null }))
+    .sort((a, b) => Number(b.quantidade > 0) - Number(a.quantidade > 0) || a.nome.localeCompare(b.nome, "pt-BR"));
+}

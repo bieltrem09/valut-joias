@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { parsePeriod, PERIOD_LABEL } from "@/lib/period";
 import { getDashboard, listEmpresasParaSelect } from "@/lib/data/vendas";
+import { listProdutosParaVenda } from "@/lib/data/estoque";
 import { NovaVendaButton } from "@/components/vendas/nova-venda";
 import { HeroLucro } from "@/components/vendas/hero-lucro";
 import { KpiColumn } from "@/components/vendas/kpi-column";
@@ -16,12 +17,12 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 
 export default async function VendasPage({ searchParams }: Props) {
   const period = parsePeriod(await searchParams);
-  const [d, empresas] = await Promise.all([getDashboard(period), listEmpresasParaSelect()]);
+  const [d, empresas, produtos] = await Promise.all([getDashboard(period), listEmpresasParaSelect(), listProdutosParaVenda()]);
   const { nome } = dono();
 
   return (
     <div className="grid gap-6 md:gap-8">
-      <PageIntro eyebrow="Seu negócio" saudacao={nome ? `Olá, ${nome}` : undefined} actions={<NovaVendaButton empresas={empresas} />}>
+      <PageIntro eyebrow="Seu negócio" saudacao={nome ? `Olá, ${nome}` : undefined} actions={<NovaVendaButton empresas={empresas} produtos={produtos} />}>
         {resumoFrase(d.placasVendidas, d.placasVendidasAnterior, period.frase, period.fraseAnterior)}
       </PageIntro>
 
