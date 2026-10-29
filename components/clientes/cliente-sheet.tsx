@@ -4,7 +4,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowUpRight, Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowUpRight, Camera, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +12,17 @@ import { StatusDot } from "@/components/ui/chip";
 import { Field, Input } from "@/components/ui/input";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Money, VendaStatus } from "@/components/vendas/cells";
-import { carregarDetalheEmpresa, definirBaseInstalacao, editarEmpresa, excluirEmpresa, registrarContagem } from "@/app/actions";
+import {
+  carregarDetalheEmpresa,
+  definirBaseInstalacao,
+  editarEmpresa,
+  excluirEmpresa,
+  registrarContagem,
+  removerFotoEmpresa,
+  salvarFotoEmpresa,
+} from "@/app/actions";
+import { CompanyAvatar } from "@/components/ui/company-avatar";
+import { comprimirImagem } from "@/lib/imagem";
 import type { EmpresaCardData, EmpresaDetalhe } from "@/lib/data/empresas";
 import type { VendaRow } from "@/lib/data/vendas";
 import { mediumDate, relativeDays, shortDate, type ISODate } from "@/lib/dates";
@@ -92,6 +102,10 @@ export function ClienteSheet({
         />
       ) : (
         <div className="grid gap-8">
+          {e.fotoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={e.fotoUrl} alt={`Foto de ${e.nome}`} className="aspect-[16/9] w-full rounded-control bg-muted object-cover" />
+          )}
           <dl className="grid grid-cols-3 divide-x divide-border rounded-control ring-1 ring-border">
             <Stat label="Faturado" value={formatBRL(e.faturamento)} />
             <Stat label="Placas" value={formatInt(e.placasCompradas)} />
@@ -480,6 +494,7 @@ function EditarCliente({
         });
       }}
     >
+      <FotoEstabelecimento empresa={e} />
       <Field label="Nome" htmlFor="ed-nome">
         <Input id="ed-nome" name="nome" defaultValue={e.nome} required />
       </Field>
@@ -583,6 +598,67 @@ function ListSkeleton({ rows }: { rows: number }) {
           <Skeleton className="h-3 w-16" />
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Foto do estabelecimento: vai na hora (sem esperar o Salvar) e aparece no cartão do cliente. */
+function FotoEstabelecimento({ empresa: e }: { empresa: EmpresaCardData }) {
+  const router = useRouter();
+  const [foto, setFoto] = React.useState(e.fotoUrl);
+  const [enviando, setEnviando] = React.useState(false);
+  const input = React.useRef<HTMLInputElement>(null);
+
+  const escolher = async (file: File | undefined) => {
+    if (!file) return;
+    setEnviando(true);
+    try {
+      const pronta = await comprimirImagem(file, 1200);
+      const fd = new FormData();
+      fd.set("foto", pronta);
+      const r = await salvarFotoEmpresa(e.id, fd);
+      if (!r.ok) return void toast.error(r.error);
+      setFoto(URL.createObjectURL(pronta));
+      toast.success("Foto salva");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não deu para enviar a foto.");
+    } finally {
+      setEnviando(false);
+      if (input.current) input.current.value = "";
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-4">
+      <CompanyAvatar nome={e.nome} categoria={e.categoria} src={foto} className="size-20 text-14" rounded="rounded-[14px]" />
+      <div className="grid gap-2">
+        <p className="text-13 font-medium">Foto do estabelecimento</p>
+        <p className="text-12 text-muted-foreground">Fachada ou logo, para você reconhecer o cliente.</p>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant="secondary" disabled={enviando} onClick={() => input.current?.click()}>
+            <Camera strokeWidth={1.5} />
+            {enviando ? "Enviando…" : foto ? "Trocar foto" : "Adicionar foto"}
+          </Button>
+          {foto && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={enviando}
+              onClick={async () => {
+                const r = await removerFotoEmpresa(e.id);
+                if (!r.ok) return void toast.error(r.error);
+                setFoto(null);
+                router.refresh();
+              }}
+            >
+              Tirar
+            </Button>
+          )}
+        </div>
+        <input ref={input} type="file" accept="image/*" hidden onChange={(ev) => escolher(ev.target.files?.[0])} />
+      </div>
     </div>
   );
 }

@@ -346,6 +346,36 @@ export async function editarEmpresa(
   return { ok: true };
 }
 
+const FOTO_MAX = 3_500_000;
+
+/** Foto do estabelecimento enviada pelo dono (para reconhecer o cliente quando não há foto do Google). */
+export async function salvarFotoEmpresa(id: number, fd: FormData): Promise<Result> {
+  const foto = fd.get("foto");
+  if (!(foto instanceof File) || !foto.size) return { ok: false, error: "Escolha uma foto." };
+  if (!foto.type.startsWith("image/")) return { ok: false, error: "Escolha um arquivo de imagem." };
+  if (foto.size > FOTO_MAX) return { ok: false, error: "A foto ficou grande demais. Tente outra." };
+  await ready();
+  const bytes = Buffer.from(await foto.arrayBuffer());
+  const now = new Date().toISOString();
+  await db
+    .insert(s.fotos)
+    .values({ empresaId: id, mime: foto.type, bytes, atualizadaEm: now })
+    .onConflictDoUpdate({ target: s.fotos.empresaId, set: { mime: foto.type, bytes, atualizadaEm: now } });
+  await db
+    .update(s.empresas)
+    .set({ fotoUrl: `/api/google/photo/${id}?v=${Date.now().toString(36)}` })
+    .where(eq(s.empresas.id, id));
+  revalidateAll();
+  return { ok: true };
+}
+
+export async function removerFotoEmpresa(id: number): Promise<Result> {
+  await ready();
+  await emSerie([db.delete(s.fotos).where(eq(s.fotos.empresaId, id)), db.update(s.empresas).set({ fotoUrl: null }).where(eq(s.empresas.id, id))]);
+  revalidateAll();
+  return { ok: true };
+}
+
 async function apagarEmpresa(id: number) {
   const vendaIds = (await db.select({ id: s.vendas.id }).from(s.vendas).where(eq(s.vendas.empresaId, id))).map((v) => v.id);
   const placaIds = (await db.select({ id: s.placas.id }).from(s.placas).where(eq(s.placas.empresaId, id))).map((p) => p.id);

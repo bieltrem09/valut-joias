@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/shell/bottom-nav";
 import { Aurora } from "@/components/shell/aurora";
 import { InstalarApp } from "@/components/shell/instalar-app";
 import { VigiaErros } from "@/components/shell/vigia-erros";
+import { Abertura } from "@/components/shell/abertura";
 import { persistente } from "@/lib/db";
 import Link from "next/link";
 import "./globals.css";
@@ -55,6 +56,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="pt-BR" suppressHydrationWarning className={`${instrument.variable} ${jetbrains.variable}`}>
       <body>
+        <Abertura />
         <Providers initialCollapsed={collapsed}>
           <Aurora />
           <InstalarApp />
