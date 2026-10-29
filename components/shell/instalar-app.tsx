@@ -154,7 +154,11 @@ export function AppNoCelular() {
           <div className="grid gap-3 text-13 sm:grid-cols-2">
             <Passos
               titulo="Android (Chrome)"
-              passos={["Abra o painel no Chrome", "Toque nos três pontinhos ⋮", "Toque em “Instalar app” (ou “Adicionar à tela inicial”)"]}
+              passos={[
+                "Abra o painel no Chrome",
+                "Toque nos três pontinhos ⋮",
+                "Toque em “Instalar app” ou “Adicionar à tela inicial” e escolha “Instalar” (não “Criar atalho”)",
+              ]}
             />
             <Passos
               titulo="iPhone (Safari)"

@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   applicationName: "Basik7",
   // iPhone: "Adicionar à Tela de Início" abre em tela cheia, como app.
-  appleWebApp: { capable: true, title: "Basik7", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Basik7", statusBarStyle: "black" },
   formatDetection: { telephone: false },
 };
 
