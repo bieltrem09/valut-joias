@@ -39,7 +39,22 @@ function conectar(): Estado {
     });
     // O texto vira uma transação só; a trava faz vários processos (build, funções) criarem
     // as tabelas um de cada vez, em vez de travarem uns aos outros no catálogo.
-    return { db: drizzle(sql, { schema }), ddl: () => sql.unsafe(`select pg_advisory_xact_lock(727274);\n${DDL}`) };
+    // lock_timeout: se algo segurar as tabelas, falha em segundos (e diz quem segura) em vez de travar.
+    const ddl = async () => {
+      try {
+        await sql.unsafe(`set local lock_timeout = '20s';\nselect pg_advisory_xact_lock(727274);\n${DDL}`);
+      } catch (e) {
+        const quem = await sql
+          .unsafe(
+            `select pid, usename, state, wait_event_type, wait_event, now() - xact_start as idade, left(query, 160) as consulta
+             from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid() and state <> 'idle'`,
+          )
+          .catch(() => []);
+        console.error("[banco] criação das tabelas falhou:", (e as Error).message, JSON.stringify(quem));
+        throw e;
+      }
+    };
+    return { db: drizzle(sql, { schema }), ddl };
   }
   // PGlite só é carregado quando não há banco remoto.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
