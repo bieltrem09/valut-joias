@@ -2,15 +2,17 @@ import { AberturaSaida } from "./abertura-saida";
 
 /**
  * Tela de abertura do aplicativo instalado: fundo roxo neon com a logo B7.
- * Vem pronta no HTML (aparece antes do JS) e só é ligada no app da tela inicial,
- * uma vez por abertura. No navegador comum não aparece (teste com ?abertura).
+ * Vem pronta no HTML (aparece antes do JS) e liga sempre que o app abre no celular
+ * (instalado ou pelo navegador do celular). No computador não aparece (teste com ?abertura).
  */
 export function Abertura() {
   return (
     <>
+      {/* O fundo já vem junto com a página: a abertura não aparece "vazia" no primeiro instante. */}
+      <link rel="preload" as="image" href="/app/abertura-roxo.webp" type="image/webp" fetchPriority="high" />
       <script
         dangerouslySetInnerHTML={{
-          __html: `try{var d=document.documentElement,s=sessionStorage;if(/[?&]abertura/.test(location.search)||(matchMedia("(display-mode: standalone)").matches||navigator.standalone)&&!s.getItem("abertura")){d.dataset.abertura="1";s.setItem("abertura","1")}}catch(e){}`,
+          __html: `try{var m=function(q){return matchMedia(q).matches},app=m("(display-mode: standalone)")||m("(display-mode: fullscreen)")||m("(display-mode: minimal-ui)")||navigator.standalone,cel=m("(pointer: coarse)")&&m("(max-width: 900px)");if(/[?&]abertura/.test(location.search)||app||cel){document.documentElement.dataset.abertura="1";window.__aberturaDesde=performance.now()}}catch(e){}`,
         }}
       />
       <div id="abertura" aria-hidden className="abertura">
