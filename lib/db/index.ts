@@ -37,7 +37,9 @@ function conectar(): Estado {
       idle_timeout: 20,
       onnotice: () => {},
     });
-    return { db: drizzle(sql, { schema }), ddl: () => sql.unsafe(DDL) };
+    // O texto vira uma transação só; a trava faz vários processos (build, funções) criarem
+    // as tabelas um de cada vez, em vez de travarem uns aos outros no catálogo.
+    return { db: drizzle(sql, { schema }), ddl: () => sql.unsafe(`select pg_advisory_xact_lock(727274);\n${DDL}`) };
   }
   // PGlite só é carregado quando não há banco remoto.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
