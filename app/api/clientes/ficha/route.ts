@@ -1,4 +1,4 @@
-import { ErroFicha, puxarFichaGoogle } from "@/lib/ficha-google";
+import { ErroFicha, puxarFichaGoogle, rastro } from "@/lib/ficha-google";
 
 /** Lê o link do Google colado no cadastro do cliente e devolve a ficha para preencher o formulário. */
 export async function GET(req: Request) {
@@ -8,6 +8,6 @@ export async function GET(req: Request) {
   } catch (e) {
     console.error("ficha google", e);
     const msg = e instanceof ErroFicha ? e.message : "Não deu para ler esse link agora. Confira o link e tente de novo.";
-    return Response.json({ erro: msg }, { status: 400 });
+    return Response.json({ erro: msg, rastro }, { status: 400 });
   }
 }

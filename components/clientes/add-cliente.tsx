@@ -3,11 +3,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Loader2, MapPin, Search } from "lucide-react";
+import { Check, Link as LinkIcon, Loader2, MapPin, Search } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field, Input, fieldClass } from "@/components/ui/input";
-import { criarEmpresa } from "@/app/actions";
+import { criarEmpresa, lerFichaGoogle } from "@/app/actions";
+import { CompanyAvatar } from "@/components/ui/company-avatar";
+import type { FichaGoogle } from "@/lib/ficha-google";
 import { CATEGORIAS } from "@/lib/categorias";
 import { formatRating } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -23,7 +25,7 @@ export function AddClienteSheet({ open, onOpenChange, googleEnabled }: { open: b
       description={
         googleEnabled
           ? "Busque pelo nome. O Google preenche foto, nota, endereço e telefone."
-          : "Sem a chave do Google, preencha à mão. Dá para vincular depois."
+          : "Cole o link do Google do estabelecimento e o resto se preenche sozinho."
       }
     >
       {googleEnabled ? <BuscaGoogle onDone={() => onOpenChange(false)} /> : <FormManual onDone={() => onOpenChange(false)} />}
@@ -160,9 +162,22 @@ function FormManual({ onDone }: { onDone: () => void }) {
   const router = useRouter();
   const [pending, start] = React.useTransition();
   const [error, setError] = React.useState<string>();
+  const [ficha, setFicha] = React.useState<FichaGoogle | null>(null);
+  const form = React.useRef<HTMLFormElement>(null);
+
+  // Preenche os campos com o que veio do Google (dá para corrigir antes de salvar).
+  const preencher = (f: FichaGoogle) => {
+    setFicha(f);
+    const campos: Record<string, string | null> = { nome: f.nome, categoria: f.categoria, cidade: f.cidade, telefone: f.telefone };
+    for (const [nome, valor] of Object.entries(campos)) {
+      const el = form.current?.elements.namedItem(nome);
+      if (el instanceof HTMLInputElement && valor) el.value = valor;
+    }
+  };
 
   return (
     <form
+      ref={form}
       className="grid gap-5"
       onSubmit={(e) => {
         e.preventDefault();
@@ -174,19 +189,32 @@ function FormManual({ onDone }: { onDone: () => void }) {
             cidade: String(f.get("cidade") ?? ""),
             contatoNome: String(f.get("contatoNome") ?? ""),
             contatoCargo: String(f.get("contatoCargo") ?? ""),
+            telefone: String(f.get("telefone") ?? ""),
+            google: ficha
+              ? {
+                  placeId: ficha.placeId,
+                  endereco: ficha.endereco,
+                  mapsUrl: ficha.mapsUrl,
+                  linkAvaliacao: ficha.linkAvaliacao,
+                  rating: ficha.rating,
+                  totalAvaliacoes: ficha.totalAvaliacoes,
+                  fotoUrl: ficha.fotoUrl,
+                }
+              : undefined,
           });
           if (!res.ok) {
             setError(res.error);
             return;
           }
-          toast.success("Cliente adicionado");
+          toast.success("Cliente adicionado", ficha ? { description: "Dados, nota e foto vieram do Google." } : undefined);
           router.refresh();
           onDone();
         });
       }}
     >
+      <LinkGoogle ficha={ficha} onFicha={preencher} onLimpar={() => setFicha(null)} />
       <Field label="Nome da empresa" htmlFor="ac-nome">
-        <Input id="ac-nome" name="nome" required autoFocus autoComplete="organization" />
+        <Input id="ac-nome" name="nome" required autoComplete="organization" />
       </Field>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Categoria" htmlFor="ac-cat">
@@ -199,6 +227,9 @@ function FormManual({ onDone }: { onDone: () => void }) {
         </Field>
         <Field label="Cidade" htmlFor="ac-cidade">
           <Input id="ac-cidade" name="cidade" required placeholder="Campinas" autoComplete="address-level2" />
+        </Field>
+        <Field label="Telefone" htmlFor="ac-tel">
+          <Input id="ac-tel" name="telefone" type="tel" placeholder="(19) 99999-0000" />
         </Field>
         <Field label="Quem comprou" htmlFor="ac-contato">
           <Input id="ac-contato" name="contatoNome" placeholder="Marina Duarte" autoComplete="name" />
@@ -222,5 +253,93 @@ function FormManual({ onDone }: { onDone: () => void }) {
         )}
       </Button>
     </form>
+  );
+}
+
+/** Cola o link do Google (Maps, Perfil da Empresa ou link de avaliação) e o painel puxa a ficha sozinho. */
+function LinkGoogle({ ficha, onFicha, onLimpar }: { ficha: FichaGoogle | null; onFicha: (f: FichaGoogle) => void; onLimpar: () => void }) {
+  const [link, setLink] = React.useState("");
+  const [lendo, setLendo] = React.useState(false);
+  const [erro, setErro] = React.useState<string>();
+  const ultimo = React.useRef("");
+
+  const ler = async (valor: string) => {
+    const v = valor.trim();
+    if (!/https?:\/\//i.test(v) || v === ultimo.current) return;
+    ultimo.current = v;
+    setLendo(true);
+    setErro(undefined);
+    const r = await lerFichaGoogle(v);
+    setLendo(false);
+    if (!r.ok) return setErro(r.error);
+    if (r.data) onFicha(r.data);
+  };
+
+  return (
+    <div className="grid gap-3 rounded-control bg-muted/50 p-4 ring-1 ring-border">
+      <Field
+        label="Link do Google do estabelecimento"
+        htmlFor="ac-link"
+        hint={erro ? undefined : "Cole o link do Google Maps ou do Perfil da Empresa. O painel preenche nome, categoria, cidade, telefone, nota e foto."}
+        error={erro}
+      >
+        <div className="relative">
+          <LinkIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
+          <Input
+            id="ac-link"
+            type="url"
+            inputMode="url"
+            autoFocus
+            value={link}
+            placeholder="https://maps.app.goo.gl/…"
+            onChange={(e) => setLink(e.target.value)}
+            onPaste={(e) => {
+              const colado = e.clipboardData.getData("text");
+              if (colado) window.setTimeout(() => ler(colado), 0);
+            }}
+            onBlur={() => ler(link)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                ler(link);
+              }
+            }}
+            className="pl-9 pr-9 font-mono text-13"
+          />
+          {lendo && (
+            <Loader2
+              className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground motion-reduce:animate-none"
+              strokeWidth={1.5}
+            />
+          )}
+        </div>
+      </Field>
+      {lendo && <p className="text-12 text-muted-foreground">Buscando no Google…</p>}
+      {ficha && !lendo && (
+        <div className="flex items-center gap-3">
+          <CompanyAvatar nome={ficha.nome} categoria={ficha.categoria ?? ""} src={ficha.fotoUrl} className="size-14" rounded="rounded-[10px]" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-14 font-medium">{ficha.nome}</p>
+            <p className="truncate text-12 text-muted-foreground">{ficha.endereco ?? ficha.cidade}</p>
+            {ficha.rating != null && (
+              <p className="font-mono text-12 tabular text-subtle-foreground">
+                ★ {formatRating(ficha.rating)} <span className="text-muted-foreground">({ficha.totalAvaliacoes ?? 0} avaliações)</span>
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              onLimpar();
+              setLink("");
+              ultimo.current = "";
+            }}
+            className="shrink-0 text-12 text-muted-foreground underline underline-offset-4"
+          >
+            Trocar
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

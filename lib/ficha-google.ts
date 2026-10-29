@@ -138,10 +138,12 @@ async function seguir(url: string): Promise<string[]> {
 }
 
 /** Faz a busca do Google Maps e devolve os lugares encontrados. */
+export const rastro: unknown[] = [];
 async function buscarNoMaps(consulta: string): Promise<Lugar[]> {
   const pagina = await pegar(`https://www.google.com/maps?q=${encodeURIComponent(consulta)}&hl=pt-BR&gl=br`);
   const html = await pagina.text();
   const href = html.match(/href="(\/search\?tbm=map[^"]+)"/)?.[1];
+  rastro.push({ consulta, final: pagina.url, status: pagina.status, links: [...html.matchAll(/<link[^>]+href="([^"]+)"/g)].map((m) => m[1].slice(0, 300)).slice(0, 12) });
   if (!href) return [];
   const res = await pegar("https://www.google.com" + href.replace(/&amp;/g, "&"));
   const corpo = (await res.text()).replace(/^\)\]\}'\s*/, "");

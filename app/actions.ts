@@ -9,6 +9,7 @@ import { proximoCodigo } from "@/lib/data/placas";
 import { GoogleApiError, googleEnabled, registrarMedicao, syncEmpresa } from "@/lib/google/places";
 import type { DespesaCategoria, PlacaTipo } from "@/lib/db/schema";
 import { qualificar } from "@/lib/prospeccao";
+import { ErroFicha, puxarFichaGoogle, type FichaGoogle } from "@/lib/ficha-google";
 import { destinoAutomatico } from "@/lib/destino-placa";
 import { chaveLead, hostDoMaps, leadManual, lerLinkMaps, type LinkMaps } from "@/lib/maps-link";
 
@@ -278,7 +279,9 @@ export async function carregarDetalheEmpresa(id: number): Promise<EmpresaDetalhe
 }
 
 export async function criarEmpresa(
-  input: { placeId: string; nome: string } | { nome: string; categoria: string; cidade: string; contatoNome?: string; contatoCargo?: string },
+  input:
+    | { placeId: string; nome: string }
+    | { nome: string; categoria: string; cidade: string; contatoNome?: string; contatoCargo?: string; telefone?: string; google?: DadosGoogle },
 ): Promise<Result<{ id: number }>> {
   const nome = input.nome.trim();
   if (!nome) return { ok: false, error: "Qual o nome da empresa?" };
@@ -305,6 +308,11 @@ export async function criarEmpresa(
   }
 
   if (!input.cidade.trim()) return { ok: false, error: "Em que cidade fica?" };
+  const g = input.google;
+  if (g?.placeId) {
+    const existente = await db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.placeId, g.placeId)).then(one);
+    if (existente) return { ok: false, error: "Esse estabelecimento já está na sua lista." };
+  }
   const row = await db
     .insert(s.empresas)
     .values({
@@ -313,12 +321,62 @@ export async function criarEmpresa(
       cidade: input.cidade.trim(),
       contatoNome: input.contatoNome?.trim() || null,
       contatoCargo: input.contatoCargo?.trim() || null,
+      telefone: input.telefone?.trim() || null,
+      ...(g
+        ? {
+            placeId: g.placeId,
+            endereco: g.endereco,
+            mapsUrl: g.mapsUrl && urlValida(g.mapsUrl) ? g.mapsUrl : null,
+            linkAvaliacao: g.linkAvaliacao && urlValida(g.linkAvaliacao) ? g.linkAvaliacao : null,
+            rating: g.rating,
+            totalAvaliacoes: g.totalAvaliacoes,
+            refreshedAt: new Date().toISOString(),
+          }
+        : {}),
       criadaEm: todaySP(),
     })
     .returning({ id: s.empresas.id })
     .then(must);
+  if (g?.totalAvaliacoes != null) await registrarMedicao(row.id, g.totalAvaliacoes, g.rating, "google");
+  if (g?.fotoUrl) await baixarFotoGoogle(row.id, g.fotoUrl);
   revalidatePath("/clientes");
   return { ok: true, data: { id: row.id } };
+}
+
+/** O que veio do link do Google colado no cadastro (lib/ficha-google). */
+export type DadosGoogle = Pick<FichaGoogle, "placeId" | "endereco" | "mapsUrl" | "linkAvaliacao" | "rating" | "totalAvaliacoes" | "fotoUrl">;
+
+/** Puxa a ficha do Google pelo link colado (Maps, Perfil da Empresa ou link de avaliação). */
+export async function lerFichaGoogle(link: string): Promise<Result<FichaGoogle>> {
+  try {
+    return { ok: true, data: await puxarFichaGoogle(link) };
+  } catch (e) {
+    console.error("lerFichaGoogle", e);
+    return { ok: false, error: e instanceof ErroFicha ? e.message : "Não deu para ler esse link agora. Confira o link e tente de novo." };
+  }
+}
+
+/** Guarda a foto do Google no banco (só de googleusercontent; se falhar, o cliente fica com as iniciais). */
+async function baixarFotoGoogle(empresaId: number, url: string) {
+  try {
+    if (new URL(url).hostname.match(/(^|\.)googleusercontent\.com$/) == null) return;
+    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
+    const mime = res.headers.get("content-type") ?? "";
+    if (!res.ok || !mime.startsWith("image/")) return;
+    const bytes = Buffer.from(await res.arrayBuffer());
+    if (bytes.length > FOTO_MAX) return;
+    const now = new Date().toISOString();
+    await db
+      .insert(s.fotos)
+      .values({ empresaId, mime, bytes, atualizadaEm: now })
+      .onConflictDoUpdate({ target: s.fotos.empresaId, set: { mime, bytes, atualizadaEm: now } });
+    await db
+      .update(s.empresas)
+      .set({ fotoUrl: `/api/google/photo/${empresaId}?v=${Date.now().toString(36)}` })
+      .where(eq(s.empresas.id, empresaId));
+  } catch (e) {
+    console.error("baixarFotoGoogle", e);
+  }
 }
 
 export async function editarEmpresa(
