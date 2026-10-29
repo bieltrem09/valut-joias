@@ -26,6 +26,9 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
+/** Tudo depende do banco e do cookie da barra lateral: nada é gerado no build. */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: { default: "Basik7 — Painel", template: "%s · Basik7" },
   description: "Vendas, placas NFC e clientes da Basik7.",
