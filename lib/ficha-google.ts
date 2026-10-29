@@ -157,6 +157,12 @@ export async function puxarFichaGoogle(texto: string, debug = false, agulha?: st
   const res = await fetch(pagina, { headers: NAVEGADOR, cache: "no-store", signal: AbortSignal.timeout(8000) });
   const html = await res.text();
   const lido = lerPaginaMaps(html);
+  let busca = "";
+  const pre = html.match(/href="(\/search\?tbm=map[^"]+)"/)?.[1];
+  if (debug && pre) {
+    const r2 = await fetch("https://www.google.com" + decodificar(pre), { headers: NAVEGADOR, cache: "no-store", signal: AbortSignal.timeout(8000) });
+    busca = await r2.text();
+  }
 
   // Nome do próprio link quando a página não diz.
   const nomeDoLink = lugar?.match(/\/maps\/place\/([^/@?]+)/)?.[1];
@@ -187,6 +193,11 @@ export async function puxarFichaGoogle(texto: string, debug = false, agulha?: st
             amostrasTel: [...html.matchAll(/.{0,60}\(\d{2}\)\s?\d{4,5}-\d{4}.{0,40}/g)].slice(0, 4).map((m) => m[0]),
             agulha: agulha
               ? [...html.matchAll(new RegExp(`.{0,300}${agulha.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.{0,600}`, "g"))].slice(0, 4).map((m) => m[0])
+              : undefined,
+            buscaTamanho: busca.length,
+            buscaInicio: busca.slice(0, 6000),
+            buscaAgulha: agulha
+              ? [...busca.matchAll(new RegExp(`.{0,200}${agulha}.{0,400}`, "g"))].slice(0, 6).map((m) => m[0])
               : undefined,
             amostrasNumero: [...html.matchAll(/.{0,120}\b[1-5]\.\d,\s?\d{1,6}\b.{0,40}/g)].slice(0, 6).map((m) => m[0]),
           },
