@@ -33,5 +33,7 @@ function safeEqual(a: string, b: string) {
 
 export const config = {
   // /r/* é o link público das placas; /api/cron/* tem segredo próprio (CRON_SECRET).
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon\\.svg|icon\\.png|apple-icon\\.png|r/|api/cron/).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|icon\\.svg|icon\\.png|apple-icon\\.png|manifest\\.webmanifest|sw\\.js|offline\\.html|app/|r/|api/cron/).*)",
+  ],
 };

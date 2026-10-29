@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0814" />
+    <title>Sem internet · Basik7</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body { margin: 0; height: 100%; background: #0a0814; color: #ece9f5; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+      main { min-height: 100%; display: grid; place-items: center; padding: 24px; box-sizing: border-box; text-align: center; }
+      img { width: 72px; height: 72px; border-radius: 18px; }
+      h1 { font-size: 20px; margin: 20px 0 6px; letter-spacing: -0.01em; }
+      p { margin: 0; color: #a39fb5; font-size: 14px; max-width: 300px; }
+      button { margin-top: 24px; height: 44px; padding: 0 22px; border: 0; border-radius: 12px; background: #7a4dff; color: #fff; font: inherit; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div>
+        <img src="/app/icone-192.png" alt="" />
+        <h1>Sem internet</h1>
+        <p>O painel precisa de conexão para mostrar suas vendas e clientes. Assim que a internet voltar, é só tentar de novo.</p>
+        <button onclick="location.reload()">Tentar de novo</button>
+      </div>
+    </main>
+    <script>addEventListener("online", () => location.reload());</script>
+  </body>
+</html>

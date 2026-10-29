@@ -6,6 +6,7 @@ import { usoVozDoMes, vozIaEnabled } from "@/lib/elevenlabs";
 import { bancoRemoto, persistente } from "@/lib/db";
 import { PageIntro } from "@/components/shell/page-intro";
 import { StatusDot } from "@/components/ui/chip";
+import { AppNoCelular } from "@/components/shell/instalar-app";
 
 export const metadata: Metadata = { title: "Configurações" };
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export default async function ConfiguracoesPage() {
   return (
     <div className="grid max-w-2xl gap-6 md:gap-8">
       <PageIntro eyebrow="Configurações">Tudo aqui vem das variáveis de ambiente. Mudou lá, publique de novo.</PageIntro>
+      <AppNoCelular />
       <ul className="surface divide-y divide-border">
         <Item
           title="Banco de dados"

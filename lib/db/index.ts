@@ -22,7 +22,7 @@ export const persistente = bancoRemoto || !process.env.VERCEL;
 
 type DB = PostgresJsDatabase<typeof schema>;
 type Estado = { db: DB; ddl: () => Promise<unknown>; ready?: Promise<void> };
-const g = globalThis as unknown as { __ecloura?: Estado };
+const g = globalThis as unknown as { __ecloura?: Estado; __tentarDdlEm?: number };
 
 function conectar(): Estado {
   if (DB_URL) {
@@ -49,7 +49,7 @@ function conectar(): Estado {
       if (ja.length) return;
       try {
         await sql.unsafe(
-          `set local lock_timeout = '20s';\nselect pg_advisory_xact_lock(727274);\n${DDL}\n` +
+          `set local lock_timeout = '5s';\nset local statement_timeout = '30s';\nselect pg_advisory_xact_lock(727274);\n${DDL}\n` +
             `create table if not exists versao_banco (hash text primary key);\n` +
             `insert into versao_banco (hash) values ('${versao}') on conflict do nothing;`,
         );
@@ -61,7 +61,11 @@ function conectar(): Estado {
           )
           .catch(() => []);
         console.error("[banco] criação das tabelas falhou:", (e as Error).message, JSON.stringify(quem));
-        throw e;
+        // As tabelas de uma versão anterior já existem: o painel segue abrindo normalmente
+        // e tenta atualizar de novo daqui a 5 minutos, em vez de travar as páginas.
+        const anterior = await sql.unsafe(`select 1 from versao_banco limit 1`).catch(() => []);
+        if (!anterior.length) throw e;
+        g.__tentarDdlEm = Date.now() + 5 * 60_000;
       }
     };
     return { db: drizzle(sql, { schema }), ddl };
@@ -98,6 +102,10 @@ export const db: DB = new Proxy({} as DB, {
 /** Garante as tabelas uma vez por processo. Toda leitura/escrita passa por aqui. */
 export function ready(): Promise<void> {
   const estado = estadoAtual();
+  if (g.__tentarDdlEm && Date.now() > g.__tentarDdlEm) {
+    g.__tentarDdlEm = undefined;
+    estado.ready = undefined;
+  }
   estado.ready ??= estado
     .ddl()
     .then(() => undefined)
