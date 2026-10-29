@@ -2,9 +2,10 @@ import "server-only";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import postgres from "postgres";
-import { drizzle } from "drizzle-orm/postgres-js";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { Pool } from "pg";
+import { attachDatabasePool } from "@vercel/functions";
+import { drizzle } from "drizzle-orm/node-postgres";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
 import { DDL } from "./ddl";
 
@@ -20,7 +21,7 @@ const DB_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
 export const bancoRemoto = !!DB_URL;
 export const persistente = bancoRemoto || !process.env.VERCEL;
 
-type DB = PostgresJsDatabase<typeof schema>;
+type DB = NodePgDatabase<typeof schema>;
 type Estado = { db: DB; ddl: () => Promise<unknown>; ready?: Promise<void> };
 const g = globalThis as unknown as { __ecloura?: Estado; __tentarDdlEm?: number };
 
@@ -30,45 +31,51 @@ function conectar(): Estado {
     // A URL da integração vem com ?sslmode=…&supa=…; o SSL já vai nas opções e o resto não é do Postgres.
     const url = new URL(DB_URL);
     url.search = "";
-    // prepare:false: o pooler do Supabase (porta 6543) não aceita prepared statements.
-    const sql = postgres(url.toString(), {
-      prepare: false,
+    // pg + attachDatabasePool: a Vercel congela a função entre um uso e outro e as conexões
+    // abertas morriam no meio (a página ficava esperando 5 min). Agora as conexões paradas
+    // fecham antes do congelamento, e nenhuma consulta espera mais que 25 s.
+    const pool = new Pool({
+      connectionString: url.toString(),
       max: Number(process.env.DATABASE_POOL_MAX) || 5,
-      ssl: local ? false : "require",
-      idle_timeout: 20,
-      onnotice: () => {},
+      ssl: local ? false : { rejectUnauthorized: false },
+      idleTimeoutMillis: 5_000,
+      connectionTimeoutMillis: 10_000,
+      query_timeout: 25_000,
+      keepAlive: true,
     });
+    // Conexão que caiu sozinha não derruba o processo: o pool abre outra.
+    pool.on("error", (e) => console.error("[banco] conexão caiu:", e.message));
+    attachDatabasePool(pool);
     // O texto vira uma transação só; a trava faz vários processos (build, funções) criarem
     // as tabelas um de cada vez, em vez de travarem uns aos outros no catálogo.
     // lock_timeout: se algo segurar as tabelas, falha em segundos (e diz quem segura) em vez de travar.
     // Atalho: o banco guarda a "impressão digital" do DDL já aplicado. Se for a mesma,
     // basta uma consulta em vez de rodar as dezenas de comandos a cada função que liga.
     const versao = createHash("sha256").update(DDL).digest("hex").slice(0, 16);
+    const linhas = async (q: string) => (await pool.query(q)).rows;
     const ddl = async () => {
-      const ja = await sql.unsafe(`select 1 from versao_banco where hash = '${versao}'`).catch(() => []);
+      const ja = await linhas(`select 1 from versao_banco where hash = '${versao}'`).catch(() => []);
       if (ja.length) return;
       try {
-        await sql.unsafe(
+        await pool.query(
           `set local lock_timeout = '5s';\nset local statement_timeout = '30s';\nselect pg_advisory_xact_lock(727274);\n${DDL}\n` +
             `create table if not exists versao_banco (hash text primary key);\n` +
             `insert into versao_banco (hash) values ('${versao}') on conflict do nothing;`,
         );
       } catch (e) {
-        const quem = await sql
-          .unsafe(
-            `select pid, usename, state, wait_event_type, wait_event, now() - xact_start as idade, left(query, 160) as consulta
-             from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid() and state <> 'idle'`,
-          )
-          .catch(() => []);
+        const quem = await linhas(
+          `select pid, usename, state, wait_event_type, wait_event, now() - xact_start as idade, left(query, 160) as consulta
+           from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid() and state <> 'idle'`,
+        ).catch(() => []);
         console.error("[banco] criação das tabelas falhou:", (e as Error).message, JSON.stringify(quem));
         // As tabelas de uma versão anterior já existem: o painel segue abrindo normalmente
         // e tenta atualizar de novo daqui a 5 minutos, em vez de travar as páginas.
-        const anterior = await sql.unsafe(`select 1 from versao_banco limit 1`).catch(() => []);
+        const anterior = await linhas(`select 1 from versao_banco limit 1`).catch(() => []);
         if (!anterior.length) throw e;
         g.__tentarDdlEm = Date.now() + 5 * 60_000;
       }
     };
-    return { db: drizzle(sql, { schema }), ddl };
+    return { db: drizzle(pool, { schema }) as unknown as DB, ddl };
   }
   // PGlite só é carregado quando não há banco remoto.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -81,7 +88,7 @@ function conectar(): Estado {
     fs.mkdirSync(dir, { recursive: true });
   }
   const client = new PGlite(dir);
-  // A API do drizzle é a mesma; o tipo do postgres-js serve para os dois.
+  // A API do drizzle é a mesma; o tipo do node-postgres serve para os dois.
   return { db: drizzlePglite(client, { schema }) as unknown as DB, ddl: () => client.exec(DDL) };
 }
 

@@ -8,6 +8,7 @@ import { Topbar } from "@/components/shell/topbar";
 import { BottomNav } from "@/components/shell/bottom-nav";
 import { Aurora } from "@/components/shell/aurora";
 import { InstalarApp } from "@/components/shell/instalar-app";
+import { VigiaErros } from "@/components/shell/vigia-erros";
 import { persistente } from "@/lib/db";
 import Link from "next/link";
 import "./globals.css";
@@ -57,6 +58,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Providers initialCollapsed={collapsed}>
           <Aurora />
           <InstalarApp />
+          <VigiaErros />
           <a
             href="#conteudo"
             className="sr-only z-50 rounded-control bg-card px-3 py-2 text-13 shadow-pop focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
