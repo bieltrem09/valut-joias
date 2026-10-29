@@ -1,4 +1,4 @@
-import { ChartNoAxesColumn, GraduationCap, Nfc, Package, Radar, Receipt, Store, type LucideIcon } from "lucide-react";
+import { ChartNoAxesColumn, GraduationCap, Nfc, Package, Radar, Receipt, Store, Truck, type LucideIcon } from "lucide-react";
 
 export type NavItem = { href: string; label: string; short: string; icon: LucideIcon; period: boolean };
 
@@ -7,6 +7,7 @@ export const NAV: NavItem[] = [
   { href: "/placas", label: "Placas NFC", short: "Placas", icon: Nfc, period: false },
   { href: "/clientes", label: "Clientes", short: "Clientes", icon: Store, period: false },
   { href: "/estoque", label: "Estoque", short: "Estoque", icon: Package, period: false },
+  { href: "/fornecedores", label: "Fornecedores", short: "Compras", icon: Truck, period: false },
   { href: "/despesas", label: "Despesas", short: "Despesas", icon: Receipt, period: true },
   { href: "/prospeccao", label: "Prospecção", short: "Leads", icon: Radar, period: false },
   { href: "/mentora", label: "Mentora", short: "Mentora", icon: GraduationCap, period: false },

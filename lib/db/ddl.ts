@@ -176,6 +176,56 @@ create table if not exists uso_voz (
   mes text primary key,
   caracteres integer not null default 0
 );
+create table if not exists fornecedores (
+  id serial primary key,
+  nome text not null,
+  whatsapp text,
+  site text,
+  instagram text,
+  cidade text,
+  prazo_dias integer,
+  pedido_minimo integer,
+  frete text,
+  nota integer,
+  favorito boolean not null default false,
+  observacoes text,
+  criado_em text not null
+);
+create table if not exists ofertas_fornecedor (
+  id serial primary key,
+  fornecedor_id integer not null references fornecedores(id) on delete cascade,
+  nome text not null,
+  descricao text,
+  link text,
+  tipo text,
+  material text,
+  preco double precision not null default 0,
+  qtd_minima integer not null default 1,
+  imagem_url text,
+  foto_mime text,
+  foto bytea,
+  foto_versao integer not null default 0,
+  criado_em text not null
+);
+create index if not exists ofertas_fornecedor_idx on ofertas_fornecedor(fornecedor_id);
+create table if not exists pedidos_compra (
+  id serial primary key,
+  fornecedor_id integer not null references fornecedores(id) on delete cascade,
+  oferta_id integer references ofertas_fornecedor(id) on delete set null,
+  descricao text not null,
+  quantidade integer not null,
+  valor_total double precision not null,
+  frete double precision not null default 0,
+  data text not null,
+  previsao text,
+  status text not null default 'pedido',
+  rastreio text,
+  observacao text,
+  recebido_em text,
+  produto_id integer,
+  criado_em text not null
+);
+create index if not exists pedidos_compra_status_idx on pedidos_compra(status);
 create table if not exists gravacoes (
   id serial primary key,
   roteiro_id text not null unique,

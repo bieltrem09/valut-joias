@@ -1,4 +1,4 @@
-import { pgTable, text, integer, doublePrecision, serial, primaryKey, index, uniqueIndex, customType, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, doublePrecision, serial, primaryKey, index, uniqueIndex, customType, jsonb } from "drizzle-orm/pg-core";
 
 /** bytea ↔ Buffer (fotos guardadas no banco). */
 const bytea = customType<{ data: Buffer; driverData: Buffer | Uint8Array }>({
@@ -244,6 +244,79 @@ export const usoGoogle = pgTable("uso_google", {
   detalhes: integer("detalhes").notNull().default(0),
   fotos: integer("fotos").notNull().default(0),
 });
+
+/** Onde você compra as placas: contato, prazo, pedido mínimo e sua nota para ele. */
+export const fornecedores = pgTable("fornecedores", {
+  id: serial("id").primaryKey(),
+  nome: text("nome").notNull(),
+  whatsapp: text("whatsapp"),
+  site: text("site"),
+  instagram: text("instagram"),
+  cidade: text("cidade"),
+  prazoDias: integer("prazo_dias"),
+  pedidoMinimo: integer("pedido_minimo"),
+  frete: text("frete"),
+  nota: integer("nota"),
+  favorito: boolean("favorito").notNull().default(false),
+  observacoes: text("observacoes"),
+  criadoEm: text("criado_em").notNull(),
+});
+
+/** Cada placa que o fornecedor vende: foto, descrição, preço e o link direto para comprar. */
+export const ofertasFornecedor = pgTable(
+  "ofertas_fornecedor",
+  {
+    id: serial("id").primaryKey(),
+    fornecedorId: integer("fornecedor_id")
+      .notNull()
+      .references(() => fornecedores.id, { onDelete: "cascade" }),
+    nome: text("nome").notNull(),
+    descricao: text("descricao"),
+    link: text("link"),
+    tipo: text("tipo"),
+    material: text("material"),
+    preco: doublePrecision("preco").notNull().default(0),
+    qtdMinima: integer("qtd_minima").notNull().default(1),
+    /** Foto vinda do link (quando não deu para guardar a imagem). */
+    imagemUrl: text("imagem_url"),
+    fotoMime: text("foto_mime"),
+    foto: bytea("foto"),
+    /** Sobe a cada foto nova: a URL muda e o cache não mostra a antiga. */
+    fotoVersao: integer("foto_versao").notNull().default(0),
+    criadoEm: text("criado_em").notNull(),
+  },
+  (t) => [index("ofertas_fornecedor_idx").on(t.fornecedorId)],
+);
+
+/** Compras de placas: do pedido até chegar (e entrar no estoque). */
+export const pedidosCompra = pgTable(
+  "pedidos_compra",
+  {
+    id: serial("id").primaryKey(),
+    fornecedorId: integer("fornecedor_id")
+      .notNull()
+      .references(() => fornecedores.id, { onDelete: "cascade" }),
+    ofertaId: integer("oferta_id").references(() => ofertasFornecedor.id, { onDelete: "set null" }),
+    descricao: text("descricao").notNull(),
+    quantidade: integer("quantidade").notNull(),
+    valorTotal: doublePrecision("valor_total").notNull(),
+    frete: doublePrecision("frete").notNull().default(0),
+    data: text("data").notNull(),
+    previsao: text("previsao"),
+    status: text("status", { enum: ["pedido", "enviado", "recebido", "cancelado"] })
+      .notNull()
+      .default("pedido"),
+    rastreio: text("rastreio"),
+    observacao: text("observacao"),
+    recebidoEm: text("recebido_em"),
+    produtoId: integer("produto_id"),
+    criadoEm: text("criado_em").notNull(),
+  },
+  (t) => [index("pedidos_compra_status_idx").on(t.status)],
+);
+
+export type Fornecedor = typeof fornecedores.$inferSelect;
+export type PedidoCompra = typeof pedidosCompra.$inferSelect;
 
 /** Sua voz falando cada roteiro da Mentora (uma gravação por roteiro; regravar troca). */
 export const gravacoes = pgTable("gravacoes", {
