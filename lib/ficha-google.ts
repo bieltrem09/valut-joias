@@ -129,7 +129,7 @@ async function seguir(url: string): Promise<string[]> {
   return vistos;
 }
 
-export async function puxarFichaGoogle(texto: string, debug = false): Promise<FichaGoogle & { debug?: unknown }> {
+export async function puxarFichaGoogle(texto: string, debug = false, agulha?: string): Promise<FichaGoogle & { debug?: unknown }> {
   const url = urlDoTexto(texto);
   if (!url || !hostGoogle(url)) throw new Error("Cole um link do Google Maps ou do Perfil da Empresa no Google.");
 
@@ -185,6 +185,9 @@ export async function puxarFichaGoogle(texto: string, debug = false): Promise<Fi
             titulo: html.match(/<title>[^<]*<\/title>/i)?.[0],
             amostrasNota: [...html.matchAll(/.{0,80}(?:avalia|reviews).{0,80}/gi)].slice(0, 8).map((m) => m[0]),
             amostrasTel: [...html.matchAll(/.{0,60}\(\d{2}\)\s?\d{4,5}-\d{4}.{0,40}/g)].slice(0, 4).map((m) => m[0]),
+            agulha: agulha
+              ? [...html.matchAll(new RegExp(`.{0,300}${agulha.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.{0,600}`, "g"))].slice(0, 4).map((m) => m[0])
+              : undefined,
             amostrasNumero: [...html.matchAll(/.{0,120}\b[1-5]\.\d,\s?\d{1,6}\b.{0,40}/g)].slice(0, 6).map((m) => m[0]),
           },
         }
