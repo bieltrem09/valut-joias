@@ -235,4 +235,5 @@ create table if not exists gravacoes (
   criada_em text not null
 );
 alter table fornecedores add column if not exists link_compra text;
+alter table empresas add column if not exists link_avaliacao text;
 `;

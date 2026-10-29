@@ -17,7 +17,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ codigo:
   // Placa sem link colado: avaliação no Google do cliente (ou o Maps), calculado na hora.
   if (!placa.destinoUrl) {
     const empresa = await db
-      .select({ placeId: s.empresas.placeId, mapsUrl: s.empresas.mapsUrl })
+      .select({ placeId: s.empresas.placeId, mapsUrl: s.empresas.mapsUrl, linkAvaliacao: s.empresas.linkAvaliacao })
       .from(s.empresas)
       .where(eq(s.empresas.id, placa.empresaId))
       .then(one);

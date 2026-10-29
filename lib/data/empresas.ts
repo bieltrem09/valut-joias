@@ -14,6 +14,7 @@ export type EmpresaCardData = {
   cidade: string;
   endereco: string | null;
   mapsUrl: string | null;
+  linkAvaliacao: string | null;
   fotoUrl: string | null;
   telefone: string | null;
   rating: number | null;
@@ -79,6 +80,7 @@ export async function listEmpresas(): Promise<EmpresaCardData[]> {
       cidade: e.cidade,
       endereco: e.endereco,
       mapsUrl: e.mapsUrl,
+      linkAvaliacao: e.linkAvaliacao,
       fotoUrl: e.fotoUrl,
       telefone: e.telefone,
       rating: e.rating,

@@ -14,6 +14,8 @@ export const empresas = pgTable("empresas", {
   cidade: text("cidade").notNull(),
   endereco: text("endereco"),
   mapsUrl: text("maps_url"),
+  /** Link "Pedir avaliações" do Google colado por você: as placas do cliente levam direto para ele. */
+  linkAvaliacao: text("link_avaliacao"),
   fotoUrl: text("foto_url"),
   rating: doublePrecision("rating"),
   totalAvaliacoes: integer("total_avaliacoes"),

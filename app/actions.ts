@@ -74,7 +74,7 @@ export type NovaVenda = {
 export async function criarVenda(v: NovaVenda): Promise<Result<{ codigos: string[] }>> {
   await ready();
   const empresa = await db
-    .select({ id: s.empresas.id, placeId: s.empresas.placeId, mapsUrl: s.empresas.mapsUrl })
+    .select({ id: s.empresas.id, placeId: s.empresas.placeId, mapsUrl: s.empresas.mapsUrl, linkAvaliacao: s.empresas.linkAvaliacao })
     .from(s.empresas)
     .where(eq(s.empresas.id, v.empresaId))
     .then(one);
@@ -323,10 +323,12 @@ export async function criarEmpresa(
 
 export async function editarEmpresa(
   id: number,
-  input: { nome: string; categoria: string; cidade: string; contatoNome: string; contatoCargo: string; telefone: string },
+  input: { nome: string; categoria: string; cidade: string; contatoNome: string; contatoCargo: string; telefone: string; linkAvaliacao?: string },
 ): Promise<Result> {
   if (!input.nome.trim()) return { ok: false, error: "O nome não pode ficar vazio." };
   if (!input.cidade.trim()) return { ok: false, error: "Informe a cidade." };
+  const link = input.linkAvaliacao?.trim() ?? "";
+  if (link && !urlValida(link)) return { ok: false, error: "O link de avaliação precisa começar com https:// (copie o link inteiro)." };
   await ready();
   await db
     .update(s.empresas)
@@ -337,6 +339,7 @@ export async function editarEmpresa(
       contatoNome: input.contatoNome.trim() || null,
       contatoCargo: input.contatoCargo.trim() || null,
       telefone: input.telefone.trim() || null,
+      ...(input.linkAvaliacao !== undefined ? { linkAvaliacao: link || null } : {}),
     })
     .where(eq(s.empresas.id, id));
   revalidateAll();

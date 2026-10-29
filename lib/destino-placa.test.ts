@@ -7,6 +7,11 @@ describe("destino automático da placa", () => {
       "https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4",
     );
   });
+  it("link colado no cliente vem primeiro", () => {
+    expect(destinoAutomatico("Avaliação Google", { placeId: "ChIJN1t_tDeuEmsRUsoyG83frY4", mapsUrl: null, linkAvaliacao: "https://g.page/r/abc/review" })).toBe(
+      "https://g.page/r/abc/review",
+    );
+  });
   it("sem id do Google cai no Maps, e sem nada fica vazio", () => {
     expect(destinoAutomatico("Avaliação Google", { placeId: "manual:abc", mapsUrl: "https://maps.google.com/?cid=1" })).toBe("https://maps.google.com/?cid=1");
     expect(destinoAutomatico("Instagram", { placeId: "ChIJN1t_tDeuEmsRUsoyG83frY4", mapsUrl: null })).toBeNull();

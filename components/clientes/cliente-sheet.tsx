@@ -472,6 +472,7 @@ function EditarCliente({
             contatoNome: String(f.get("contatoNome") ?? ""),
             contatoCargo: String(f.get("contatoCargo") ?? ""),
             telefone: String(f.get("telefone") ?? ""),
+            linkAvaliacao: String(f.get("linkAvaliacao") ?? ""),
           });
           if (!r.ok) return setError(r.error);
           toast.success("Dados salvos");
@@ -499,6 +500,21 @@ function EditarCliente({
           <Input id="ed-tel" name="telefone" type="tel" defaultValue={e.telefone ?? ""} />
         </Field>
       </div>
+      <Field
+        label="Link de avaliação no Google"
+        htmlFor="ed-aval"
+        hint="As placas de avaliação deste cliente levam direto para este link. Onde achar: no Perfil da Empresa no Google do cliente, toque em “Pedir avaliações” e copie o link (ou cole o link do Maps)."
+      >
+        <Input
+          id="ed-aval"
+          name="linkAvaliacao"
+          type="url"
+          inputMode="url"
+          placeholder="https://g.page/r/…/review"
+          defaultValue={e.linkAvaliacao ?? ""}
+          className="font-mono text-13"
+        />
+      </Field>
       {error && (
         <p role="alert" className="text-13 text-destructive">
           {error}
