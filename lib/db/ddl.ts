@@ -234,4 +234,5 @@ create table if not exists gravacoes (
   segundos double precision,
   criada_em text not null
 );
+alter table fornecedores add column if not exists link_compra text;
 `;

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ImagePlus, Link2, Loader2, Package, Star, Trash2, Wand2, X } from "lucide-react";
+import { ClipboardPaste, ExternalLink, ImagePlus, Link2, Loader2, Package, ShoppingCart, Star, Trash2, Wand2, X } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, fieldClass } from "@/components/ui/input";
@@ -19,7 +19,7 @@ import {
   salvarPedido,
 } from "@/app/fornecedores/actions";
 import type { Fornecedor, Oferta, PedidoCompra } from "@/lib/data/fornecedores";
-import { MATERIAIS, TIPOS_PLACA, custoUnitario } from "@/lib/fornecedores";
+import { MATERIAIS, TIPOS_PLACA, custoUnitario, normalizarUrl } from "@/lib/fornecedores";
 import { comprimirImagem } from "@/lib/imagem";
 import { formatBRL } from "@/lib/format";
 import { todaySP, addDays } from "@/lib/dates";
@@ -87,6 +87,7 @@ function FormFornecedor({ f, onDone }: { f: Fornecedor | null; onDone: () => voi
   const [nome, setNome] = React.useState(f?.nome ?? "");
   const [whatsapp, setWhatsapp] = React.useState(f?.whatsapp ?? "");
   const [site, setSite] = React.useState(f?.site ?? "");
+  const [linkCompra, setLinkCompra] = React.useState(f?.linkCompra ?? "");
   const [instagram, setInstagram] = React.useState(f?.instagram ?? "");
   const [cidade, setCidade] = React.useState(f?.cidade ?? "");
   const [prazo, setPrazo] = React.useState(f?.prazoDias != null ? String(f.prazoDias) : "");
@@ -105,6 +106,7 @@ function FormFornecedor({ f, onDone }: { f: Fornecedor | null; onDone: () => voi
       nome,
       whatsapp,
       site,
+      linkCompra,
       instagram,
       cidade,
       prazoDias: prazo,
@@ -131,6 +133,47 @@ function FormFornecedor({ f, onDone }: { f: Fornecedor | null; onDone: () => voi
     >
       <Field label="Nome" htmlFor="f-nome">
         <Input id="f-nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Gráfica Prime NFC" autoComplete="off" />
+      </Field>
+      <Field
+        label="Link direto da compra"
+        htmlFor="f-compra"
+        hint="Abra a página de compra do fornecedor, copie o endereço e cole aqui. O botão Comprar abre direto nela."
+      >
+        <div className="flex gap-2">
+          <div className="relative flex min-w-0 flex-1 items-center">
+            <ShoppingCart className="pointer-events-none absolute left-3 size-4 text-primary" strokeWidth={1.5} />
+            <Input
+              id="f-compra"
+              value={linkCompra}
+              onChange={(e) => setLinkCompra(e.target.value)}
+              placeholder="https://loja.com.br/placa-nfc"
+              inputMode="url"
+              autoComplete="off"
+              className="pl-9"
+            />
+          </div>
+          <Button
+            type="button"
+            onClick={async () => {
+              try {
+                const t = (await navigator.clipboard.readText()).trim();
+                if (!t) return toast("A área de transferência está vazia.");
+                setLinkCompra(t);
+              } catch {
+                toast("Toque e segure no campo e escolha Colar.");
+              }
+            }}
+          >
+            <ClipboardPaste strokeWidth={1.5} /> Colar
+          </Button>
+          {normalizarUrl(linkCompra) && (
+            <Button asChild size="icon" title="Testar o link">
+              <a href={normalizarUrl(linkCompra)!} target="_blank" rel="noreferrer" aria-label="Testar o link da compra">
+                <ExternalLink strokeWidth={1.5} />
+              </a>
+            </Button>
+          )}
+        </div>
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="WhatsApp" htmlFor="f-wa" hint="Com DDD">

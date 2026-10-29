@@ -44,6 +44,7 @@ export type FornecedorEntrada = {
   nome: string;
   whatsapp?: string;
   site?: string;
+  linkCompra?: string;
   instagram?: string;
   cidade?: string;
   prazoDias?: number | string | null;
@@ -61,6 +62,9 @@ export function validarFornecedor(e: FornecedorEntrada) {
   const siteBruto = limpo(e.site, 300);
   const site = normalizarUrl(siteBruto);
   if (siteBruto && !site) return { ok: false, error: "O site não parece um link válido." } as const;
+  const compraBruto = limpo(e.linkCompra, 1000);
+  const linkCompra = normalizarUrl(compraBruto);
+  if (compraBruto && !linkCompra) return { ok: false, error: "O link da compra não parece válido. Copie o endereço inteiro da página." } as const;
   const nota = e.nota == null ? null : Math.min(5, Math.max(1, Math.round(Number(e.nota)))) || null;
   return {
     ok: true,
@@ -68,6 +72,7 @@ export function validarFornecedor(e: FornecedorEntrada) {
       nome,
       whatsapp,
       site,
+      linkCompra,
       instagram: limpo(e.instagram, 120),
       cidade: limpo(e.cidade, 80),
       prazoDias: inteiro(e.prazoDias),

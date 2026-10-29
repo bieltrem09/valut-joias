@@ -251,6 +251,8 @@ export const fornecedores = pgTable("fornecedores", {
   nome: text("nome").notNull(),
   whatsapp: text("whatsapp"),
   site: text("site"),
+  /** Link direto da página de compra: o botão "Comprar" abre nele. */
+  linkCompra: text("link_compra"),
   instagram: text("instagram"),
   cidade: text("cidade"),
   prazoDias: integer("prazo_dias"),

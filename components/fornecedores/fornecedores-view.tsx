@@ -11,6 +11,7 @@ import {
   Calculator,
   Check,
   ClipboardList,
+  Copy,
   ExternalLink,
   Globe,
   ImageOff,
@@ -577,9 +578,9 @@ function CartaoPlaca({
           </p>
         )}
         <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 pt-1">
-          {o.link ? (
+          {(o.link ?? f?.linkCompra) ? (
             <Button asChild variant="primary" size="sm">
-              <a href={o.link} target="_blank" rel="noreferrer">
+              <a href={(o.link ?? f?.linkCompra)!} target="_blank" rel="noreferrer">
                 <ShoppingCart strokeWidth={1.75} /> Comprar
               </a>
             </Button>
@@ -706,8 +707,36 @@ function CartaoFornecedor({
       </p>
 
       <div className="mt-auto flex flex-wrap gap-2">
+        {f.linkCompra ? (
+          <>
+            <Button asChild variant="primary" size="sm">
+              <a href={f.linkCompra} target="_blank" rel="noreferrer">
+                <ShoppingCart strokeWidth={1.75} /> Comprar
+              </a>
+            </Button>
+            <Button
+              size="icon-sm"
+              title="Copiar o link da compra"
+              aria-label={`Copiar o link da compra de ${f.nome}`}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(f.linkCompra!);
+                  toast.success("Link da compra copiado");
+                } catch {
+                  toast.error("Não deu para copiar. Abra o link e copie pelo navegador.");
+                }
+              }}
+            >
+              <Copy strokeWidth={1.5} />
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" onClick={onEditar}>
+            <Plus strokeWidth={1.5} /> Pôr link da compra
+          </Button>
+        )}
         {wa && (
-          <Button asChild variant="primary" size="sm">
+          <Button asChild variant={f.linkCompra ? "secondary" : "primary"} size="sm">
             <a href={wa} target="_blank" rel="noreferrer">
               <MessageCircle strokeWidth={1.75} /> Pedir orçamento
             </a>
@@ -1079,9 +1108,9 @@ function SimuladorSheet({
           </dl>
 
           <div className="grid gap-2">
-            {o.link && (
+            {(o.link ?? f?.linkCompra) && (
               <Button asChild variant="primary">
-                <a href={o.link} target="_blank" rel="noreferrer">
+                <a href={(o.link ?? f?.linkCompra)!} target="_blank" rel="noreferrer">
                   <ShoppingCart strokeWidth={1.75} /> Comprar no site
                 </a>
               </Button>

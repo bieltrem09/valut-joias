@@ -36,6 +36,9 @@ describe("validação", () => {
     expect(validarFornecedor({ nome: "Gráfica X", whatsapp: "9999-0000" }).ok).toBe(false);
     const v = validarFornecedor({ nome: "Gráfica X", whatsapp: "(19) 99999-0000", site: "graficax.com.br", nota: 7, prazoDias: "5" });
     expect(v.ok && v.dados).toMatchObject({ site: "https://graficax.com.br/", nota: 5, prazoDias: 5 });
+    const c = validarFornecedor({ nome: "Loja", linkCompra: " graficax.com.br/placa-nfc?cor=preta " });
+    expect(c.ok && c.dados.linkCompra).toBe("https://graficax.com.br/placa-nfc?cor=preta");
+    expect(validarFornecedor({ nome: "Loja", linkCompra: "comprar aqui" }).ok).toBe(false);
   });
   it("oferta e pedido", () => {
     expect(validarOferta({ fornecedorId: 1, nome: "Placa", preco: 12.345, link: "nada" }).ok).toBe(false);
