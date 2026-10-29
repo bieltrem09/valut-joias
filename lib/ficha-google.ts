@@ -142,11 +142,13 @@ export const rastro: unknown[] = [];
 async function buscarNoMaps(consulta: string): Promise<Lugar[]> {
   const pagina = await pegar(`https://www.google.com/maps?q=${encodeURIComponent(consulta)}&hl=pt-BR&gl=br`);
   const html = await pagina.text();
-  const href = html.match(/href="(\/search\?tbm=map[^"]+)"/)?.[1];
+  // Busca solta pré-carrega /search?tbm=map; um lugar exato pré-carrega /maps/preview/place. Os dois trazem a ficha.
+  const href = html.match(/href="(\/(?:search\?tbm=map|maps\/preview\/place\?)[^"]+)"/)?.[1];
   rastro.push({ consulta, final: pagina.url, status: pagina.status, links: [...html.matchAll(/<link[^>]+href="([^"]+)"/g)].map((m) => m[1].slice(0, 300)).slice(0, 12) });
   if (!href) return [];
   const res = await pegar("https://www.google.com" + href.replace(/&amp;/g, "&"));
   const corpo = (await res.text()).replace(/^\)\]\}'\s*/, "");
+  rastro.push({ href: href.slice(0, 80), corpo: corpo.slice(0, 1500) });
   try {
     return acharLugares(JSON.parse(corpo));
   } catch {
