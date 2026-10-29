@@ -763,3 +763,20 @@ html:not(.dark) .aurora-grain {
     max-width: none;
   }
 }
+
+/* Barrinha de carregamento ao trocar de aba: avança rápido e espera a página. */
+.barra-rota {
+  width: 0;
+  animation: barra-rota 2.4s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
+}
+@keyframes barra-rota {
+  to {
+    width: 88%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .barra-rota {
+    animation: none;
+    width: 60%;
+  }
+}

@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { motion } from "motion/react";
 import { Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { activeNav, NAV } from "./nav";
+import { NAV } from "./nav";
+import { BarraCarregando, useNavOtimista } from "./nav-otimista";
 import { LogoMark } from "./logo";
 import { NeonIcon, useBurst } from "./neon-icon";
 import { ThemeToggle } from "./theme-toggle";
@@ -74,36 +75,50 @@ export function Sidebar({ nome, email }: { nome: string | null; email: string | 
 }
 
 function NavLinks() {
-  const pathname = usePathname();
   const sp = useSearchParams();
-  const active = activeNav(pathname);
+  const { ativo: active, carregando, marcar, adiantar } = useNavOtimista();
   const { bursts, fire } = useBurst();
   const p = sp.get("p");
   const periodQs = p ? `?${new URLSearchParams(Object.fromEntries(["p", "de", "ate"].filter((k) => sp.get(k)).map((k) => [k, sp.get(k)!]))).toString()}` : "";
 
-  return NAV.map((item) => {
-    const isActive = active?.href === item.href;
-    const Icon = item.icon;
-    return (
-      <Link
-        key={item.href}
-        href={item.period ? `${item.href}${periodQs}` : item.href}
-        aria-current={isActive ? "page" : undefined}
-        title={item.label}
-        onClick={() => fire(item.href)}
-        className={cn(
-          "relative flex h-10 items-center gap-3 rounded-control px-3 text-14 outline-hidden transition-[color,transform] duration-150 ease-out-strong active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-sidebar-accent coarse:h-11",
-          isActive ? "text-sidebar-strong" : "text-sidebar-foreground hover-fine:text-sidebar-strong",
-        )}
-      >
-        {isActive && (
-          <motion.span layoutId="nav-active" className="nav-glow absolute inset-0 rounded-control" transition={{ type: "spring", stiffness: 300, damping: 30 }}>
-            <span className="nav-glow-bar absolute inset-y-2.5 left-0 w-[2px] rounded-full" />
-          </motion.span>
-        )}
-        <NeonIcon icon={Icon} active={isActive} burst={bursts[item.href] ?? 0} size={18} />
-        <span className="relative hidden truncate group-data-[wide=true]/sb:xl:inline">{item.label}</span>
-      </Link>
-    );
-  });
+  return (
+    <>
+      <BarraCarregando ativa={carregando} />
+      {NAV.map((item) => {
+        const isActive = active?.href === item.href;
+        const Icon = item.icon;
+        const href = item.period ? `${item.href}${periodQs}` : item.href;
+        return (
+          <Link
+            key={item.href}
+            href={href}
+            aria-current={isActive ? "page" : undefined}
+            title={item.label}
+            onPointerEnter={() => adiantar(href)}
+            onPointerDown={() => adiantar(href)}
+            onClick={(e) => {
+              marcar(item.href, e);
+              fire(item.href);
+            }}
+            className={cn(
+              "relative flex h-10 items-center gap-3 rounded-control px-3 text-14 outline-hidden transition-[color,transform] duration-150 ease-out-strong active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-sidebar-accent coarse:h-11",
+              isActive ? "text-sidebar-strong" : "text-sidebar-foreground hover-fine:text-sidebar-strong",
+            )}
+          >
+            {isActive && (
+              <motion.span
+                layoutId="nav-active"
+                className="nav-glow absolute inset-0 rounded-control"
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              >
+                <span className="nav-glow-bar absolute inset-y-2.5 left-0 w-[2px] rounded-full" />
+              </motion.span>
+            )}
+            <NeonIcon icon={Icon} active={isActive} burst={bursts[item.href] ?? 0} size={18} />
+            <span className="relative hidden truncate group-data-[wide=true]/sb:xl:inline">{item.label}</span>
+          </Link>
+        );
+      })}
+    </>
+  );
 }

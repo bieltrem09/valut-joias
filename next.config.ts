@@ -9,7 +9,8 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "4mb" },
     // Voltar para uma aba vista há menos de 30 s é instantâneo (sem ir ao servidor de novo).
     // Salvar qualquer coisa limpa esse cache na hora, então nada fica desatualizado.
-    staleTimes: { dynamic: 30 },
+    // static: o que o menu adianta (mouse em cima / dedo encostando) vale os mesmos 30 s.
+    staleTimes: { dynamic: 30, static: 30 },
   },
 };
 

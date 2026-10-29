@@ -233,7 +233,7 @@ export function EstoqueView({ produtos }: { produtos: ProdutoComFotos[] }) {
             {visiveis.map((p, i) => (
               <motion.li
                 key={p.id}
-                layout={!reduce}
+                // Sem animação de posição: ela media todos os itens a cada toque e deixava a tela lenta.
                 initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}

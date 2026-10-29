@@ -38,6 +38,7 @@ import { urlBuscaMaps, urlEmbedMaps } from "@/lib/maps-link";
 import { formatInt, formatRating } from "@/lib/format";
 import type { BuscaSalva } from "@/lib/data/leads";
 import { cn } from "@/lib/utils";
+import { useEstavel } from "@/lib/use-estavel";
 import { Medidor, Motivos, PRIORIDADE, STATUS_FUNIL } from "./radar-ui";
 
 type Onde = { nome: string; centro: { lat: number; lng: number } } | null;
@@ -357,6 +358,23 @@ export function Prospector({
     router.refresh();
   };
 
+  // Funções estáveis para os cartões: tocar num nicho não redesenha os 40 cartões.
+  const qRepetir = useEstavel(repetir);
+  const qEnviar = useEstavel(enviarVarios);
+  const qFocar = useEstavel((id: string) => {
+    selecionar(id);
+    setAba("lista");
+    // No celular o mapa fica abaixo do painel: rola direto para ele.
+    const alvo = window.matchMedia("(min-width: 1024px)").matches ? mapaBox.current?.closest("section") : mapaBox.current;
+    alvo?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  });
+  const qMelhores = useEstavel(() => {
+    setOrdem("score");
+    setFiltros(new Set());
+    setRamo("");
+  });
+  const qSoWhatsapp = useEstavel(() => setFiltros(new Set<Filtro>(["whatsapp"])));
+
   const navegar = (d: number) => {
     if (!lista.length) return;
     const i = Math.max(
@@ -391,37 +409,7 @@ export function Prospector({
             </div>
           </header>
 
-          <LayoutGroup id="abas-prosp">
-            <div role="tablist" aria-label="Painel" className="mx-5 flex gap-1 rounded-full bg-muted p-1">
-              {(
-                [
-                  ["alvo", "Alvo"],
-                  ["lista", resultados ? `Resultados · ${total}` : "Resultados"],
-                ] as const
-              ).map(([k, l]) => (
-                <button
-                  key={k}
-                  role="tab"
-                  type="button"
-                  aria-selected={aba === k}
-                  onClick={() => setAba(k)}
-                  className={cn(
-                    "relative h-8 flex-1 rounded-full text-13 font-medium outline-hidden focus-visible:ring-2 focus-visible:ring-ring coarse:h-10",
-                    aba === k ? "text-foreground" : "text-muted-foreground hover-fine:text-foreground",
-                  )}
-                >
-                  {aba === k && (
-                    <motion.span
-                      layoutId="aba-prosp-pill"
-                      className="absolute inset-0 rounded-full bg-card shadow-hairline"
-                      transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
-                    />
-                  )}
-                  <span className="relative">{l}</span>
-                </button>
-              ))}
-            </div>
-          </LayoutGroup>
+          <AbasPainel aba={aba} onAba={setAba} resultados={resultados ? total : null} reduce={!!reduce} />
 
           <div className={cn("min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-4 lg:max-h-none lg:no-scrollbar", aba === "lista" && "max-h-[55vh]")}>
             {aba === "alvo" ? (
@@ -866,25 +854,65 @@ export function Prospector({
         numeros={numeros}
         contexto={contexto}
         carregando={carregando}
-        onRepetir={repetir}
-        onFocar={(id) => {
-          selecionar(id);
-          setAba("lista");
-          // No celular o mapa fica abaixo do painel: rola direto para ele.
-          const alvo = window.matchMedia("(min-width: 1024px)").matches ? mapaBox.current?.closest("section") : mapaBox.current;
-          alvo?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-        }}
-        onEnviar={enviarVarios}
-        onMelhoresPrimeiro={() => {
-          setOrdem("score");
-          setFiltros(new Set());
-          setRamo("");
-        }}
-        onSoWhatsapp={() => setFiltros(new Set<Filtro>(["whatsapp"]))}
+        onRepetir={qRepetir}
+        onFocar={qFocar}
+        onEnviar={qEnviar}
+        onMelhoresPrimeiro={qMelhores}
+        onSoWhatsapp={qSoWhatsapp}
       />
     </>
   );
 }
+
+/**
+ * Abas Alvo/Resultados. Separadas e com memo: a pílula animada mede a página a cada
+ * redesenho, então ela só redesenha quando a aba ou o total mudam (não a cada nicho tocado).
+ */
+const AbasPainel = React.memo(function AbasPainel({
+  aba,
+  onAba,
+  resultados,
+  reduce,
+}: {
+  aba: "alvo" | "lista";
+  onAba: (a: "alvo" | "lista") => void;
+  resultados: number | null;
+  reduce: boolean;
+}) {
+  return (
+    <LayoutGroup id="abas-prosp">
+      <div role="tablist" aria-label="Painel" className="mx-5 flex gap-1 rounded-full bg-muted p-1">
+        {(
+          [
+            ["alvo", "Alvo"],
+            ["lista", resultados != null ? `Resultados · ${resultados}` : "Resultados"],
+          ] as const
+        ).map(([k, l]) => (
+          <button
+            key={k}
+            role="tab"
+            type="button"
+            aria-selected={aba === k}
+            onClick={() => onAba(k)}
+            className={cn(
+              "relative h-8 flex-1 rounded-full text-13 font-medium outline-hidden focus-visible:ring-2 focus-visible:ring-ring coarse:h-10",
+              aba === k ? "text-foreground" : "text-muted-foreground hover-fine:text-foreground",
+            )}
+          >
+            {aba === k && (
+              <motion.span
+                layoutId="aba-prosp-pill"
+                className="absolute inset-0 rounded-full bg-card shadow-hairline"
+                transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
+              />
+            )}
+            <span className="relative">{l}</span>
+          </button>
+        ))}
+      </div>
+    </LayoutGroup>
+  );
+});
 
 const botaoBarra =
   "h-8 rounded-full px-3 text-12 font-medium ring-1 ring-border transition-[background-color,transform] duration-150 hover-fine:bg-muted active:scale-[0.96] coarse:h-10";

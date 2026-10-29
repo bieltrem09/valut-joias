@@ -19,7 +19,8 @@ const dataCurta = (iso: string) =>
  * Bancada de qualificação: buscas salvas, o resumo do lote, a barra para mandar
  * ao funil em lote e os leads em cartões (duas colunas no computador, uma no celular).
  */
-export function Qualificador({
+/** Só redesenha quando os resultados mudam (ver useEstavel no Prospector). */
+export const Qualificador = React.memo(function Qualificador({
   buscas,
   lista,
   numeros,
@@ -252,7 +253,7 @@ export function Qualificador({
                 {leads.slice(0, limite).map((l, i) => (
                   <motion.li
                     key={l.placeId}
-                    layout={!reduce}
+                    // Sem animação de posição: ela media todos os itens a cada toque e deixava a tela lenta.
                     initial={reduce ? { opacity: 0 } : { opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
@@ -287,7 +288,7 @@ export function Qualificador({
       )}
     </section>
   );
-}
+});
 
 function CartaoLead({
   l,
