@@ -12,18 +12,18 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#0a0814",
-    theme_color: "#0a0814",
+    background_color: "#000000",
+    theme_color: "#000000",
     categories: ["business", "productivity"],
     icons: [
-      { src: "/app/icone-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/app/icone-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/app/icone-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/app/icone-preto-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/app/icone-preto-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/app/icone-preto-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
-      { name: "Registrar venda", short_name: "Vendas", url: "/", icons: [{ src: "/app/icone-192.png", sizes: "192x192" }] },
-      { name: "Prospecção", short_name: "Leads", url: "/prospeccao", icons: [{ src: "/app/icone-192.png", sizes: "192x192" }] },
-      { name: "Fornecedores", short_name: "Compras", url: "/fornecedores", icons: [{ src: "/app/icone-192.png", sizes: "192x192" }] },
+      { name: "Registrar venda", short_name: "Vendas", url: "/", icons: [{ src: "/app/icone-preto-192.png", sizes: "192x192" }] },
+      { name: "Prospecção", short_name: "Leads", url: "/prospeccao", icons: [{ src: "/app/icone-preto-192.png", sizes: "192x192" }] },
+      { name: "Fornecedores", short_name: "Compras", url: "/fornecedores", icons: [{ src: "/app/icone-preto-192.png", sizes: "192x192" }] },
     ],
   };
 }

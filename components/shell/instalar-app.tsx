@@ -89,7 +89,7 @@ export function InstalarApp() {
       className="fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-40 flex items-center gap-3 rounded-card bg-card p-3 shadow-pop ring-1 ring-border md:inset-x-auto md:right-6 md:bottom-6 md:w-[360px]"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/app/icone-192.png" alt="" className="size-11 shrink-0 rounded-[12px]" />
+      <img src="/app/icone-preto-192.png" alt="" className="size-11 shrink-0 rounded-[12px]" />
       <div className="min-w-0 flex-1">
         <p className="text-14 font-semibold">Basik7 no seu celular</p>
         <p className="text-12 leading-snug text-muted-foreground">
@@ -128,7 +128,7 @@ export function AppNoCelular() {
     <section aria-labelledby="app" className="surface grid gap-4 p-5">
       <div className="flex items-start gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/app/icone-192.png" alt="" className="size-12 shrink-0 rounded-[14px]" />
+        <img src="/app/icone-preto-192.png" alt="" className="size-12 shrink-0 rounded-[14px]" />
         <div className="min-w-0 flex-1">
           <h2 id="app" className="text-16 font-semibold tracking-[-0.01em]">
             Aplicativo no celular

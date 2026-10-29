@@ -4,14 +4,14 @@
  * - Arquivos do sistema (/_next/static, ícones): guardados no aparelho, abrem na hora.
  * Nada de dados do painel fica guardado aqui.
  */
-const VERSAO = "basik7-v1";
+const VERSAO = "basik7-v2";
 const OFFLINE = "/offline.html";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches
       .open(VERSAO)
-      .then((c) => c.addAll([OFFLINE, "/app/icone-192.png", "/app/icone-512.png"]))
+      .then((c) => c.addAll([OFFLINE, "/app/icone-preto-192.png", "/app/icone-preto-512.png"]))
       .then(() => self.skipWaiting()),
   );
 });
