@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import postgres from "postgres";
@@ -40,9 +41,18 @@ function conectar(): Estado {
     // O texto vira uma transação só; a trava faz vários processos (build, funções) criarem
     // as tabelas um de cada vez, em vez de travarem uns aos outros no catálogo.
     // lock_timeout: se algo segurar as tabelas, falha em segundos (e diz quem segura) em vez de travar.
+    // Atalho: o banco guarda a "impressão digital" do DDL já aplicado. Se for a mesma,
+    // basta uma consulta em vez de rodar as dezenas de comandos a cada função que liga.
+    const versao = createHash("sha256").update(DDL).digest("hex").slice(0, 16);
     const ddl = async () => {
+      const ja = await sql.unsafe(`select 1 from versao_banco where hash = '${versao}'`).catch(() => []);
+      if (ja.length) return;
       try {
-        await sql.unsafe(`set local lock_timeout = '20s';\nselect pg_advisory_xact_lock(727274);\n${DDL}`);
+        await sql.unsafe(
+          `set local lock_timeout = '20s';\nselect pg_advisory_xact_lock(727274);\n${DDL}\n` +
+            `create table if not exists versao_banco (hash text primary key);\n` +
+            `insert into versao_banco (hash) values ('${versao}') on conflict do nothing;`,
+        );
       } catch (e) {
         const quem = await sql
           .unsafe(

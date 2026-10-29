@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -17,6 +17,9 @@ import type { DespesaCategoria } from "@/lib/db/schema";
 import { mediumDate, shortDate, todaySP } from "@/lib/dates";
 import { formatBRL, formatPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+/** Gráfico em pedaço separado: a página abre sem esperar a biblioteca de gráficos. */
+const GraficoCategorias = dynamic(() => import("@/components/graficos").then((m) => m.GraficoCategorias), { ssr: false });
 
 const CATS: DespesaCategoria[] = ["Anúncios", "Ferramentas", "Frete", "Taxas", "Outros"];
 // Ordem fixa: a cor segue a categoria, nunca o ranking.
@@ -180,40 +183,7 @@ export function DespesasView({
             ) : (
               <>
                 <div className="relative mx-auto mt-4 aspect-square w-full max-w-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={porCat}
-                        dataKey="valor"
-                        nameKey="categoria"
-                        innerRadius="84%"
-                        outerRadius="100%"
-                        paddingAngle={2}
-                        cornerRadius={4}
-                        stroke="var(--card)"
-                        strokeWidth={2}
-                        startAngle={90}
-                        endAngle={-270}
-                        isAnimationActive={false}
-                      >
-                        {porCat.map((c) => (
-                          <Cell key={c.categoria} fill={CAT_COLOR[c.categoria]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        isAnimationActive={false}
-                        content={({ active, payload }) => {
-                          const p = payload?.[0]?.payload as { categoria: string; valor: number } | undefined;
-                          if (!active || !p) return null;
-                          return (
-                            <div className="rounded-[8px] bg-popover px-2.5 py-1.5 text-12 shadow-pop ring-1 ring-border">
-                              {p.categoria} · <span className="font-mono tabular">{formatBRL(p.valor)}</span>
-                            </div>
-                          );
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <GraficoCategorias porCat={porCat} cores={CAT_COLOR} />
                   <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
                     <div>
                       <p className="text-12 text-muted-foreground">Total</p>

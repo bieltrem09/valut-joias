@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Check, Copy, Download, Link2, Pencil, Power, Trash2, Truck } from "lucide-react";
 import { DataTable, type DataTableColumn, type DataTableHelpers } from "@/components/ui/data-table";
@@ -16,6 +16,9 @@ import { addDays, mediumDate, shortDate, todaySP } from "@/lib/dates";
 import { formatBRL, formatInt } from "@/lib/format";
 import type { PlacaRow } from "@/lib/data/placas";
 import { atualizarDestino, definirStatusPlacas, excluirPlacas, marcarEnviadas } from "@/app/actions";
+
+/** Gráfico em pedaço separado: a página abre sem esperar a biblioteca de gráficos. */
+const GraficoToques = dynamic(() => import("@/components/graficos").then((m) => m.GraficoToques), { ssr: false });
 
 const STATUS_TONE = { Ativa: "profit", "Pendente de envio": "pending", Inativa: "neutral", Cancelada: "cost" } as const;
 
@@ -298,25 +301,7 @@ function PlacaDetalhe({ placa, link, onCopy }: { placa: PlacaRow; link: string; 
           </p>
         ) : (
           <div className="mt-3 h-28" role="img" aria-label={`${total30} leituras em 30 dias`}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }} barCategoryGap={2}>
-                <XAxis dataKey="data" hide />
-                <Tooltip
-                  cursor={{ fill: "var(--muted)" }}
-                  isAnimationActive={false}
-                  content={({ active, payload }) => {
-                    const p = payload?.[0]?.payload as { data: string; n: number } | undefined;
-                    if (!active || !p) return null;
-                    return (
-                      <div className="rounded-[8px] bg-popover px-2.5 py-1.5 font-mono text-11 shadow-pop ring-1 ring-border">
-                        {shortDate(p.data)} · <span className="text-foreground">{p.n}</span>
-                      </div>
-                    );
-                  }}
-                />
-                <Bar dataKey="n" fill="var(--chart-1)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
-              </BarChart>
-            </ResponsiveContainer>
+            <GraficoToques data={data} />
           </div>
         )}
         <div className="mt-1 flex justify-between font-mono text-11 text-muted-foreground">

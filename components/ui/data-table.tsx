@@ -2,7 +2,17 @@
 
 import * as React from "react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion, useSpring } from "motion/react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, CloseSquare, Document, MoreCircle, Search, TickSquare } from "react-iconly";
+// Um arquivo por ícone: o pacote inteiro pesa ~500 kB.
+import ArrowDown from "react-iconly/dist/Icons/ArrowDown.mjs";
+import ArrowUp from "react-iconly/dist/Icons/ArrowUp.mjs";
+import ChevronDown from "react-iconly/dist/Icons/ChevronDown.mjs";
+import ChevronLeft from "react-iconly/dist/Icons/ChevronLeft.mjs";
+import ChevronRight from "react-iconly/dist/Icons/ChevronRight.mjs";
+import CloseSquare from "react-iconly/dist/Icons/CloseSquare.mjs";
+import Document from "react-iconly/dist/Icons/Document.mjs";
+import MoreCircle from "react-iconly/dist/Icons/MoreCircle.mjs";
+import Search from "react-iconly/dist/Icons/Search.mjs";
+import TickSquare from "react-iconly/dist/Icons/TickSquare.mjs";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./dropdown-menu";
 

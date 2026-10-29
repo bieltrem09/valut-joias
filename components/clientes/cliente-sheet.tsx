@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowUpRight, Pencil, RefreshCw, Trash2 } from "lucide-react";
@@ -18,7 +19,12 @@ import { mediumDate, relativeDays, shortDate, type ISODate } from "@/lib/dates";
 import { formatBRL, formatInt, formatRating } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Stars } from "./stars";
-import { CrescimentoChart } from "./crescimento-chart";
+
+/** Gráfico em pedaço separado; o espaço fica reservado enquanto carrega. */
+const CrescimentoChart = dynamic(() => import("./crescimento-chart").then((m) => m.CrescimentoChart), {
+  ssr: false,
+  loading: () => <div style={{ height: 220 }} aria-hidden />,
+});
 
 const vendaCols: DataTableColumn<VendaRow>[] = [
   { key: "data", header: "Data", cell: (r) => <span className="font-mono text-13 tabular">{shortDate(r.data)}</span> },
