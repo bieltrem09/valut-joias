@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import { db, ready, schema as s, one, emSerie } from "@/lib/db";
 import { todaySP } from "@/lib/dates";
+import { destinoAutomatico } from "@/lib/destino-placa";
 
 /**
  * Link gravado na placa: conta o toque (ou leitura do QR) e redireciona
@@ -13,6 +14,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ codigo:
   await ready();
   const placa = await db.select().from(s.placas).where(eq(s.placas.codigo, codigo)).then(one);
   if (!placa) return aviso("Placa não encontrada", "Confira se o link está completo.", 404);
+  // Placa sem link colado: avaliação no Google do cliente (ou o Maps), calculado na hora.
+  if (!placa.destinoUrl) {
+    const empresa = await db
+      .select({ placeId: s.empresas.placeId, mapsUrl: s.empresas.mapsUrl })
+      .from(s.empresas)
+      .where(eq(s.empresas.id, placa.empresaId))
+      .then(one);
+    placa.destinoUrl = destinoAutomatico(placa.tipo, empresa) ?? "";
+    if (!placa.destinoUrl) return aviso("Placa quase pronta", "O estabelecimento ainda está configurando esta placa. Tente de novo em breve.", 200);
+  }
   // Ainda não entregue: leva ao destino (dá para testar a gravação) sem contar o toque.
   if (placa.status === "Pendente de envio") return destino(placa.destinoUrl);
   if (placa.status !== "Ativa") return aviso("Esta placa está pausada", "Fale com o estabelecimento para reativar.", 410);

@@ -256,14 +256,18 @@ function PlacaDetalhe({ placa, link, onCopy }: { placa: PlacaRow; link: string; 
         <div>
           <dt className="text-12 text-muted-foreground">Destino atual</dt>
           <dd className="mt-1">
-            <a
-              href={placa.destinoUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="block truncate font-mono text-12 text-foreground underline decoration-border-strong underline-offset-4 hover-fine:decoration-foreground"
-            >
-              {placa.destinoUrl.replace(/^https?:\/\//, "")}
-            </a>
+            {placa.destinoUrl ? (
+              <a
+                href={placa.destinoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block truncate font-mono text-12 text-foreground underline decoration-border-strong underline-offset-4 hover-fine:decoration-foreground"
+              >
+                {placa.destinoUrl.replace(/^https?:\/\//, "")}
+              </a>
+            ) : (
+              <span className="text-13 text-muted-foreground">Automático: avaliação no Google do cliente (ou a página dele no Maps)</span>
+            )}
           </dd>
         </div>
         <div className="grid grid-cols-2 gap-4">

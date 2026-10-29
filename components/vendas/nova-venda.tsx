@@ -15,16 +15,8 @@ import { cn } from "@/lib/utils";
 import type { ProdutoParaVenda } from "@/lib/data/estoque";
 
 const TIPOS = ["Avaliação Google", "Instagram", "WhatsApp", "Pix", "Cardápio"] as const;
-const PLACEHOLDER: Record<(typeof TIPOS)[number], string> = {
-  "Avaliação Google": "https://g.page/r/…/review",
-  Instagram: "https://instagram.com/perfil",
-  WhatsApp: "https://wa.me/5519…",
-  Pix: "https://… (link de pagamento)",
-  Cardápio: "https://… (cardápio online)",
-};
-
 /** produtoId: a placa saiu do Estoque (baixa automática ao registrar). */
-type Linha = { key: number; tipo: (typeof TIPOS)[number]; destinoUrl: string; preco: string; produtoId: number | null };
+type Linha = { key: number; tipo: (typeof TIPOS)[number]; preco: string; produtoId: number | null };
 
 const brl = (v: number) => (v ? v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "");
 
@@ -71,7 +63,7 @@ function NovaVendaSheet({
   const router = useRouter();
   const today = todaySP();
   const seq = React.useRef(1);
-  const nova = (): Linha => ({ key: seq.current++, tipo: "Avaliação Google", destinoUrl: "", preco: "", produtoId: null });
+  const nova = (): Linha => ({ key: seq.current++, tipo: "Avaliação Google", preco: "", produtoId: null });
 
   const [empresaId, setEmpresaId] = React.useState("");
   const [data, setData] = React.useState(today);
@@ -98,7 +90,7 @@ function NovaVendaSheet({
   const escolherDoEstoque = (p: ProdutoParaVenda) => {
     if ((usados.get(p.id) ?? 0) >= p.quantidade) return void toast(`${p.nome}: todas as ${p.quantidade} do estoque já estão nesta venda.`);
     setLinhas((ls) => {
-      const vazia = ls.find((l) => !l.produtoId && !l.preco.trim() && !l.destinoUrl.trim());
+      const vazia = ls.find((l) => !l.produtoId && !l.preco.trim());
       const patch = { produtoId: p.id, preco: brl(p.preco) };
       return vazia
         ? ls.map((l) => (l.key === vazia.key ? { ...l, ...patch } : l))
@@ -135,7 +127,7 @@ function NovaVendaSheet({
         data,
         status,
         metodo,
-        placas: linhas.map((l) => ({ tipo: l.tipo, destinoUrl: l.destinoUrl, preco: parseValor(l.preco), produtoId: l.produtoId })),
+        placas: linhas.map((l) => ({ tipo: l.tipo, preco: parseValor(l.preco), produtoId: l.produtoId })),
         custoPlacas: parseValor(custoMaterial),
         custoGravacao: parseValor(gravacao),
         frete: parseValor(frete),
@@ -159,7 +151,7 @@ function NovaVendaSheet({
       open={open}
       onOpenChange={onOpenChange}
       title="Registrar venda"
-      description="Cada placa ganha um código e um link próprio para gravar no chip."
+      description="Escolha a placa e pronto: ela já leva à avaliação no Google do cliente."
       footer={
         empresas.length ? (
           <div className="flex w-full items-center justify-between gap-3">
@@ -281,16 +273,6 @@ function NovaVendaSheet({
                     </button>
                   )}
                 </div>
-                <Input
-                  aria-label={`Link de destino da placa ${i + 1}`}
-                  type="url"
-                  inputMode="url"
-                  autoComplete="off"
-                  placeholder={PLACEHOLDER[l.tipo]}
-                  value={l.destinoUrl}
-                  onChange={(e) => set(l.key, { destinoUrl: e.target.value })}
-                  className="h-9 font-mono text-12"
-                />
               </div>
             ))}
             <Button

@@ -9,6 +9,7 @@ import { proximoCodigo } from "@/lib/data/placas";
 import { GoogleApiError, googleEnabled, registrarMedicao, syncEmpresa } from "@/lib/google/places";
 import type { DespesaCategoria, PlacaTipo } from "@/lib/db/schema";
 import { qualificar } from "@/lib/prospeccao";
+import { destinoAutomatico } from "@/lib/destino-placa";
 import { chaveLead, hostDoMaps, leadManual, lerLinkMaps, type LinkMaps } from "@/lib/maps-link";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -62,7 +63,7 @@ export type NovaVenda = {
   status: "paga" | "pendente";
   metodo: "Pix" | "Cartão" | "Boleto";
   /** produtoId: a placa saiu do Estoque (dá baixa de 1 unidade). */
-  placas: { tipo: string; destinoUrl: string; preco: number; produtoId?: number | null }[];
+  placas: { tipo: string; destinoUrl?: string; preco: number; produtoId?: number | null }[];
   custoPlacas: number;
   custoGravacao: number;
   frete: number;
@@ -72,13 +73,18 @@ export type NovaVenda = {
 
 export async function criarVenda(v: NovaVenda): Promise<Result<{ codigos: string[] }>> {
   await ready();
-  const empresa = await db.select({ id: s.empresas.id }).from(s.empresas).where(eq(s.empresas.id, v.empresaId)).then(one);
+  const empresa = await db
+    .select({ id: s.empresas.id, placeId: s.empresas.placeId, mapsUrl: s.empresas.mapsUrl })
+    .from(s.empresas)
+    .where(eq(s.empresas.id, v.empresaId))
+    .then(one);
   if (!empresa) return { ok: false, error: "Escolha o cliente." };
   if (!isISODate(v.data) || v.data > todaySP()) return { ok: false, error: "Use a data de hoje ou anterior." };
   if (!v.placas.length) return { ok: false, error: "Adicione pelo menos uma placa." };
   for (const [i, p] of v.placas.entries()) {
     if (!TIPOS.includes(p.tipo as PlacaTipo)) return { ok: false, error: `Placa ${i + 1}: escolha o tipo.` };
-    if (!urlValida(p.destinoUrl)) return { ok: false, error: `Placa ${i + 1}: o link de destino precisa começar com https://` };
+    // O link é opcional: sem ele, a placa leva à avaliação no Google do cliente (ou ao Maps).
+    if (p.destinoUrl?.trim() && !urlValida(p.destinoUrl)) return { ok: false, error: `Placa ${i + 1}: o link de destino precisa começar com https://` };
     if (!Number.isFinite(p.preco) || p.preco <= 0) return { ok: false, error: `Placa ${i + 1}: informe o preço.` };
   }
   for (const [k, n] of [
@@ -131,7 +137,7 @@ export async function criarVenda(v: NovaVenda): Promise<Result<{ codigos: string
       .values({
         codigo,
         tipo: p.tipo as PlacaTipo,
-        destinoUrl: p.destinoUrl.trim(),
+        destinoUrl: p.destinoUrl?.trim() || destinoAutomatico(p.tipo, empresa) || "",
         status: v.entregue ? "Ativa" : "Pendente de envio",
         leituras: 0,
         empresaId: v.empresaId,
