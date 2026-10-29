@@ -138,23 +138,22 @@ async function seguir(url: string): Promise<string[]> {
 }
 
 /** Faz a busca do Google Maps e devolve os lugares encontrados. */
-export const rastro: unknown[] = [];
-async function buscarNoMaps(consulta: string): Promise<Lugar[]> {
-  const pagina = await pegar(`https://www.google.com/maps?q=${encodeURIComponent(consulta)}&hl=pt-BR&gl=br`);
-  const html = await pagina.text();
-  // Busca solta pré-carrega /search?tbm=map; um lugar exato pré-carrega /maps/preview/place. Os dois trazem a ficha.
+/** Abre uma página do Google Maps e lê a ficha que ela pré-carrega (busca solta ou lugar exato). */
+async function lugaresDaPagina(pagina: string): Promise<Lugar[]> {
+  const html = await (await pegar(pagina)).text();
   const href = html.match(/href="(\/(?:search\?tbm=map|maps\/preview\/place\?)[^"]+)"/)?.[1];
-  rastro.push({ consulta, final: pagina.url, status: pagina.status, links: [...html.matchAll(/<link[^>]+href="([^"]+)"/g)].map((m) => m[1].slice(0, 300)).slice(0, 12) });
   if (!href) return [];
   const res = await pegar("https://www.google.com" + href.replace(/&amp;/g, "&"));
   const corpo = (await res.text()).replace(/^\)\]\}'\s*/, "");
-  rastro.push({ href: href.slice(0, 80), corpo: corpo.slice(0, 1500) });
   try {
     return acharLugares(JSON.parse(corpo));
   } catch {
     return [];
   }
 }
+
+const MAPS = "https://www.google.com/maps";
+const IDIOMA = "hl=pt-BR&gl=br";
 
 export async function puxarFichaGoogle(entrada: string): Promise<FichaGoogle> {
   const url = urlDoTexto(entrada);
@@ -164,22 +163,21 @@ export async function puxarFichaGoogle(entrada: string): Promise<FichaGoogle> {
   const pista = pistasDoLink(caminho);
 
   // Do mais certeiro para o mais solto.
-  const consultas = [
-    pista.placeId && `place_id:${pista.placeId}`,
-    pista.cid && pista.nome && `${pista.nome}`,
-    pista.nome && pista.lat != null ? `${pista.nome} @${pista.lat},${pista.lng}` : pista.nome,
-    pista.q,
-    pista.lat != null && `${pista.lat},${pista.lng}`,
+  const paginas = [
+    pista.placeId && `${MAPS}?q=${encodeURIComponent(`place_id:${pista.placeId}`)}&${IDIOMA}`,
+    pista.chave && `${MAPS}/place/data=!4m2!3m1!1s${pista.chave}?${IDIOMA}`,
+    pista.cid && `${MAPS}?cid=${pista.cid}&${IDIOMA}`,
+    pista.nome && `${MAPS}?q=${encodeURIComponent(pista.nome)}&${IDIOMA}`,
+    pista.q && `${MAPS}?q=${encodeURIComponent(pista.q)}&${IDIOMA}`,
   ].filter((c): c is string => !!c);
 
   let escolhido: ReturnType<typeof fichaDoLugar> | null = null;
-  for (const c of [...new Set(consultas)]) {
-    const lugares = (await buscarNoMaps(c)).map(fichaDoLugar);
-    if (!lugares.length) continue;
-    escolhido =
-      lugares.find((l) => (pista.chave && l.chave === pista.chave) || (pista.placeId && l.placeId === pista.placeId)) ??
-      (pista.chave || pista.placeId ? null : lugares[0]) ??
-      lugares[0];
+  for (const pagina of [...new Set(paginas)]) {
+    const lugares = (await lugaresDaPagina(pagina)).map(fichaDoLugar);
+    // Com chave ou id no link, só vale o lugar certo; sem eles, o primeiro resultado.
+    escolhido = pista.chave || pista.placeId
+      ? (lugares.find((l) => l.chave === pista.chave || (!!pista.placeId && l.placeId === pista.placeId)) ?? null)
+      : (lugares[0] ?? null);
     if (escolhido) break;
   }
   if (!escolhido) throw new ErroFicha("Não achei esse estabelecimento no Google. Abra o lugar no Google Maps, toque em Compartilhar e cole o link.");
