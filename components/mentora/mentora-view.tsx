@@ -114,7 +114,7 @@ function Mentora({ leads }: { leads: LeadMentora[] }) {
           <h2 id="regras" className="flex items-center gap-2 text-16 font-semibold tracking-[-0.01em]">
             <Lightbulb className="size-4 text-primary" strokeWidth={1.75} /> Regras de ouro
           </h2>
-          <ol className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 xl:grid-cols-5">
+          <ol className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 xl:grid-cols-4">
             {REGRAS_DE_OURO.map((r, i) => (
               <li key={r.titulo} className="surface toque w-[72%] shrink-0 snap-start p-4 sm:w-auto">
                 <p className="font-mono text-11 text-primary tabular">{String(i + 1).padStart(2, "0")}</p>

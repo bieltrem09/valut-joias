@@ -25,7 +25,10 @@ export type Etapa = { id: string; titulo: string; resumo: string; roteiros: Rote
 export const REGRAS_DE_OURO: { titulo: string; texto: string }[] = [
   { titulo: "Peça licença", texto: "Comece perguntando se é uma boa hora. Quem tem a chance de dizer “agora não” fica mais à vontade para dizer “sim”." },
   { titulo: "30 segundos", texto: "Prometa pouco tempo e cumpra. Se a conversa esquentar, é o cliente que estica, não você." },
+  { titulo: "Mostre interesse de verdade", texto: "Pergunte o nome do dono, há quanto tempo o lugar existe e o que os clientes mais elogiam. Escute sem cortar: quem se sente ouvido confia." },
   { titulo: "Pergunte antes de mostrar", texto: "Uma boa pergunta vale mais que três argumentos. Deixe ele falar dos clientes dele." },
+  { titulo: "Faça ele enxergar a necessidade", texto: "Ligue o que ele disse (“o cliente elogia”) com o que o Google mostra (poucas avaliações). Quando ele mesmo vê a diferença, já quer resolver." },
+  { titulo: "Venda o resultado", texto: "Fale de cliente novo chegando pelo Google e de quanto a placa se paga, não de NFC e chip." },
   { titulo: "Coloque na mão", texto: "A placa na mão do dono, com o celular dele, vende mais que qualquer explicação." },
   { titulo: "Sempre deixe uma porta", texto: "Nunca saia com um “não” seco. Saia com um “posso voltar mês que vem?”." },
 ];
