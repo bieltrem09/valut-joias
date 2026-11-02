@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/input";
 import { anotarLead, excluirLeads, mudarStatusLead, virarCliente } from "@/app/actions";
 import type { LeadFunil } from "@/lib/data/leads";
 import { whatsappUrl } from "@/lib/prospeccao";
+import { MensagensWhats } from "./mensagens-whats";
 import { urlBuscaMaps } from "@/lib/maps-link";
 import { formatInt, formatRating } from "@/lib/format";
 import { relativeDays, todaySP } from "@/lib/dates";
@@ -22,12 +23,6 @@ const COLUNAS = [
   { key: "perdido", label: "Perdido", dot: "bg-cost" },
 ] as const;
 type Status = (typeof COLUNAS)[number]["key"];
-
-/** Mensagem inicial para o WhatsApp: curta, pessoal e com o motivo do contato. */
-function mensagem(l: LeadFunil) {
-  const n = l.totalAvaliacoes ?? 0;
-  return `Oi! Vi a ${l.nome} no Google${l.rating ? `, nota ${formatRating(l.rating)}` : ""}${n ? ` com ${formatInt(n)} avaliações` : ""}. Trabalho com placas NFC que fazem o cliente avaliar com um toque no celular. Posso te mostrar como funciona?`;
-}
 
 export function Funil({ leads }: { leads: LeadFunil[] }) {
   const router = useRouter();
@@ -96,7 +91,8 @@ function CartaoLead({
   const [nota, setNota] = React.useState(l.anotacao ?? "");
   const [editando, setEditando] = React.useState(false);
   const [convertendo, setConvertendo] = React.useState(false);
-  const zap = l.telefone ? whatsappUrl(l.telefone, mensagem(l)) : null;
+  const [zapAberto, setZapAberto] = React.useState(false);
+  const zap = l.telefone ? whatsappUrl(l.telefone) : null;
 
   return (
     <li className="surface grid gap-2.5 p-3">
@@ -119,15 +115,16 @@ function CartaoLead({
 
       <div className="flex flex-wrap gap-1.5">
         {zap && (
-          <a
-            href={zap}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => l.status === "novo" && onMover("contatado")}
+          <button
+            type="button"
+            onClick={() => setZapAberto(true)}
             className="inline-flex h-7 items-center rounded-[8px] bg-profit-soft px-2 text-11 font-medium text-profit coarse:h-10"
           >
             WhatsApp
-          </a>
+          </button>
+        )}
+        {zap && (
+          <MensagensWhats lead={l} open={zapAberto} onOpenChange={setZapAberto} onEnviou={() => l.status === "novo" && onMover("contatado")} />
         )}
         {l.telefone && (
           <a

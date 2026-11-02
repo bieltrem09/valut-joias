@@ -5,6 +5,7 @@
  * Mesmos marcadores das outras falas, mais {preco}.
  */
 import type { Roteiro } from "./mentora";
+import { CENAS_VIDEO, DICAS_WHATS, PASSOS_WHATS } from "./abordagem-whatsapp";
 
 export type Estilo = {
   id: string;
@@ -126,6 +127,15 @@ export const ESTILOS: Estilo[] = [
         porque: "“Vou pensar” quase sempre esconde uma dúvida específica. Perguntar com calma e dar opções faz ela aparecer, e dúvida que aparece dá para responder.",
       },
     ],
+  },
+  {
+    id: "whatsapp",
+    nome: "Pelo WhatsApp",
+    lema: "Vende sem bater de porta em porta: mensagem, áudio e vídeo, e só vai até o lugar para instalar.",
+    origem: "Mesma lógica do “Vendedor que convence”, adaptada para o celular: pedir licença, mostrar o problema, provar com vídeo e marcar a visita.",
+    combina: "Leads do funil com celular no Google, lugares longe de você ou dias de chuva. Use os botões do funil para mandar cada mensagem já preenchida.",
+    comportamento: DICAS_WHATS,
+    roteiros: [...PASSOS_WHATS, ...CENAS_VIDEO],
   },
   {
     id: "parceiro",
