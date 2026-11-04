@@ -3,7 +3,7 @@ import { Manifesto } from "@/components/sections/Manifesto";
 import { EstruturaScroller } from "@/components/sections/EstruturaScroller";
 import { Horarios24 } from "@/components/sections/Horarios24";
 import { Planos } from "@/components/sections/Planos";
-import { Professores } from "@/components/sections/Professores";
+import { Professores } from "@/components/sections/ProfessoresSection";
 import { PrimeiroTreino } from "@/components/sections/PrimeiroTreino";
 import { Resultados } from "@/components/sections/Resultados";
 import { Depoimentos } from "@/components/sections/Depoimentos";

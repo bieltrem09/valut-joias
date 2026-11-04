@@ -42,7 +42,7 @@ export function Depoimentos({ label = "09" }: { label?: string }) {
         )}
 
         {d ? (
-          <figure className="mx-auto mt-10 max-w-4xl" aria-live="polite">
+          <figure className="mx-auto mt-10 min-h-[18rem] max-w-4xl md:min-h-[16rem]" aria-live="polite">
             <blockquote className="title text-[clamp(1.6rem,3.4vw,3rem)] font-semibold leading-tight">“{d.texto}”</blockquote>
             <figcaption className="mt-8 flex flex-col items-center gap-3">
               <Stars n={d.nota} />
@@ -50,6 +50,7 @@ export function Depoimentos({ label = "09" }: { label?: string }) {
                 {d.nome}
                 {d.desde ? ` · aluno(a) desde ${d.desde}` : ""}
               </span>
+              <span className="label text-gray-300">Avaliação no Google</span>
             </figcaption>
           </figure>
         ) : (
@@ -63,7 +64,7 @@ export function Depoimentos({ label = "09" }: { label?: string }) {
           </div>
         )}
 
-        <div className="mt-10 flex items-center justify-center gap-3">
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           {depoimentos.length > 1 && (
             <>
               <button type="button" onClick={() => go(-1)} className="btn-circle !bg-steel" aria-label="Depoimento anterior">

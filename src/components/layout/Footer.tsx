@@ -12,7 +12,7 @@ export function Footer() {
           <div className="md:col-span-4">
             <Logo className="h-9 w-auto" />
             <p className="mt-6 max-w-sm text-gray-300">
-              Academia de musculação 24 horas em Americana/SP. {zeroum.area} de estrutura.
+              Academia de musculação 24 horas em Americana/SP. {zeroum.area}, {zeroum.maquinas} máquinas.
             </p>
             <ul className="mt-6 flex flex-wrap gap-2" aria-label="Agregadores aceitos">
               {zeroum.agregadores.map((a) => (
@@ -51,7 +51,7 @@ export function Footer() {
               </li>
               <li>
                 <a href={zeroum.mapa} target="_blank" rel="noopener noreferrer" className="inline-block py-2 font-semibold hover:text-red-bright">
-                  Como chegar · {zeroum.endereco.cidade}/{zeroum.endereco.uf}
+                  {zeroum.endereco.rua} · {zeroum.endereco.bairro}
                 </a>
               </li>
             </ul>

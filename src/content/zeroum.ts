@@ -35,25 +35,27 @@ export const zeroum = {
     { nome: "Wellhub", plano: "Silver", obs: "antigo Gympass" },
     { nome: "TotalPass", plano: "TP2", obs: "" },
   ],
-  diferenciais: ["Sala Recovery", "Máquina de gelo", "Funcionamento 24h", "2.500 m² de estrutura"],
+  maquinas: 230, // post oficial: "230 máquinas de 10 marcas diferentes"
+  marcas: 10,
+  diaria: 39.9, // post oficial do Instagram (diária avulsa) — campanhas podem ter valor promocional
+  diferenciais: ["Sala Recovery", "Máquina de gelo", "Funcionamento 24h", "2.500 m² de estrutura", "230 máquinas de 10 marcas"],
 
   endereco: {
-    // ⚠️ Divergência: Google diz nº 200 / Vila N. Sra. de Fátima; Instagram diz nº 220 / Campo Limpo.
-    confirmado: false,
-    texto: { todo: "Confirmar número (200 ou 220) e bairro" } as Todo | string,
-    rua: "Rua Orlando dei Santi",
+    // Confirmado: perfil do Google + post oficial ("Rua Orlando de Santi, 220 - Campo Limpo").
+    confirmado: true,
+    texto: "Rua Orlando de Santi, 220 · Campo Limpo · Americana/SP · CEP 13477-000" as Todo | string,
+    rua: "Rua Orlando de Santi, 220",
+    bairro: "Campo Limpo",
     cidade: "Americana",
     uf: "SP",
     cep: "13477-000",
-    googleLinha: "Rua Orlando dei Santi, 200 · Vila Nossa Senhora de Fátima",
-    instagramLinha: "Rua Orlando de Santi, 220 · Campo Limpo",
   },
   mapa: "https://maps.app.goo.gl/Kqcj3cBea41V7nj17",
   referenciaLocal: "Perto da Rodoviária de Americana", // confirmar
   descricao:
     "Academia especializada em musculação, com estrutura completa, equipamentos de qualidade e acompanhamento profissional. Para ganhar massa muscular, emagrecer ou melhorar a qualidade de vida, com segurança e dedicação.",
-  slogan: "A maior academia de Americana", // destaque oficial "Estrutura" — confirmar uso
-  sloganConfirmado: false,
+  slogan: "A maior academia de Americana", // usado pela própria academia no post oficial de estrutura
+  sloganConfirmado: true,
   site: "https://zeroumct.com.br", // TODO: domínio definitivo
 
   // ---- PREENCHER (não inventar) ----
@@ -84,17 +86,17 @@ export const pilares = [
   {
     nome: "Estrutura",
     dado: "2.500 m²",
-    frase: "Peso livre, máquinas, cardio e Sala Recovery debaixo do mesmo teto.",
+    frase: "A maior academia de Americana: peso livre, máquinas, cardio e Sala Recovery debaixo do mesmo teto.",
   },
   {
     nome: "Performance",
-    dado: "24h",
-    frase: "Treino no seu horário. Madrugada, antes do trabalho ou depois da faculdade: a porta está aberta.",
+    dado: "230",
+    frase: "Máquinas de 10 marcas diferentes. Variedade para treinar cada músculo do jeito certo.",
   },
   {
     nome: "Experiência",
-    dado: "Recovery",
-    frase: "Depois do treino, recuperação: Sala Recovery e máquina de gelo para o dia seguinte render.",
+    dado: "24h",
+    frase: "Porta aberta todos os dias. Madrugada, antes do trabalho ou depois da faculdade: você escolhe.",
   },
 ] as const;
 
@@ -123,8 +125,8 @@ export const ambientes: Ambiente[] = [
   {
     id: "maquinas",
     nome: "Máquinas de musculação",
-    resumo: "Linha completa de máquinas para cada grupo muscular.",
-    detalhe: "Máquinas articuladas e de cabo. TODO: marcas e quantidade de equipamentos.",
+    resumo: "230 máquinas de 10 marcas diferentes.",
+    detalhe: "São 230 máquinas de 10 marcas diferentes, para treinar cada grupo muscular com variedade. TODO: listar as marcas.",
     foto: "estrutura-maquinas",
     confirmado: true,
   },
@@ -295,10 +297,74 @@ export const conquistas: Conquista[] = [];
 
 /** Só avaliações reais do Google (nome + texto + nota). */
 export type Depoimento = { id: string; nome: string; desde?: string; texto: string; nota: 1 | 2 | 3 | 4 | 5 };
-export const depoimentos: Depoimento[] = [];
+/**
+ * Avaliações públicas reais do perfil da Zero Um CT no Google (nov/2026), nota 5.
+ * Textos transcritos como estão; trechos cortados pelo Google terminam em "…"; emojis removidos.
+ */
+export const depoimentos: Depoimento[] = [
+  {
+    id: "nicolly",
+    nome: "Nicolly Đianna",
+    texto: "Academia top. Atendimento, agilidade no balcão, professores atenciosos, e as máquinas maravilhosas. Venham que ela mostrará por si só…",
+    nota: 5,
+  },
+  {
+    id: "ricardo",
+    nome: "Ricardo Patrício Oliveira",
+    texto: "Melhor academia do interior de SP, saiu de Limeira para aproveitar essa estrutura top, professores super técnicos.",
+    nota: 5,
+  },
+  {
+    id: "michael-parra",
+    nome: "Michael Parra",
+    texto: "Estou muito satisfeito com a academia! Os professores são extremamente dedicados, atenciosos e demonstram verdadeiro compromisso em ajudar os alunos. Os aparelhos são incríveis, de uma qualidade que eu nunca tinha visto antes…",
+    nota: 5,
+  },
+  {
+    id: "rafaela",
+    nome: "Rafaela Valensuela",
+    texto: "Amo a academia. Super inovadora, tecnológica, me sinto super protegida lá dentro. Ambiente completamente acolhedor e pronto para os alunos!! Recomendo muito a academia! Tudo impecável!!",
+    nota: 5,
+  },
+  {
+    id: "erick",
+    nome: "Erick Riesterer",
+    texto: "Fui muito bem recebido, tratado com muita atenção e cordialidade, além de encontrar uma estrutura excelente. Recomendo muito!",
+    nota: 5,
+  },
+  {
+    id: "vanessa",
+    nome: "Vanessa Sato",
+    texto: "Uma academia simplesmente maravilhosa! Um ambiente que une qualidade, conforto e motivação, perfeito para quem busca saúde, bem-estar e superação a cada treino!",
+    nota: 5,
+  },
+  {
+    id: "nicolas",
+    nome: "Nicolas Nogueira",
+    texto: "Melhor academia que já treinei, muito equipada, só equipamento de melhor qualidade, parabéns.",
+    nota: 5,
+  },
+  {
+    id: "michael-hadlei",
+    nome: "Michael Hadlei",
+    texto: "Excelente academia, recomendo muito. Excelente atendimento das meninas da recepção, muito atenciosas, educadas e prestativas. Nota 10, melhor academia que já frequentei…",
+    nota: 5,
+  },
+];
+
+/** Trechos reais das avaliações do Google sobre a equipe (usados enquanto os professores não são cadastrados). */
+export const falamDaEquipe = [
+  { id: "ricardo", trecho: "Professores super técnicos.", nome: "Ricardo Patrício Oliveira" },
+  { id: "nicolly", trecho: "Professores atenciosos.", nome: "Nicolly Đianna" },
+  {
+    id: "michael-parra",
+    trecho: "Os professores são extremamente dedicados, atenciosos e demonstram verdadeiro compromisso em ajudar os alunos.",
+    nome: "Michael Parra",
+  },
+];
 
 /** Nota agregada do Google — só preencher com o dado real. */
-export const avaliacaoGoogle: { nota: number; total: number } | null = null;
+export const avaliacaoGoogle: { nota: number; total: number } | null = { nota: 4.9, total: 181 }; // perfil do Google, nov/2026
 
 export type Evento = { id: string; titulo: string; data: string; resumo: string; link: string; foto: string };
 export const eventos: Evento[] = [
@@ -353,6 +419,10 @@ export const faq: { q: string; a: string | Todo }[] = [
   {
     q: "Nunca treinei. Por onde começo?",
     a: "Agende uma aula experimental. Você conhece a estrutura, conversa com um professor e sai com um treino montado para o seu objetivo.",
+  },
+  {
+    q: "Dá para treinar só um dia?",
+    a: "Dá. A diária avulsa custa R$ 39,90 (em campanhas pode haver valor promocional). Chama no WhatsApp para combinar.",
   },
   { q: "Tem estacionamento?", a: { todo: "Confirmar estacionamento" } },
   { q: "É seguro treinar de madrugada?", a: { todo: "Responder só com fatos: câmeras, controle de acesso, equipe" } },

@@ -76,7 +76,7 @@ export function Hero() {
               </span>
             </h1>
             <p className="hero-sub mt-5 max-w-[34rem] text-base text-white/85 md:text-lg">
-              Musculação 24 horas em {zeroum.area}, em Americana. Estrutura de verdade, acompanhamento de verdade.
+              Musculação 24 horas em {zeroum.area}, com {zeroum.maquinas} máquinas, em Americana. Estrutura de verdade, acompanhamento de verdade.
             </p>
             <div className="hero-ctas mt-7 flex flex-wrap gap-3">
               <Link href="/aula-experimental" className="btn btn-red">

@@ -24,7 +24,7 @@ export function EstruturaScroller() {
           </h2>
         </div>
         <p className="max-w-md text-gray-300 md:col-span-4 md:col-start-9">
-          Peso livre, máquinas, cardio, Sala Recovery e máquina de gelo. Um tour pelo que você encontra quando passa pela catraca.
+          A maior academia de Americana: 230 máquinas de 10 marcas, peso livre, cardio, Sala Recovery e máquina de gelo. Um tour pelo que você encontra quando passa pela catraca.
         </p>
       </div>
 

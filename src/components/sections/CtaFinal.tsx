@@ -1,16 +1,14 @@
 import Link from "next/link";
-import { professores, zeroum } from "@/content/zeroum";
+import { zeroum } from "@/content/zeroum";
 import { Media } from "@/components/ui/Media";
 import { WA_AULA } from "@/lib/whatsapp";
 
 /** 11 · CTA FINAL — card com borda entalhada (clip-path) + painel vermelho de números. */
 export function CtaFinal() {
-  const profConfirmados = professores.filter((p) => !p.pendente).length;
   const numeros = [
     { v: "24h", l: "aberta" },
     { v: "2.500", l: "m² de estrutura" },
-    // Nº de professores entra quando a equipe for cadastrada; até lá, um fato confirmado.
-    profConfirmados ? { v: String(profConfirmados), l: "professores" } : { v: "Recovery", l: "sala + máquina de gelo" },
+    { v: String(zeroum.maquinas), l: `máquinas de ${zeroum.marcas} marcas` },
   ];
   return (
     <section aria-labelledby="cta-title" className="relative z-10 bg-black py-12 md:py-20">

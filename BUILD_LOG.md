@@ -93,7 +93,7 @@ Medição real: **Lighthouse 12, perfil mobile (throttling simulado), build de p
 
 | Métrica | Baseline | Depois | Estado |
 |---|---|---|---|
-| Performance | 66 | **93–94** (2 execuções) | ⚠️ abaixo da meta de 95 |
+| Performance | 66 | **93–96** (5 execuções; uma fora da curva deu 78 por ruído da máquina) | ⚠️ oscila em torno da meta de 95 |
 | Acessibilidade | 89 | **100** | ✅ |
 | Boas práticas | 100 | **100** | ✅ |
 | SEO | 100 | **100** | ✅ |
@@ -151,27 +151,40 @@ Medição real: **Lighthouse 12, perfil mobile (throttling simulado), build de p
 
 Todos ficam em `src/content/zeroum.ts` e aparecem no site com o aviso tracejado "A CONFIRMAR".
 
-1. **Endereço: número 200 × 220 e bairro** (Google: "Rua Orlando dei Santi, 200 · Vila N. Sra. de Fátima"; Instagram: "Rua Orlando de Santi, 220 · Campo Limpo"). Depois de confirmar, preencher `endereco.texto` e `confirmado: true`; isso também libera o `streetAddress` no JSON-LD.
-2. **Planos**: nomes, valores (mensal/semestral/anual) e o que cada um inclui (destaque "Planos" do Instagram).
-3. **Professores**: nome, foto, especialidade, CREF e turno.
-4. **Grade de professores por turno** (`gradeProfessores`).
-5. **Avaliação física**: dias e horários.
-6. **Domingos e feriados**: abre 24h também?
-7. **Horário da recepção.**
-8. **Mapa de calor "melhor horário pra treinar vazio"** (`movimento`). A seção fica oculta até haver dados.
-9. **Transformações (antes/depois)**: só com autorização por escrito.
-10. **Conquistas**: campeonatos, metas, tempo de casa.
-11. **Depoimentos**: avaliações reais do Google (nome, texto e nota) e a nota agregada (`avaliacaoGoogle`).
-12. **Estacionamento**: existe? É gratuito?
-13. **Segurança de madrugada**: câmeras, controle de acesso, equipe.
-14. **Professor de madrugada**: tem?
-15. **FAQ de pagamento**: formas de pagamento, matrícula, cancelamento/fidelidade.
-16. **Detalhes de cada ambiente**: faixa de pesos, marcas, equipamentos de cardio, o que tem na Sala Recovery, vestiários.
-17. **Datas** dos posts de Estrutura, Sorteio e Inauguração.
-18. **"A maior academia de Americana"**: confirmar se pode ser usado como slogan (hoje não aparece no site).
-19. **"Primeira aula por nossa conta"**: confirmar que a aula experimental é gratuita (a frase está no prompt e no site).
-20. **"Perto da Rodoviária de Americana"**: confirmar a referência.
-21. **Domínio definitivo** (`zeroum.site`, hoje `https://zeroumct.com.br`), usado no canonical, no sitemap e no Open Graph.
-22. **Política de privacidade**: razão social, CNPJ e e-mail do encarregado (DPO).
-23. **Fotos**: todos os slots de `src/content/media.ts` (ver `IMAGE_PROMPTS.md`).
-24. **Imagens de referência de layout** ("Velocity" e "Athlete Showcase"), para a revisão de fidelidade.
+1. **Planos**: nomes, valores (mensal/semestral/anual) e o que cada um inclui (destaque "Planos" do Instagram).
+2. **Professores**: nome, foto, especialidade, CREF e turno. Enquanto não houver, a seção mostra trechos reais das avaliações do Google sobre a equipe (sem cards falsos).
+3. **Grade de professores por turno** (`gradeProfessores`).
+4. **Avaliação física**: dias e horários.
+5. **Domingos e feriados**: abre 24h também?
+6. **Horário da recepção.**
+7. **Mapa de calor "melhor horário pra treinar vazio"** (`movimento`). A seção fica oculta até haver dados.
+8. **Transformações (antes/depois)**: só com autorização por escrito.
+9. **Conquistas**: campeonatos, metas, tempo de casa.
+10. **Estacionamento**: existe? É gratuito?
+11. **Segurança de madrugada**: câmeras, controle de acesso, equipe.
+12. **Professor de madrugada**: tem?
+13. **FAQ de pagamento**: formas de pagamento, matrícula, cancelamento/fidelidade.
+14. **Detalhes de cada ambiente**: faixa de pesos, marcas, equipamentos de cardio, o que tem na Sala Recovery, vestiários.
+15. **Datas** dos posts de Estrutura, Sorteio e Inauguração.
+16. **"Primeira aula por nossa conta"**: confirmar que a aula experimental é gratuita (a frase está no prompt e no site).
+17. **"Perto da Rodoviária de Americana"**: confirmar a referência.
+18. **Domínio definitivo** (`zeroum.site`, hoje `https://zeroumct.com.br`), usado no canonical, no sitemap e no Open Graph.
+19. **Política de privacidade**: razão social, CNPJ e e-mail do encarregado (DPO).
+20. **Fotos**: todos os slots de `src/content/media.ts` (ver `IMAGE_PROMPTS.md`).
+21. **Imagens de referência de layout** ("Velocity" e "Athlete Showcase"), para a revisão de fidelidade.
+
+---
+
+## 7. Atualização: dados confirmados pelo dono (03/11/2026)
+
+| Dado | Fonte | Onde entrou |
+|---|---|---|
+| Endereço **Rua Orlando de Santi, 220 · Campo Limpo · CEP 13477-000** | Perfil do Google + post oficial | Localização, footer, JSON-LD (`streetAddress`) |
+| **230 máquinas de 10 marcas** | Post oficial ("Os números impressionam") | Hero, Manifesto (pilar Performance), Estrutura, CTA final |
+| **"A maior academia de Americana"** | Post oficial | Manifesto e Estrutura |
+| **Nota 4,9 · 181 avaliações** no Google | Perfil do Google | Depoimentos, Professores, JSON-LD (`aggregateRating`), meta description |
+| **8 avaliações reais** (nota 5) | Perfil do Google | `depoimentos` em `zeroum.ts`. Textos transcritos sem alteração; trechos cortados pelo Google terminam em "…"; emojis removidos. |
+| **Diária avulsa R$ 39,90** | Post oficial do Instagram | Planos (bloco "Diária avulsa") e FAQ |
+| Professores | Ainda sem dados | Seção mostra o que os alunos dizem da equipe |
+
+**Não usado:** os preços dos planos Wellhub e TotalPass (Silver a partir de R$ 149,99, TP2 cerca de R$ 119,90…). São preços dos agregadores e variam por cidade e por data. O site mostra só o nome do plano mínimo aceito. As fotos das avaliações também não foram usadas, porque são dos autores das avaliações.

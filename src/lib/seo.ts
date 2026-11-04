@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { zeroum } from "@/content/zeroum";
+import { avaliacaoGoogle, zeroum } from "@/content/zeroum";
 
 export const SITE_URL = zeroum.site;
 
@@ -33,11 +33,11 @@ export function gymJsonLd() {
       addressRegion: zeroum.endereco.uf,
       postalCode: zeroum.endereco.cep,
       addressCountry: "BR",
-      // streetAddress: entra quando o número (200 x 220) for confirmado
-      ...(zeroum.endereco.confirmado && typeof zeroum.endereco.texto === "string"
-        ? { streetAddress: zeroum.endereco.texto }
-        : {}),
+      ...(zeroum.endereco.confirmado ? { streetAddress: zeroum.endereco.rua } : {}),
     },
+    ...(avaliacaoGoogle
+      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: avaliacaoGoogle.nota, reviewCount: avaliacaoGoogle.total, bestRating: 5 } }
+      : {}),
     amenityFeature: zeroum.diferenciais.map((d) => ({ "@type": "LocationFeatureSpecification", name: d, value: true })),
   };
   return data;

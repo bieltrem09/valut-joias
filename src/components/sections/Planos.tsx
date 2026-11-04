@@ -104,6 +104,21 @@ export function Planos({ full = false, label = "05" }: { full?: boolean; label?:
           })}
         </ul>
 
+        {/* Diária avulsa — preço oficial do Instagram */}
+        <div className="mt-6 flex flex-col gap-5 rounded-[var(--radius-card)] bg-black p-6 text-white sm:flex-row sm:items-center sm:justify-between md:px-8">
+          <div>
+            <p className="label text-gray-300">Diária avulsa</p>
+            <p className="mt-2 flex items-baseline gap-2">
+              <span className="label">R$</span>
+              <span className="font-mono text-4xl font-medium tracking-tight tnum">{brl(zeroum.diaria)}</span>
+              <span className="text-sm text-gray-300">/dia · campanhas podem ter valor promocional</span>
+            </p>
+          </div>
+          <a href={waLink("Olá, Zero Um! Quero fazer uma diária.")} target="_blank" rel="noopener noreferrer" className="btn btn-white justify-center">
+            Quero treinar um dia <span className="btn-arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
+
         <div className="hairline mt-14 flex flex-col gap-4 border-t pt-8 md:flex-row md:items-center md:justify-between">
           <p className="max-w-md">
             <strong>Já tem agregador?</strong> Só chegar com o app.

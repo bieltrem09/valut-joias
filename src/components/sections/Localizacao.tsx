@@ -4,7 +4,6 @@ import { MapPin } from "lucide-react";
 import { zeroum } from "@/content/zeroum";
 import { WA_GERAL } from "@/lib/whatsapp";
 import { SectionLabel } from "@/components/ui/SectionHead";
-import { Todo } from "@/components/ui/Todo";
 
 const EMBED = `https://www.google.com/maps?q=${encodeURIComponent("Zero Um CT Americana")}&output=embed`;
 
@@ -44,18 +43,10 @@ export function Localizacao({ label = "12" }: { label?: string }) {
             <span className="text-red">SP.</span>
           </h2>
           <address className="mt-8 not-italic">
-            {e.confirmado && typeof e.texto === "string" ? (
-              <p className="text-lg font-semibold">{e.texto}</p>
-            ) : (
-              <>
-                <p className="text-lg font-semibold">
-                  {e.rua} · {e.cidade}/{e.uf} · CEP {e.cep}
-                </p>
-                <p className="mt-3">
-                  <Todo>número e bairro — Google: “{e.googleLinha}” × Instagram: “{e.instagramLinha}”</Todo>
-                </p>
-              </>
-            )}
+            <p className="text-lg font-semibold">{e.rua}</p>
+            <p className="text-gray-300">
+              {e.bairro} · {e.cidade}/{e.uf} · CEP {e.cep}
+            </p>
             <p className="mt-4 text-gray-300">{zeroum.referenciaLocal}.</p>
           </address>
           <div className="mt-8 flex flex-wrap gap-3">

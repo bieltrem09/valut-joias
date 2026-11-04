@@ -1,6 +1,6 @@
 import { pageMeta } from "@/lib/seo";
 import { PageHero } from "@/components/sections/PageHero";
-import { Professores } from "@/components/sections/Professores";
+import { Professores } from "@/components/sections/ProfessoresSection";
 import { PrimeiroTreino } from "@/components/sections/PrimeiroTreino";
 
 export const metadata = pageMeta(

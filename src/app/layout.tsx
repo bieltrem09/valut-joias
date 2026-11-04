@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: "%s · Zero Um CT Americana",
   },
   description:
-    "Academia de musculação 24 horas em Americana/SP, com 2.500 m² de estrutura, Sala Recovery e máquina de gelo. Aceita Wellhub Silver e TotalPass TP2. Agende sua aula experimental.",
+    "Academia de musculação 24 horas em Americana/SP: 2.500 m², 230 máquinas de 10 marcas, Sala Recovery e máquina de gelo. Nota 4,9 no Google. Aceita Wellhub Silver e TotalPass TP2.",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",

@@ -12,7 +12,7 @@ import { Todo } from "@/components/ui/Todo";
  * cursor-bolha vermelho "ARRASTE" (só ponteiro fino). Touch / reduced-motion: scroll-snap nativo.
  * WCAG 2.5.7: botões Anterior/Próximo como alternativa ao arrasto.
  */
-export function Professores({ label = "06", grid = false }: { label?: string; grid?: boolean }) {
+export function ProfessoresCarousel({ label = "06", grid = false }: { label?: string; grid?: boolean }) {
   const viewport = useRef<HTMLDivElement>(null);
   const bubble = useRef<HTMLDivElement>(null);
   const pendente = professores.some((p) => p.pendente);
