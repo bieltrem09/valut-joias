@@ -56,7 +56,7 @@ export const zeroum = {
     "Academia especializada em musculação, com estrutura completa, equipamentos de qualidade e acompanhamento profissional. Para ganhar massa muscular, emagrecer ou melhorar a qualidade de vida, com segurança e dedicação.",
   slogan: "A maior academia de Americana", // usado pela própria academia no post oficial de estrutura
   sloganConfirmado: true,
-  site: "https://zeroumct.com.br", // TODO: domínio definitivo
+  site: "https://zeroum-academia.vercel.app", // trocar pelo domínio próprio quando houver
 
   // ---- PREENCHER (não inventar) ----
   estacionamento: { todo: "Confirmar se há estacionamento e se é gratuito" } as Todo | string,
